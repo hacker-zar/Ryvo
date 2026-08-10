@@ -1,0 +1,129 @@
+-- Schema base para la plantilla multi-negocio de peluquerías/barberías.
+-- Ejecutar en el SQL editor de Supabase cuando el proyecto esté creado.
+
+create extension if not exists "pgcrypto";
+
+-- =========================
+-- businesses
+-- =========================
+create table if not exists businesses (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text not null unique,
+  description text default '',
+  logo text default '',
+  primary_color text default '#111111',
+  secondary_color text default '#f5f5f5',
+  whatsapp text default '',
+  instagram text default '',
+  address text default '',
+  phone text default '',
+  email text default '',
+  city text default '',
+  hero_image text default '',
+  gallery text[] default '{}',
+  opening_hours jsonb default '[]',
+  created_at timestamptz not null default now()
+);
+
+-- =========================
+-- services
+-- =========================
+create table if not exists services (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  name text not null,
+  description text default '',
+  price numeric(10,2) not null default 0,
+  duration integer not null default 30, -- minutos
+  active boolean not null default true
+);
+
+create index if not exists services_business_id_idx on services(business_id);
+
+-- =========================
+-- locations (sucursales/locales de un negocio)
+-- Estructura mínima para soportar negocios con uno o varios locales.
+-- Si el negocio tiene un único local, alcanza con una sola fila acá.
+-- =========================
+create table if not exists locations (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  name text not null,
+  address text default '',
+  opening_hours jsonb default '[]',
+  is_primary boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists locations_business_id_idx on locations(business_id);
+
+-- =========================
+-- bookings
+-- =========================
+create table if not exists bookings (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  service_id uuid not null references services(id) on delete cascade,
+  location_id uuid references locations(id) on delete set null,
+  customer_name text not null,
+  customer_phone text not null,
+  customer_email text,
+  date date not null,
+  time time not null,
+  status text not null default 'pending' check (status in ('pending','confirmed','cancelled')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists bookings_business_id_idx on bookings(business_id);
+create index if not exists bookings_date_idx on bookings(business_id, date);
+
+-- Evita reservas duplicadas para el mismo negocio/local/fecha/hora,
+-- siempre que la reserva no esté cancelada. Esto es la defensa a nivel DB;
+-- la app también valida disponibilidad antes de insertar.
+create unique index if not exists bookings_no_duplicate_slot
+  on bookings (business_id, coalesce(location_id, '00000000-0000-0000-0000-000000000000'::uuid), date, time)
+  where status <> 'cancelled';
+
+-- =========================
+-- reviews
+-- =========================
+create table if not exists reviews (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  customer_name text not null,
+  rating integer not null check (rating between 1 and 5),
+  comment text default '',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists reviews_business_id_idx on reviews(business_id);
+
+-- =========================
+-- Row Level Security
+-- =========================
+alter table businesses enable row level security;
+alter table locations enable row level security;
+alter table services enable row level security;
+alter table bookings enable row level security;
+alter table reviews enable row level security;
+
+-- Lectura pública (la web es pública, cualquiera puede ver negocios/servicios/reseñas).
+create policy "public read businesses" on businesses for select using (true);
+create policy "public read locations" on locations for select using (true);
+create policy "public read services" on services for select using (true);
+create policy "public read reviews" on reviews for select using (true);
+
+-- Reservas: cualquiera puede crear (formulario público de reserva) y leer
+-- (necesario para calcular disponibilidad de horarios en el cliente/servidor
+-- sin exponer datos sensibles: solo se filtra por business/location/date/hora,
+-- no se muestran nombres/teléfonos de otros clientes en la UI pública).
+create policy "public insert bookings" on bookings for insert with check (true);
+create policy "public read bookings for availability" on bookings for select using (true);
+
+-- Reseñas: cualquiera puede dejar una reseña.
+create policy "public insert reviews" on reviews for insert with check (true);
+
+-- NOTA: administración (crear negocios, servicios, gestionar bookings)
+-- se hace con la service_role key desde un contexto seguro (no en el cliente),
+-- fuera del alcance de este MVP.

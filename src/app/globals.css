@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  /* Identidad base de la plantilla: cuero curtido + bronce cepillado.
+     Cada negocio puede sobrescribir el acento vía business.primary_color,
+     pero el fondo oscuro y cálido es la firma visual del producto. */
+  --ink: #1a1815;
+  --ink-elevated: #242019;
+  --ink-line: #3a342c;
+  --bone: #f7f4ee;
+  --bone-muted: #9c9184;
+  --brass: #c9a15a;
+
+  --background: var(--ink);
+  --foreground: var(--bone);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-ink-elevated: var(--ink-elevated);
+  --color-ink-line: var(--ink-line);
+  --color-bone: var(--bone);
+  --color-bone-muted: var(--bone-muted);
+  --color-brass: var(--brass);
+  --font-display: var(--font-display-stack);
+  --font-sans: var(--font-sans-stack);
+}
+
+:root {
+  --font-display-stack: "Futura", "Century Gothic", "Arial Narrow", system-ui, sans-serif;
+  --font-sans-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans-stack);
+}
+
+/* Título de sección: mayúsculas, tracking amplio, tipo cartel de local.
+   Se usa consistentemente para que la voz tipográfica del sitio no
+   dependa de que cada negocio elija bien sus estilos. */
+.section-eyebrow {
+  font-family: var(--font-display-stack);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: var(--brass);
+}
+
+.section-title {
+  font-family: var(--font-display-stack);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+}
+
+/* Ficha de turno: el signature element. Referencia directa al numerito
+   de espera real de una barbería, no un marcador decorativo 01/02/03. */
+.ticket-number {
+  font-family: var(--font-display-stack);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+/* Animaciones del modal de reserva. Discretas y cortas a propósito. */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[fadeIn_0\.2s_ease-out\],
+  .animate-\[slideUp_0\.25s_ease-out\] {
+    animation: none !important;
+  }
+}
