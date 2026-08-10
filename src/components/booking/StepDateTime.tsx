@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Business, Location, Service } from "@/types/business";
 import { getAvailableSlots } from "@/lib/actions/availability-actions";
+import MiniCalendar from "./MiniCalendar";
 
 interface StepDateTimeProps {
   business: Pick<Business, "id" | "primary_color">;
@@ -16,22 +17,6 @@ interface StepDateTimeProps {
   onSelectTime: (time: string) => void;
 }
 
-function nextDays(count: number): { date: string; label: string }[] {
-  const out: { date: string; label: string }[] = [];
-  const today = new Date();
-  const dayLabels = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-  for (let i = 0; i < count; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    out.push({
-      date: iso,
-      label: `${dayLabels[d.getDay()]} ${d.getDate()}`,
-    });
-  }
-  return out;
-}
-
 export default function StepDateTime({
   business,
   locations,
@@ -43,7 +28,6 @@ export default function StepDateTime({
   onSelectDate,
   onSelectTime,
 }: StepDateTimeProps) {
-  const days = useMemo(() => nextDays(14), []);
   const [slots, setSlots] = useState<string[] | null>(null);
   const [slotsKey, setSlotsKey] = useState<string | null>(null);
 
@@ -98,31 +82,15 @@ export default function StepDateTime({
 
       {/* Fecha */}
       <p className="text-xs text-bone-muted mt-6 mb-2">Fecha</p>
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        {days.map((d) => {
-          const selected = d.date === selectedDate;
-          return (
-            <button
-              key={d.date}
-              type="button"
-              onClick={() => {
-                onSelectDate(d.date);
-                onSelectTime("");
-              }}
-              className="shrink-0 rounded-sm border px-3.5 py-2.5 text-xs transition-colors"
-              style={{
-                borderColor: selected ? business.primary_color : "var(--ink-line)",
-                backgroundColor: selected
-                  ? "color-mix(in srgb, var(--brass) 10%, transparent)"
-                  : "transparent",
-                color: selected ? business.primary_color : "var(--bone)",
-              }}
-            >
-              {d.label}
-            </button>
-          );
-        })}
-      </div>
+      <MiniCalendar
+        selectedDate={selectedDate}
+        onSelectDate={(date) => {
+          onSelectDate(date);
+          onSelectTime("");
+        }}
+        openingHours={activeLocation?.opening_hours ?? []}
+        primaryColor={business.primary_color}
+      />
 
       {/* Local (solo si hay más de uno) */}
       {locations.length > 1 ? (
