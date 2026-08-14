@@ -8,6 +8,7 @@ import {
   createBusiness,
   createService,
   deleteService,
+  updateBookingStatus,
   updateBusiness,
   updateService,
 } from "@/lib/data/business-repository";
@@ -137,5 +138,16 @@ export async function adminDeleteService(
   await requireAdmin();
   const result = await deleteService(serviceId);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminUpdateBookingStatus(
+  businessId: string,
+  bookingId: string,
+  status: "confirmed" | "cancelled"
+) {
+  await requireAdmin();
+  const result = await updateBookingStatus(bookingId, status);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}/turnos`);
   return result;
 }

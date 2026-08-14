@@ -30,6 +30,23 @@ export default function StepDateTime({
 }: StepDateTimeProps) {
   const [slots, setSlots] = useState<string[] | null>(null);
   const [slotsKey, setSlotsKey] = useState<string | null>(null);
+  const [pulsingLocationId, setPulsingLocationId] = useState<string | null>(
+    null
+  );
+  const [pulsingSlot, setPulsingSlot] = useState<string | null>(null);
+
+  function handleSelectLocation(locId: string) {
+    onSelectLocation(locId);
+    onSelectTime("");
+    setPulsingLocationId(locId);
+    window.setTimeout(() => setPulsingLocationId(null), 200);
+  }
+
+  function handleSelectTime(slot: string) {
+    onSelectTime(slot);
+    setPulsingSlot(slot);
+    window.setTimeout(() => setPulsingSlot(null), 200);
+  }
 
   const activeLocation =
     locations.find((l) => l.id === selectedLocationId) ?? locations[0];
@@ -103,11 +120,10 @@ export default function StepDateTime({
                 <button
                   key={loc.id}
                   type="button"
-                  onClick={() => {
-                    onSelectLocation(loc.id);
-                    onSelectTime("");
-                  }}
-                  className="rounded-sm border px-3.5 py-2.5 text-xs transition-colors"
+                  onClick={() => handleSelectLocation(loc.id)}
+                  className={`rounded-sm border px-3.5 py-2.5 text-xs transition-colors ${
+                    pulsingLocationId === loc.id ? "select-pulse" : ""
+                  }`}
                   style={{
                     borderColor: selected
                       ? business.primary_color
@@ -140,8 +156,10 @@ export default function StepDateTime({
                   <button
                     key={slot}
                     type="button"
-                    onClick={() => onSelectTime(slot)}
-                    className="ticket-number rounded-sm border py-2.5 text-xs transition-colors"
+                    onClick={() => handleSelectTime(slot)}
+                    className={`ticket-number rounded-sm border py-2.5 text-xs transition-colors ${
+                      pulsingSlot === slot ? "select-pulse" : ""
+                    }`}
                     style={{
                       borderColor: selected
                         ? business.primary_color

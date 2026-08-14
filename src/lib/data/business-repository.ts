@@ -278,3 +278,77 @@ export async function deleteService(
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+// ---------------------------------------------------------------------
+// Turnos (bookings) — vistos y gestionados desde /admin.
+// ---------------------------------------------------------------------
+
+/** Una reserva con el nombre del servicio y del local ya resueltos, lista
+ *  para mostrar en la lista de turnos del admin sin otro round-trip. */
+export interface BookingWithDetails extends Booking {
+  service_name: string;
+  location_name: string;
+}
+
+export async function listBookingsByBusiness(
+  businessId: string,
+  date?: string
+): Promise<BookingWithDetails[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    // Modo demo: no hay reservas reales persistidas.
+    return [];
+  }
+
+  let query = supabase
+    .from("bookings")
+    .select("*")
+    .eq("business_id", businessId)
+    .order("date", { ascending: true })
+    .order("time", { ascending: true });
+
+  if (date) query = query.eq("date", date);
+
+  const { data: bookings } = await query;
+  if (!bookings || bookings.length === 0) return [];
+
+  const [{ data: services }, { data: locations }] = await Promise.all([
+    supabase.from("services").select("id, name").eq("business_id", businessId),
+    supabase
+      .from("locations")
+      .select("id, name")
+      .eq("business_id", businessId),
+  ]);
+
+  const serviceNames = new Map(
+    (services ?? []).map((s: { id: string; name: string }) => [s.id, s.name])
+  );
+  const locationNames = new Map(
+    (locations ?? []).map((l: { id: string; name: string }) => [l.id, l.name])
+  );
+
+  return bookings.map((b) => ({
+    ...b,
+    service_name: serviceNames.get(b.service_id) ?? "Servicio eliminado",
+    location_name: b.location_id
+      ? (locationNames.get(b.location_id) ?? "Local eliminado")
+      : "Local único",
+  }));
+}
+
+export async function updateBookingStatus(
+  id: string,
+  status: "confirmed" | "cancelled"
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      success: false,
+      error: "Conectá Supabase para poder gestionar turnos.",
+    };
+  }
+  const { error } = await supabase
+    .from("bookings")
+    .update({ status })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}

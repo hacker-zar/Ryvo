@@ -56,6 +56,13 @@ export default function MiniCalendar({
 
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [pulsingDate, setPulsingDate] = useState<string | null>(null);
+
+  function handleSelectDate(iso: string) {
+    onSelectDate(iso);
+    setPulsingDate(iso);
+    window.setTimeout(() => setPulsingDate(null), 200);
+  }
 
   const firstOfMonth = new Date(viewYear, viewMonth, 1);
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -139,8 +146,10 @@ export default function MiniCalendar({
               key={iso}
               type="button"
               disabled={disabled}
-              onClick={() => onSelectDate(iso)}
-              className="aspect-square rounded-sm text-xs flex items-center justify-center transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+              onClick={() => handleSelectDate(iso)}
+              className={`aspect-square rounded-sm text-xs flex items-center justify-center transition-colors disabled:opacity-25 disabled:cursor-not-allowed ${
+                pulsingDate === iso ? "select-pulse" : ""
+              }`}
               style={{
                 backgroundColor: selected ? primaryColor : "transparent",
                 color: selected ? "var(--ink)" : "var(--bone)",

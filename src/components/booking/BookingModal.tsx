@@ -36,6 +36,9 @@ function BookingModalContent({
   const { close } = useBookingModal();
 
   const [step, setStep] = useState<WizardStep>(1);
+  const [direction, setDirection] = useState<"forward" | "backward">(
+    "forward"
+  );
   const [selectedService, setSelectedService] = useState<Service | null>(
     null
   );
@@ -71,6 +74,11 @@ function BookingModalContent({
   const activeLocation =
     locations.find((l) => l.id === locationId) ?? locations[0];
 
+  function goToStep(next: WizardStep, dir: "forward" | "backward") {
+    setDirection(dir);
+    setStep(next);
+  }
+
   async function handleConfirm() {
     if (!selectedService || !activeLocation || !date || !time) return;
     setSubmitting(true);
@@ -92,7 +100,7 @@ function BookingModalContent({
     setSubmitting(false);
 
     if (result.success) {
-      setStep("success");
+      goToStep("success", "forward");
     } else {
       setSubmitError(result.error ?? "No se pudo completar la reserva.");
     }
@@ -140,7 +148,12 @@ function BookingModalContent({
         ) : null}
 
         {/* Contenido */}
-        <div className="overflow-y-auto px-5 py-6 flex-1">
+        <div
+          key={step}
+          className={`overflow-y-auto px-5 py-6 flex-1 ${
+            direction === "forward" ? "step-forward" : "step-backward"
+          }`}
+        >
           {step === 1 ? (
             <StepService
               services={services}
@@ -207,7 +220,7 @@ function BookingModalContent({
                 <button
                   type="button"
                   onClick={() =>
-                    setStep((s) => (s === 3 ? 2 : s === 2 ? 1 : s))
+                    goToStep(step === 3 ? 2 : step === 2 ? 1 : step, "backward")
                   }
                   className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
                 >
@@ -219,7 +232,7 @@ function BookingModalContent({
                 <button
                   type="button"
                   disabled={!canContinueStep1}
-                  onClick={() => setStep(2)}
+                  onClick={() => goToStep(2, "forward")}
                   className="section-eyebrow flex-1 text-xs px-5 py-3 rounded-sm text-ink font-semibold disabled:opacity-40 transition-opacity"
                   style={{ backgroundColor: business.primary_color }}
                 >
@@ -231,7 +244,7 @@ function BookingModalContent({
                 <button
                   type="button"
                   disabled={!canContinueStep2}
-                  onClick={() => setStep(3)}
+                  onClick={() => goToStep(3, "forward")}
                   className="section-eyebrow flex-1 text-xs px-5 py-3 rounded-sm text-ink font-semibold disabled:opacity-40 transition-opacity"
                   style={{ backgroundColor: business.primary_color }}
                 >

@@ -86,9 +86,64 @@ body {
   }
 }
 
+/* Transición tipo carrusel entre pasos del modal de reserva. El contenido
+   nuevo entra desde un lado y el texto anterior ya se desmontó (usamos
+   `key` en React para forzar el remount), así que solo animamos la
+   entrada, no una salida simultánea. */
+@keyframes stepInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes stepInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.step-forward {
+  animation: stepInFromRight 0.22s ease-out;
+}
+
+.step-backward {
+  animation: stepInFromLeft 0.22s ease-out;
+}
+
+/* Feedback táctil al seleccionar una opción (servicio, día, local, hora):
+   un pulso breve de escala, sutil, no un rebote exagerado. */
+@keyframes selectPulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.select-pulse {
+  animation: selectPulse 0.2s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-\[fadeIn_0\.2s_ease-out\],
-  .animate-\[slideUp_0\.25s_ease-out\] {
+  .animate-\[slideUp_0\.25s_ease-out\],
+  .step-forward,
+  .step-backward,
+  .select-pulse {
     animation: none !important;
   }
 }

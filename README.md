@@ -80,7 +80,7 @@ La disponibilidad se valida en dos capas:
    carrera, excluyendo reservas canceladas (un horario cancelado vuelve a
    quedar disponible).
 
-
+## Panel de administración (`/admin`)
 
 Permite crear/editar negocios y sus servicios sin tocar la base de datos a
 mano. Protegido con un password simple compartido (sin login de usuarios
@@ -92,6 +92,18 @@ individuales — fuera de alcance del MVP).
 2. Entrar a `/admin/login`.
 3. Requiere Supabase conectado para poder crear/editar — en modo demo el
    panel se ve pero avisa que hace falta configurar la base de datos.
+
+### Ver y gestionar turnos
+
+Desde `/admin/negocios/[id]/turnos` (link "Ver turnos" en la página del
+negocio) el dueño puede:
+
+- Ver todos los turnos reservados, ordenados por fecha y hora, con el
+  nombre del cliente, teléfono, servicio y local.
+- Filtrar por un día puntual.
+- Marcar un turno como **Confirmado** o **Cancelado**. Cancelar un turno
+  libera ese horario automáticamente para nuevas reservas (la lógica de
+  disponibilidad excluye las reservas canceladas).
 
 ## Cómo agregar un segundo negocio
 

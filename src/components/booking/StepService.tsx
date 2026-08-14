@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Business, Service } from "@/types/business";
 import { formatDuration, formatPrice } from "@/lib/format";
 
@@ -10,12 +11,24 @@ interface StepServiceProps {
   primaryColor: Business["primary_color"];
 }
 
+const PULSE_DURATION_MS = 200;
+
 export default function StepService({
   services,
   selectedServiceId,
   onSelect,
   primaryColor,
 }: StepServiceProps) {
+  // Guarda el id que acaba de ser clickeado para animarlo una sola vez;
+  // se limpia solo después de la duración del pulso.
+  const [pulsingId, setPulsingId] = useState<string | null>(null);
+
+  function handleSelect(service: Service) {
+    onSelect(service);
+    setPulsingId(service.id);
+    window.setTimeout(() => setPulsingId(null), PULSE_DURATION_MS);
+  }
+
   return (
     <div>
       <p className="section-eyebrow" style={{ color: primaryColor }}>
@@ -32,8 +45,10 @@ export default function StepService({
             <button
               key={service.id}
               type="button"
-              onClick={() => onSelect(service)}
-              className="text-left rounded-sm border px-4 py-3.5 transition-colors flex items-center justify-between gap-4"
+              onClick={() => handleSelect(service)}
+              className={`text-left rounded-sm border px-4 py-3.5 transition-colors flex items-center justify-between gap-4 ${
+                pulsingId === service.id ? "select-pulse" : ""
+              }`}
               style={{
                 borderColor: selected ? primaryColor : "var(--ink-line)",
                 backgroundColor: selected

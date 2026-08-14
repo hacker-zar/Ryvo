@@ -44,6 +44,13 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
       >
         Ver sitio público →
       </a>
+      <br />
+      <Link
+        href={`/admin/negocios/${business.id}/turnos`}
+        className="text-xs text-bone-muted hover:text-brass transition-colors"
+      >
+        Ver turnos →
+      </Link>
 
       <div className="mt-8">
         <BusinessEditForm business={business} />
