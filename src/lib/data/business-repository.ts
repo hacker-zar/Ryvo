@@ -1,4 +1,9 @@
-import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import {
+  isSupabaseAdminConfigured,
+  isSupabaseConfigured,
+  supabase,
+  supabaseAdmin,
+} from "@/lib/supabase";
 import {
   Booking,
   Business,
@@ -159,6 +164,9 @@ export async function createBooking(
 
 // ---------------------------------------------------------------------
 // Operaciones de administración (usadas por /admin).
+// Usan supabaseAdmin (service role key) porque estas escrituras están
+// protegidas por la sesión de admin (contraseña), no por RLS — RLS solo
+// permite lectura pública y creación de bookings/reviews desde el sitio.
 // Requieren Supabase configurado: en modo demo no hay dónde persistir.
 // ---------------------------------------------------------------------
 
@@ -204,13 +212,14 @@ export type BusinessInput = Omit<Business, "id" | "created_at">;
 export async function createBusiness(
   input: BusinessInput
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
       success: false,
-      error: "Conectá Supabase para poder crear negocios.",
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder crear negocios.",
     };
   }
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("businesses")
     .insert(input)
     .select("id")
@@ -223,13 +232,17 @@ export async function updateBusiness(
   id: string,
   input: Partial<BusinessInput>
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
       success: false,
-      error: "Conectá Supabase para poder editar negocios.",
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder editar negocios.",
     };
   }
-  const { error } = await supabase.from("businesses").update(input).eq("id", id);
+  const { error } = await supabaseAdmin
+    .from("businesses")
+    .update(input)
+    .eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
@@ -239,13 +252,14 @@ export type ServiceInput = Omit<Service, "id">;
 export async function createService(
   input: ServiceInput
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
       success: false,
-      error: "Conectá Supabase para poder crear servicios.",
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder crear servicios.",
     };
   }
-  const { error } = await supabase.from("services").insert(input);
+  const { error } = await supabaseAdmin.from("services").insert(input);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
@@ -254,13 +268,17 @@ export async function updateService(
   id: string,
   input: Partial<ServiceInput>
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
       success: false,
-      error: "Conectá Supabase para poder editar servicios.",
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder editar servicios.",
     };
   }
-  const { error } = await supabase.from("services").update(input).eq("id", id);
+  const { error } = await supabaseAdmin
+    .from("services")
+    .update(input)
+    .eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
@@ -268,13 +286,14 @@ export async function updateService(
 export async function deleteService(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
       success: false,
-      error: "Conectá Supabase para poder borrar servicios.",
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder borrar servicios.",
     };
   }
-  const { error } = await supabase.from("services").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("services").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
@@ -294,12 +313,12 @@ export async function listBookingsByBusiness(
   businessId: string,
   date?: string
 ): Promise<BookingWithDetails[]> {
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     // Modo demo: no hay reservas reales persistidas.
     return [];
   }
 
-  let query = supabase
+  let query = supabaseAdmin
     .from("bookings")
     .select("*")
     .eq("business_id", businessId)
@@ -312,8 +331,11 @@ export async function listBookingsByBusiness(
   if (!bookings || bookings.length === 0) return [];
 
   const [{ data: services }, { data: locations }] = await Promise.all([
-    supabase.from("services").select("id, name").eq("business_id", businessId),
-    supabase
+    supabaseAdmin
+      .from("services")
+      .select("id, name")
+      .eq("business_id", businessId),
+    supabaseAdmin
       .from("locations")
       .select("id, name")
       .eq("business_id", businessId),
@@ -339,13 +361,14 @@ export async function updateBookingStatus(
   id: string,
   status: "confirmed" | "cancelled"
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseConfigured || !supabase) {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
       success: false,
-      error: "Conectá Supabase para poder gestionar turnos.",
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder gestionar turnos.",
     };
   }
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from("bookings")
     .update({ status })
     .eq("id", id);

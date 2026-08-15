@@ -39,10 +39,21 @@ de Supabase todavía.
 
 1. Crear un proyecto en Supabase.
 2. Ejecutar `supabase/schema.sql` en el SQL editor (crea las tablas
-   `businesses`, `services`, `bookings`, `reviews` con RLS básica).
-3. Copiar `.env.example` a `.env.local` y completar `NEXT_PUBLIC_SUPABASE_URL`
-   y `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-4. Cargar un negocio (fila en `businesses`) con sus servicios.
+   `businesses`, `services`, `locations`, `bookings`, `reviews`, sus
+   políticas de RLS, y el bucket público `business-images` para las fotos).
+3. Copiar `.env.example` a `.env.local` y completar `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` (esta última
+   se encuentra en Project Settings → API → service_role — **nunca** debe
+   llevar el prefijo `NEXT_PUBLIC_`, porque no debe llegar al navegador).
+4. Cargar el primer negocio desde `/admin` (ver más abajo) — no hace falta
+   tocar la base de datos a mano.
+
+**Por qué se necesitan dos claves de Supabase:** la `anon key` es pública y
+respeta las políticas de RLS (lectura de negocios/servicios, y creación de
+reservas/reseñas desde el sitio). Crear o editar negocios, servicios, y
+subir imágenes son operaciones administrativas que no están permitidas por
+RLS al cliente anónimo — esas escrituras usan la `service_role key` desde
+el servidor, y solo dentro de acciones ya protegidas por `ADMIN_PASSWORD`.
 
 ## Sistema de reservas
 
@@ -92,6 +103,14 @@ individuales — fuera de alcance del MVP).
 2. Entrar a `/admin/login`.
 3. Requiere Supabase conectado para poder crear/editar — en modo demo el
    panel se ve pero avisa que hace falta configurar la base de datos.
+
+### Subir imágenes desde la computadora
+
+Logo, imagen de portada y galería de fotos se cargan con un selector de
+archivo (JPG, PNG, WEBP, GIF o SVG, hasta 5 MB), sin necesidad de pegar
+una URL a mano. Las imágenes se suben a Supabase Storage (bucket
+`business-images`, creado por `schema.sql`) y quedan con URL pública
+automáticamente.
 
 ### Ver y gestionar turnos
 

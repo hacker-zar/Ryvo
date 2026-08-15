@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Business } from "@/types/business";
 import { adminUpdateBusiness } from "@/lib/admin/actions";
+import ImageUploadField from "@/components/admin/ImageUploadField";
 
 const inputClasses =
   "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2.5 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors";
@@ -146,31 +147,19 @@ export default function BusinessEditForm({ business }: { business: Business }) {
         />
       </div>
 
-      <div className="grid gap-1.5">
-        <label htmlFor="hero_image" className="text-xs text-bone-muted">
-          URL de imagen de portada
-        </label>
-        <input
-          id="hero_image"
-          name="hero_image"
-          type="text"
-          defaultValue={business.hero_image}
-          className={inputClasses}
-        />
-      </div>
+      <ImageUploadField
+        folder={business.id}
+        label="Imagen de portada"
+        name="hero_image"
+        defaultValue={business.hero_image}
+      />
 
-      <div className="grid gap-1.5">
-        <label htmlFor="logo" className="text-xs text-bone-muted">
-          URL del logo
-        </label>
-        <input
-          id="logo"
-          name="logo"
-          type="text"
-          defaultValue={business.logo}
-          className={inputClasses}
-        />
-      </div>
+      <ImageUploadField
+        folder={business.id}
+        label="Logo"
+        name="logo"
+        defaultValue={business.logo}
+      />
 
       {status === "error" ? (
         <p className="text-sm text-red-400">{error}</p>

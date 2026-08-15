@@ -127,3 +127,21 @@ create policy "public insert reviews" on reviews for insert with check (true);
 -- NOTA: administración (crear negocios, servicios, gestionar bookings)
 -- se hace con la service_role key desde un contexto seguro (no en el cliente),
 -- fuera del alcance de este MVP.
+
+-- =========================
+-- Storage: imágenes de negocios (logo, portada, galería)
+-- =========================
+-- El bucket se crea desde el Dashboard de Supabase (Storage → New bucket)
+-- con el nombre "business-images", marcado como público, o ejecutando:
+insert into storage.buckets (id, name, public)
+values ('business-images', 'business-images', true)
+on conflict (id) do nothing;
+
+-- Lectura pública (las imágenes se muestran en el sitio, sin login).
+create policy "public read business images"
+  on storage.objects for select
+  using (bucket_id = 'business-images');
+
+-- La subida/edición/borrado de archivos se hace únicamente desde el panel
+-- de administración, usando la service_role key (que se salta estas
+-- políticas), igual que el resto de las escrituras de /admin.

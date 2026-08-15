@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { hasValidAdminSession } from "@/lib/admin/session";
+import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 import {
   BusinessInput,
   ServiceInput,
@@ -150,4 +151,70 @@ export async function adminUpdateBookingStatus(
   const result = await updateBookingStatus(bookingId, status);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}/turnos`);
   return result;
+}
+
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+]);
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+/**
+ * Sube una imagen (logo, portada o foto de galería) a Supabase Storage y
+ * devuelve su URL pública, para usar en los campos correspondientes del
+ * negocio sin que el usuario tenga que pegar una URL a mano.
+ *
+ * `folder` agrupa las imágenes por negocio dentro del bucket. Al crear un
+ * negocio nuevo (que todavía no tiene id), se usa "new" como carpeta
+ * temporal — el archivo ya queda subido y con URL pública utilizable
+ * igual, aunque no esté bajo el id definitivo del negocio.
+ */
+export async function adminUploadImage(
+  folder: string,
+  formData: FormData
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  await requireAdmin();
+
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder subir imágenes.",
+    };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { success: false, error: "No se recibió ningún archivo." };
+  }
+
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    return {
+      success: false,
+      error: "Formato no soportado. Usá JPG, PNG, WEBP, GIF o SVG.",
+    };
+  }
+
+  if (file.size > MAX_IMAGE_BYTES) {
+    return { success: false, error: "La imagen no puede pesar más de 5 MB." };
+  }
+
+  const extension = file.name.split(".").pop() || "jpg";
+  const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "") || "new";
+  const path = `${safeFolder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+
+  const { error } = await supabaseAdmin.storage
+    .from("business-images")
+    .upload(path, file, { contentType: file.type, upsert: false });
+
+  if (error) return { success: false, error: error.message };
+
+  const { data } = supabaseAdmin.storage
+    .from("business-images")
+    .getPublicUrl(path);
+
+  return { success: true, url: data.publicUrl };
 }

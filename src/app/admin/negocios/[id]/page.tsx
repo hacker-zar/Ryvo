@@ -6,6 +6,7 @@ import {
   listServicesByBusiness,
 } from "@/lib/data/business-repository";
 import AdminChrome from "@/components/admin/AdminChrome";
+import GalleryUploadField from "@/components/admin/GalleryUploadField";
 import BusinessEditForm from "./business-edit-form";
 import ServicesManager from "./services-manager";
 
@@ -54,6 +55,17 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
 
       <div className="mt-8">
         <BusinessEditForm business={business} />
+      </div>
+
+      <div className="mt-14">
+        <p className="section-eyebrow text-brass">Galería</p>
+        <h2 className="section-title mt-2 text-xl text-bone">Fotos</h2>
+        <div className="mt-6">
+          <GalleryUploadField
+            businessId={business.id}
+            initialImages={business.gallery ?? []}
+          />
+        </div>
       </div>
 
       <div className="mt-14">
