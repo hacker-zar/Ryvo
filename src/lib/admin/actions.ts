@@ -5,14 +5,19 @@ import { hasValidAdminSession } from "@/lib/admin/session";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 import {
   BusinessInput,
+  LocationInput,
   ServiceInput,
   createBusiness,
+  createLocation,
   createService,
+  deleteLocation,
   deleteService,
   updateBookingStatus,
   updateBusiness,
+  updateLocation,
   updateService,
 } from "@/lib/data/business-repository";
+import { OpeningHours } from "@/types/business";
 
 async function requireAdmin() {
   const ok = await hasValidAdminSession();
@@ -150,6 +155,105 @@ export async function adminUpdateBookingStatus(
   await requireAdmin();
   const result = await updateBookingStatus(bookingId, status);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}/turnos`);
+  return result;
+}
+
+/**
+ * Parsea el horario semanal enviado desde el editor de locales. Se manda
+ * como JSON en un campo hidden del form (armado en el cliente), porque es
+ * una estructura de 7 filas — más simple que 7 campos sueltos por día.
+ */
+function parseOpeningHours(raw: string): OpeningHours[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+export async function adminCreateLocation(
+  businessId: string,
+  formData: FormData
+) {
+  await requireAdmin();
+
+  const input: LocationInput = {
+    business_id: businessId,
+    name: String(formData.get("name") || "").trim(),
+    address: String(formData.get("address") || ""),
+    opening_hours: parseOpeningHours(
+      String(formData.get("opening_hours") || "[]")
+    ),
+    is_primary: formData.get("is_primary") === "on",
+  };
+
+  if (!input.name) return { success: false, error: "El nombre es obligatorio." };
+
+  const result = await createLocation(input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminUpdateLocation(
+  businessId: string,
+  locationId: string,
+  formData: FormData
+) {
+  await requireAdmin();
+
+  const input: Partial<LocationInput> = {
+    name: String(formData.get("name") || "").trim(),
+    address: String(formData.get("address") || ""),
+    opening_hours: parseOpeningHours(
+      String(formData.get("opening_hours") || "[]")
+    ),
+    is_primary: formData.get("is_primary") === "on",
+  };
+
+  const result = await updateLocation(locationId, input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminDeleteLocation(
+  businessId: string,
+  locationId: string
+) {
+  await requireAdmin();
+  const result = await deleteLocation(locationId);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+const TYPOGRAPHY_PRESETS = new Set(["clasica", "moderna", "elegante"]);
+const BUTTON_STYLES = new Set(["redondeado", "suave", "recto"]);
+
+export async function adminUpdateAppearance(
+  businessId: string,
+  formData: FormData
+) {
+  await requireAdmin();
+
+  const typography = String(formData.get("typography_preset") || "elegante");
+  const buttonStyle = String(formData.get("button_style") || "recto");
+
+  const input: Partial<BusinessInput> = {
+    primary_color: String(formData.get("primary_color") || "#c9a15a"),
+    secondary_color: String(formData.get("secondary_color") || "#f5f5f5"),
+    background_color: String(formData.get("background_color") || "#1a1815"),
+    text_color: String(formData.get("text_color") || "#f7f4ee"),
+    typography_preset: TYPOGRAPHY_PRESETS.has(typography)
+      ? (typography as BusinessInput["typography_preset"])
+      : "elegante",
+    button_style: BUTTON_STYLES.has(buttonStyle)
+      ? (buttonStyle as BusinessInput["button_style"])
+      : "recto",
+  };
+
+  const result = await updateBusiness(businessId, input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
 }
 

@@ -3,8 +3,10 @@
 import { redirect } from "next/navigation";
 import {
   checkAdminPassword,
+  clearAdminOrigin,
   createAdminSession,
   destroyAdminSession,
+  getAdminOrigin,
 } from "@/lib/admin/session";
 
 export async function loginAdmin(formData: FormData) {
@@ -27,6 +29,11 @@ export async function loginAdmin(formData: FormData) {
 }
 
 export async function logoutAdmin() {
+  const origin = await getAdminOrigin();
   await destroyAdminSession();
-  redirect("/admin/login");
+  await clearAdminOrigin();
+  // Vuelve a la página pública del negocio desde el que se entró al panel;
+  // si no hay ese dato (ej: se entró directo por /admin/login), vuelve a
+  // la home general en vez de a una ruta técnica.
+  redirect(origin ? `/${origin}` : "/");
 }

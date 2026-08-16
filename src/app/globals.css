@@ -33,6 +33,41 @@
   --font-sans-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Presets de tipografía controlados (no libertad total de fuentes).
+   Se aplican seteando estas mismas variables en un contenedor con
+   data-typography="clasica|moderna|elegante" — ver TypographyScope. */
+[data-typography="elegante"] {
+  --font-display-stack: "Futura", "Century Gothic", "Arial Narrow", system-ui, sans-serif;
+  --font-sans-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+[data-typography="clasica"] {
+  --font-display-stack: Georgia, "Times New Roman", Times, serif;
+  --font-sans-stack: Georgia, "Times New Roman", Times, serif;
+}
+
+[data-typography="moderna"] {
+  --font-display-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Estilo de botones controlado: redondeado / suave / recto. Se aplica vía
+   data-button-style en el mismo contenedor de arriba, y los componentes
+   que dibujan botones usan la clase .btn-radius en vez de un rounded-*
+   fijo de Tailwind. */
+[data-button-style="redondeado"] {
+  --button-radius: 9999px;
+}
+[data-button-style="suave"] {
+  --button-radius: 0.5rem;
+}
+[data-button-style="recto"] {
+  --button-radius: 0.125rem;
+}
+.btn-radius {
+  border-radius: var(--button-radius, 0.125rem);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

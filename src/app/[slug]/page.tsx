@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getBusinessProfile } from "@/lib/data/business-repository";
 import { BookingModalProvider } from "@/lib/booking-modal-context";
+import AppearanceScope from "@/components/AppearanceScope";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Services from "@/components/Services";
@@ -43,51 +44,61 @@ export default async function BusinessPage({ params }: PageProps) {
   const bookingUrl = `${siteUrl}/${business.slug}?reservar=1`;
 
   return (
-    <BookingModalProvider>
-      <Header
-        business={{
-          name: business.name,
-          logo: business.logo,
-          primary_color: business.primary_color,
-        }}
-      />
-      <Hero
-        business={{
-          name: business.name,
-          description: business.description,
-          hero_image: business.hero_image,
-          primary_color: business.primary_color,
-        }}
-      />
-      <Services services={services} primaryColor={business.primary_color} />
-      <Gallery
-        images={business.gallery ?? []}
-        businessName={business.name}
-        primaryColor={business.primary_color}
-      />
-      <Reviews reviews={reviews} primaryColor={business.primary_color} />
-      <Contact
-        business={{
-          name: business.name,
-          whatsapp: business.whatsapp,
-          instagram: business.instagram,
-          address: business.address,
-          phone: business.phone,
-          email: business.email,
-          opening_hours: business.opening_hours,
-          primary_color: business.primary_color,
-          slug: business.slug,
-        }}
-        bookingUrl={bookingUrl}
-      />
-      <Footer business={{ name: business.name }} />
+    <AppearanceScope
+      business={{
+        typography_preset: business.typography_preset,
+        button_style: business.button_style,
+        background_color: business.background_color,
+        text_color: business.text_color,
+      }}
+    >
+      <BookingModalProvider>
+        <Header
+          business={{
+            name: business.name,
+            logo: business.logo,
+            primary_color: business.primary_color,
+            slug: business.slug,
+          }}
+        />
+        <Hero
+          business={{
+            name: business.name,
+            description: business.description,
+            hero_image: business.hero_image,
+            primary_color: business.primary_color,
+          }}
+        />
+        <Services services={services} primaryColor={business.primary_color} />
+        <Gallery
+          images={business.gallery ?? []}
+          businessName={business.name}
+          primaryColor={business.primary_color}
+        />
+        <Reviews reviews={reviews} primaryColor={business.primary_color} />
+        <Contact
+          business={{
+            name: business.name,
+            whatsapp: business.whatsapp,
+            instagram: business.instagram,
+            address: business.address,
+            phone: business.phone,
+            email: business.email,
+            opening_hours: business.opening_hours,
+            primary_color: business.primary_color,
+            slug: business.slug,
+          }}
+          bookingUrl={bookingUrl}
+        />
+        <Footer business={{ name: business.name }} />
 
-      <BookingModal
-        business={{ id: business.id, primary_color: business.primary_color }}
-        services={services}
-        locations={locations}
-      />
-      <BookingQueryParamTrigger />
-    </BookingModalProvider>
+        <BookingModal
+          business={{ id: business.id, primary_color: business.primary_color }}
+          services={services}
+          locations={locations}
+        />
+        <BookingQueryParamTrigger />
+      </BookingModalProvider>
+    </AppearanceScope>
   );
 }

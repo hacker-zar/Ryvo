@@ -100,9 +100,29 @@ individuales — fuera de alcance del MVP).
 1. Definir `ADMIN_PASSWORD` (la contraseña) y `ADMIN_PASSWORD_SECRET`
    (clave para firmar la cookie de sesión, cualquier string largo) en las
    variables de entorno.
-2. Entrar a `/admin/login`.
+2. Entrar desde la página pública del negocio con el link **"¿Trabajás
+   aquí?"** (arriba a la derecha), o directo a `/admin/login`.
 3. Requiere Supabase conectado para poder crear/editar — en modo demo el
    panel se ve pero avisa que hace falta configurar la base de datos.
+
+### Acceso desde la página pública
+
+El dueño/empleado no necesita conocer ni escribir `/admin`: en cada
+página de negocio hay un link discreto **"¿Trabajás aquí?"** que lleva a
+`/admin/entrar?from=<slug>` (un Route Handler, no una página visible).
+Ese punto de entrada:
+
+- Si ya hay sesión válida → redirige directo al editor (`/admin`), sin
+  mostrar el login de nuevo.
+- Si no → redirige a `/admin/login`, que al loguearse con éxito redirige
+  automáticamente a `/admin` (sin pasos extra).
+- De paso, guarda de qué negocio vino (cookie `admin_origin`, separada de
+  la cookie de sesión) para que **Cerrar sesión** pueda volver a esa misma
+  página pública en vez de a una ruta técnica.
+
+Toda la lógica de autenticación (contraseña, cookie de sesión firmada,
+protección de cada página) es la misma de siempre — este flujo solo
+agrega una puerta de entrada más amigable, sin duplicarla.
 
 ### Subir imágenes desde la computadora
 
@@ -111,6 +131,30 @@ archivo (JPG, PNG, WEBP, GIF o SVG, hasta 5 MB), sin necesidad de pegar
 una URL a mano. Las imágenes se suben a Supabase Storage (bucket
 `business-images`, creado por `schema.sql`) y quedan con URL pública
 automáticamente.
+
+### Apariencia
+
+Cada negocio puede personalizar, sin tocar código:
+
+- **Colores**: principal, secundario, fondo, texto.
+- **Tipografía**: uno de 3 presets controlados (Clásica, Moderna, Elegante)
+  — no hay libertad de elegir cualquier fuente, cada preset ya trae su
+  combinación de fuentes pensada.
+- **Estilo de botones**: Redondeado, Suave o Recto.
+
+Se aplica al sitio público vía `AppearanceScope`, que setea variables CSS
+y atributos `data-*` sin necesidad de CSS por negocio. Si un negocio no
+tiene estos campos cargados (por ejemplo, uno creado antes de esta
+funcionalidad), usa los valores por defecto de la plantilla.
+
+### Locales y horarios
+
+Desde la página del negocio, la sección **Locales y horarios** permite
+crear uno o varios locales, cada uno con nombre, dirección, y un horario
+semanal (día por día: abierto/cerrado y hora desde/hasta). Esto es lo que
+el modal de reserva usa para calcular los horarios disponibles — sin al
+menos un local con horario cargado, no hay ningún turno disponible para
+reservar en el sitio público.
 
 ### Ver y gestionar turnos
 

@@ -2,6 +2,9 @@
 // en supabase/schema.sql. Cualquier cambio de columnas debe reflejarse
 // en ambos lugares.
 
+export type TypographyPreset = "clasica" | "moderna" | "elegante";
+export type ButtonStyle = "redondeado" | "suave" | "recto";
+
 export interface Business {
   id: string;
   name: string;
@@ -21,6 +24,12 @@ export interface Business {
   hero_image?: string;
   gallery?: string[];
   opening_hours?: OpeningHours[];
+  // Apariencia: colores adicionales de fondo/texto, y presets controlados
+  // (no libertad total) de tipografía y estilo de botones.
+  background_color?: string;
+  text_color?: string;
+  typography_preset?: TypographyPreset;
+  button_style?: ButtonStyle;
   created_at: string;
 }
 

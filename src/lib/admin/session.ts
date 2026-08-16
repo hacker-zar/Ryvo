@@ -4,6 +4,14 @@ import crypto from "crypto";
 const COOKIE_NAME = "admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8; // 8 horas
 
+// Cookie separada y liviana (no autenticación, solo una preferencia de
+// navegación) que recuerda desde qué negocio se entró al panel, para
+// poder volver ahí al cerrar sesión. No se firma: si se manipula, en el
+// peor caso el logout redirige a un slug incorrecto o inexistente, sin
+// ningún impacto de seguridad.
+const ORIGIN_COOKIE_NAME = "admin_origin";
+const ORIGIN_COOKIE_TTL_SECONDS = 60 * 60 * 24; // 1 día
+
 function getSecret(): string {
   // En dev, si no se configuró, usamos un valor fijo: solo importa que
   // la firma sea consistente entre requests del mismo proceso.
@@ -55,4 +63,27 @@ export async function hasValidAdminSession(): Promise<boolean> {
 
   const age = (Date.now() - Number(issuedAt)) / 1000;
   return age >= 0 && age <= SESSION_TTL_SECONDS;
+}
+
+/** Recuerda desde qué slug de negocio se entró al panel de administración,
+ *  para poder volver ahí al cerrar sesión (ver logoutAdmin). */
+export async function setAdminOrigin(slug: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(ORIGIN_COOKIE_NAME, slug, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: ORIGIN_COOKIE_TTL_SECONDS,
+    path: "/",
+  });
+}
+
+export async function getAdminOrigin(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(ORIGIN_COOKIE_NAME)?.value ?? null;
+}
+
+export async function clearAdminOrigin() {
+  const cookieStore = await cookies();
+  cookieStore.delete(ORIGIN_COOKIE_NAME);
 }

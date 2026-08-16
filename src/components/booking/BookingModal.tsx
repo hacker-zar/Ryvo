@@ -222,7 +222,7 @@ function BookingModalContent({
                   onClick={() =>
                     goToStep(step === 3 ? 2 : step === 2 ? 1 : step, "backward")
                   }
-                  className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
+                  className="section-eyebrow text-xs px-5 py-3 btn-radius border border-ink-line text-bone-muted hover:text-bone transition-colors"
                 >
                   Atrás
                 </button>
@@ -233,7 +233,7 @@ function BookingModalContent({
                   type="button"
                   disabled={!canContinueStep1}
                   onClick={() => goToStep(2, "forward")}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 rounded-sm text-ink font-semibold disabled:opacity-40 transition-opacity"
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius text-ink font-semibold disabled:opacity-40 transition-opacity"
                   style={{ backgroundColor: business.primary_color }}
                 >
                   Continuar
@@ -245,7 +245,7 @@ function BookingModalContent({
                   type="button"
                   disabled={!canContinueStep2}
                   onClick={() => goToStep(3, "forward")}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 rounded-sm text-ink font-semibold disabled:opacity-40 transition-opacity"
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius text-ink font-semibold disabled:opacity-40 transition-opacity"
                   style={{ backgroundColor: business.primary_color }}
                 >
                   Continuar
@@ -257,7 +257,7 @@ function BookingModalContent({
                   type="button"
                   disabled={!canConfirmStep3 || submitting}
                   onClick={handleConfirm}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 rounded-sm text-ink font-semibold disabled:opacity-40 transition-opacity"
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius text-ink font-semibold disabled:opacity-40 transition-opacity"
                   style={{ backgroundColor: business.primary_color }}
                 >
                   {submitting ? "Confirmando..." : "Confirmar turno"}

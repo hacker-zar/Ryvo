@@ -8,6 +8,7 @@ import {
   Booking,
   Business,
   BusinessProfile,
+  Location,
   Service,
 } from "@/types/business";
 import {
@@ -294,6 +295,76 @@ export async function deleteService(
     };
   }
   const { error } = await supabaseAdmin.from("services").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------
+// Locales (locations) — horarios y sucursales, gestionados desde /admin.
+// ---------------------------------------------------------------------
+
+export async function listLocationsByBusiness(
+  businessId: string
+): Promise<Location[]> {
+  if (isSupabaseConfigured && supabase) {
+    const { data } = await supabase
+      .from("locations")
+      .select("*")
+      .eq("business_id", businessId)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true });
+    return data ?? [];
+  }
+  return businessId === demoBusiness.id ? demoLocations : [];
+}
+
+export type LocationInput = Omit<Location, "id" | "created_at">;
+
+export async function createLocation(
+  input: LocationInput
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder crear locales.",
+    };
+  }
+  const { error } = await supabaseAdmin.from("locations").insert(input);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function updateLocation(
+  id: string,
+  input: Partial<LocationInput>
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder editar locales.",
+    };
+  }
+  const { error } = await supabaseAdmin
+    .from("locations")
+    .update(input)
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function deleteLocation(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder borrar locales.",
+    };
+  }
+  const { error } = await supabaseAdmin.from("locations").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }

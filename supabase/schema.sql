@@ -23,8 +23,37 @@ create table if not exists businesses (
   hero_image text default '',
   gallery text[] default '{}',
   opening_hours jsonb default '[]',
+  background_color text default '#1a1815',
+  text_color text default '#f7f4ee',
+  typography_preset text not null default 'elegante'
+    check (typography_preset in ('clasica', 'moderna', 'elegante')),
+  button_style text not null default 'recto'
+    check (button_style in ('redondeado', 'suave', 'recto')),
   created_at timestamptz not null default now()
 );
+
+-- Si la tabla ya existía de antes de agregar estas columnas de apariencia,
+-- esto las suma sin tocar los datos existentes. Seguro de re-ejecutar.
+alter table businesses add column if not exists background_color text default '#1a1815';
+alter table businesses add column if not exists text_color text default '#f7f4ee';
+alter table businesses add column if not exists typography_preset text not null default 'elegante';
+alter table businesses add column if not exists button_style text not null default 'recto';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'businesses_typography_preset_check'
+  ) then
+    alter table businesses add constraint businesses_typography_preset_check
+      check (typography_preset in ('clasica', 'moderna', 'elegante'));
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'businesses_button_style_check'
+  ) then
+    alter table businesses add constraint businesses_button_style_check
+      check (button_style in ('redondeado', 'suave', 'recto'));
+  end if;
+end $$;
 
 -- =========================
 -- services

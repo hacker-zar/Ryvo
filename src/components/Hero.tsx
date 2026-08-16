@@ -46,14 +46,14 @@ export default function Hero({ business }: HeroProps) {
           <button
             type="button"
             onClick={open}
-            className="section-eyebrow text-xs px-7 py-3.5 rounded-sm text-ink font-semibold hover:opacity-90 transition-opacity"
+            className="section-eyebrow text-xs px-7 py-3.5 btn-radius text-ink font-semibold hover:opacity-90 transition-opacity"
             style={{ backgroundColor: business.primary_color }}
           >
             Reservar turno
           </button>
           <a
             href="#servicios"
-            className="section-eyebrow text-xs px-7 py-3.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors"
+            className="section-eyebrow text-xs px-7 py-3.5 btn-radius border border-ink-line text-bone hover:border-brass transition-colors"
           >
             Ver servicios
           </a>
