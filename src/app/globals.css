@@ -15,6 +15,20 @@
   --foreground: var(--bone);
 }
 
+/* Identidad de marca de RYVO como plataforma (landing en "/", nav, etc).
+   Deliberadamente distinta de los tokens de arriba: esos son la piel por
+   defecto de los sitios de negocio (cuero + bronce, cálida y artesanal);
+   RYVO como software debe leerse tecnológico y premium, no como "una
+   barbería más". Monocromo casi puro + un único acento frío. */
+:root {
+  --graphite: #0a0a0b;
+  --graphite-elevated: #131316;
+  --graphite-line: #232327;
+  --porcelain: #f5f4f1;
+  --porcelain-muted: #96938d;
+  --signal: #5b63f5;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -24,31 +38,40 @@
   --color-bone: var(--bone);
   --color-bone-muted: var(--bone-muted);
   --color-brass: var(--brass);
+  --color-graphite: var(--graphite);
+  --color-graphite-elevated: var(--graphite-elevated);
+  --color-graphite-line: var(--graphite-line);
+  --color-porcelain: var(--porcelain);
+  --color-porcelain-muted: var(--porcelain-muted);
+  --color-signal: var(--signal);
   --font-display: var(--font-display-stack);
   --font-sans: var(--font-sans-stack);
 }
 
 :root {
-  --font-display-stack: "Futura", "Century Gothic", "Arial Narrow", system-ui, sans-serif;
-  --font-sans-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display-stack: var(--font-fraunces), Georgia, serif;
+  --font-sans-stack: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* Presets de tipografía controlados (no libertad total de fuentes).
    Se aplican seteando estas mismas variables en un contenedor con
-   data-typography="clasica|moderna|elegante" — ver TypographyScope. */
+   data-typography="clasica|moderna|elegante" — ver AppearanceScope.
+   Las tres usan solo las 2 familias cargadas en layout.tsx (Fraunces
+   variable + Inter variable): alcanza para cubrir serif elegante, serif
+   clásico y sans moderno sin descargar 5 archivos de fuente distintos. */
 [data-typography="elegante"] {
-  --font-display-stack: "Futura", "Century Gothic", "Arial Narrow", system-ui, sans-serif;
-  --font-sans-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display-stack: var(--font-fraunces), Georgia, serif;
+  --font-sans-stack: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 [data-typography="clasica"] {
-  --font-display-stack: Georgia, "Times New Roman", Times, serif;
-  --font-sans-stack: Georgia, "Times New Roman", Times, serif;
+  --font-display-stack: var(--font-fraunces), Georgia, "Times New Roman", Times, serif;
+  --font-sans-stack: var(--font-fraunces), Georgia, "Times New Roman", Times, serif;
 }
 
 [data-typography="moderna"] {
-  --font-display-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-sans-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display-stack: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans-stack: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* Estilo de botones controlado: redondeado / suave / recto. Se aplica vía
@@ -90,6 +113,18 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.02em;
   font-weight: 700;
+}
+
+/* Título editorial: mixed-case, grande, sin mayúsculas forzadas. Es el
+   tratamiento que separa un "cartel" de una web premium — se usa en el
+   H1 del hero y en los encabezados de sección (Servicios, Galería,
+   Reseñas, Contacto). .section-title se conserva para donde el tono
+   "cartel" en mayúsculas siga siendo apropiado (p. ej. StepIndicator). */
+.display-title {
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
 }
 
 /* Ficha de turno: el signature element. Referencia directa al numerito
@@ -171,6 +206,17 @@ body {
 
 .select-pulse {
   animation: selectPulse 0.2s ease-out;
+}
+
+/* Oculta la scrollbar del filmstrip de la galería sin depender de un
+   plugin de Tailwind: el scroll sigue funcionando (mouse, trackpad,
+   swipe), solo se esconde la barra visual. */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -22,22 +22,36 @@ function Stars({ rating, color }: { rating: number; color: string }) {
 export default function Reviews({ reviews, primaryColor }: ReviewsProps) {
   if (reviews.length === 0) return null;
 
+  const average =
+    reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+
   return (
     <section id="resenas" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
       <p className="section-eyebrow" style={{ color: primaryColor }}>
         Clientes
       </p>
-      <h2 className="section-title mt-2 text-2xl md:text-4xl text-bone">
+      <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">
         Reseñas
       </h2>
-      <div className="mt-10 grid sm:grid-cols-2 gap-4">
+
+      <div className="mt-8 flex items-center gap-3">
+        <span className="ticket-number text-2xl text-bone">
+          {average.toFixed(1)}
+        </span>
+        <Stars rating={Math.round(average)} color={primaryColor} />
+        <span className="text-xs text-bone-muted">
+          Basado en {reviews.length}{" "}
+          {reviews.length === 1 ? "reseña" : "reseñas"}
+        </span>
+      </div>
+
+      {/* Lista editorial, sin cards ni bordes: la separación es solo un
+          filete fino entre reseñas, como el resto del sitio. */}
+      <div className="mt-8 divide-y divide-ink-line border-t border-ink-line">
         {reviews.map((review) => (
-          <div
-            key={review.id}
-            className="rounded-sm border border-ink-line bg-ink-elevated p-5"
-          >
+          <div key={review.id} className="py-6">
             <Stars rating={review.rating} color={primaryColor} />
-            <p className="mt-3 text-sm text-bone leading-relaxed">
+            <p className="mt-3 text-sm md:text-base text-bone leading-relaxed max-w-2xl">
               {review.comment}
             </p>
             <p className="mt-3 text-xs text-bone-muted">

@@ -1,8 +1,18 @@
-# Plantilla multi-negocio para peluquerías y barberías
+# RYVO — plantilla multi-negocio para peluquerías y barberías
 
 Sitio único y reutilizable (Next.js + Tailwind + Supabase) para servir la
 web de múltiples peluquerías/barberías, cada una identificada por su
 `business_id` / `slug`, cambiando solo datos, no código.
+
+## Estructura de rutas
+
+- **`/`** — landing de RYVO como plataforma (`src/app/page.tsx` +
+  `src/components/marketing/*`). No pertenece a ningún negocio puntual;
+  presenta el producto y dirige al dueño a `/admin/login`.
+- **`/admin`** y **`/admin/login`** — panel de administración (ver más
+  abajo).
+- **`/{slug}`** — página pública de cada peluquería/barbería (ver
+  "Cómo funciona la multi-tenency").
 
 ## Stack
 

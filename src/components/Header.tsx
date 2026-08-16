@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Business } from "@/types/business";
 import { useBookingModal } from "@/lib/booking-modal-context";
+import { readableTextColor } from "@/lib/format";
 
 interface HeaderProps {
   business: Pick<Business, "name" | "logo" | "primary_color" | "slug">;
@@ -66,10 +67,10 @@ export default function Header({ business }: HeaderProps) {
           <button
             type="button"
             onClick={open}
-            className="section-eyebrow text-xs font-medium px-4 py-2 btn-radius border transition-colors"
+            className="section-eyebrow text-xs font-semibold px-4 py-2 btn-radius hover:opacity-90 transition-opacity"
             style={{
-              borderColor: business.primary_color,
-              color: business.primary_color,
+              backgroundColor: business.primary_color,
+              color: readableTextColor(business.primary_color),
             }}
           >
             Reservar

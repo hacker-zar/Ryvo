@@ -50,6 +50,7 @@ export default async function BusinessPage({ params }: PageProps) {
         button_style: business.button_style,
         background_color: business.background_color,
         text_color: business.text_color,
+        primary_color: business.primary_color,
       }}
     >
       <BookingModalProvider>

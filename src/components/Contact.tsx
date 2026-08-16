@@ -26,7 +26,7 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
       <p className="section-eyebrow" style={{ color: business.primary_color }}>
         Encontranos
       </p>
-      <h2 className="section-title mt-2 text-2xl md:text-4xl text-bone">
+      <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">
         Contacto
       </h2>
 

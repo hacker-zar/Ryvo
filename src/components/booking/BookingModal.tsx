@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Business, Location, Service } from "@/types/business";
 import { useBookingModal } from "@/lib/booking-modal-context";
 import { submitBooking } from "@/lib/actions/booking-actions";
+import { readableTextColor } from "@/lib/format";
 import StepIndicator from "./StepIndicator";
 import StepService from "./StepService";
 import StepDateTime from "./StepDateTime";
@@ -109,6 +110,7 @@ function BookingModalContent({
   const canContinueStep1 = Boolean(selectedService);
   const canContinueStep2 = Boolean(activeLocation && date && time);
   const canConfirmStep3 = customerName.trim() && customerPhone.trim();
+  const ctaTextColor = readableTextColor(business.primary_color);
 
   return (
     <div
@@ -233,8 +235,11 @@ function BookingModalContent({
                   type="button"
                   disabled={!canContinueStep1}
                   onClick={() => goToStep(2, "forward")}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius text-ink font-semibold disabled:opacity-40 transition-opacity"
-                  style={{ backgroundColor: business.primary_color }}
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 transition-opacity"
+                  style={{
+                    backgroundColor: business.primary_color,
+                    color: ctaTextColor,
+                  }}
                 >
                   Continuar
                 </button>
@@ -245,8 +250,11 @@ function BookingModalContent({
                   type="button"
                   disabled={!canContinueStep2}
                   onClick={() => goToStep(3, "forward")}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius text-ink font-semibold disabled:opacity-40 transition-opacity"
-                  style={{ backgroundColor: business.primary_color }}
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 transition-opacity"
+                  style={{
+                    backgroundColor: business.primary_color,
+                    color: ctaTextColor,
+                  }}
                 >
                   Continuar
                 </button>
@@ -257,8 +265,11 @@ function BookingModalContent({
                   type="button"
                   disabled={!canConfirmStep3 || submitting}
                   onClick={handleConfirm}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius text-ink font-semibold disabled:opacity-40 transition-opacity"
-                  style={{ backgroundColor: business.primary_color }}
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 transition-opacity"
+                  style={{
+                    backgroundColor: business.primary_color,
+                    color: ctaTextColor,
+                  }}
                 >
                   {submitting ? "Confirmando..." : "Confirmar turno"}
                 </button>

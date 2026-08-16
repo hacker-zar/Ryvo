@@ -1,6 +1,7 @@
 "use client";
 
 import { Business, Location, Service } from "@/types/business";
+import { readableTextColor } from "@/lib/format";
 
 interface StepSuccessProps {
   business: Pick<Business, "primary_color">;
@@ -57,8 +58,11 @@ export default function StepSuccess({
       <button
         type="button"
         onClick={onClose}
-        className="section-eyebrow mt-8 rounded-sm text-ink font-semibold text-xs px-7 py-3.5 hover:opacity-90 transition-opacity"
-        style={{ backgroundColor: business.primary_color }}
+        className="section-eyebrow mt-8 rounded-sm font-semibold text-xs px-7 py-3.5 hover:opacity-90 transition-opacity"
+        style={{
+          backgroundColor: business.primary_color,
+          color: readableTextColor(business.primary_color),
+        }}
       >
         Cerrar
       </button>

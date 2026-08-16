@@ -14,7 +14,7 @@ export default function Services({ services, primaryColor }: ServicesProps) {
       <p className="section-eyebrow" style={{ color: primaryColor }}>
         Carta de servicios
       </p>
-      <h2 className="section-title mt-2 text-2xl md:text-4xl text-bone">
+      <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">
         Servicios
       </h2>
 
