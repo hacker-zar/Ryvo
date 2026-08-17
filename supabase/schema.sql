@@ -123,6 +123,24 @@ create unique index if not exists bookings_no_duplicate_slot
   where status <> 'cancelled';
 
 -- =========================
+-- professionals (equipo del negocio, mostrado como señal de confianza en
+-- la web pública — no está ligado al flujo de reservas a propósito, es
+-- solo presentación: elegir profesional no es parte del wizard).
+-- =========================
+create table if not exists professionals (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  name text not null,
+  role text default '',
+  bio text default '',
+  photo text default '',
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists professionals_business_id_idx on professionals(business_id);
+
+-- =========================
 -- reviews
 -- =========================
 create table if not exists reviews (
@@ -144,12 +162,14 @@ alter table locations enable row level security;
 alter table services enable row level security;
 alter table bookings enable row level security;
 alter table reviews enable row level security;
+alter table professionals enable row level security;
 
--- Lectura pública (la web es pública, cualquiera puede ver negocios/servicios/reseñas).
+-- Lectura pública (la web es pública, cualquiera puede ver negocios/servicios/reseñas/equipo).
 create policy "public read businesses" on businesses for select using (true);
 create policy "public read locations" on locations for select using (true);
 create policy "public read services" on services for select using (true);
 create policy "public read reviews" on reviews for select using (true);
+create policy "public read professionals" on professionals for select using (true);
 
 -- Reservas: cualquiera puede crear (formulario público de reserva) y leer
 -- (necesario para calcular disponibilidad de horarios en el cliente/servidor

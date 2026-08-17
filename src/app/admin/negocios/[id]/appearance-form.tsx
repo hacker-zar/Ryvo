@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Business, ButtonStyle, TypographyPreset } from "@/types/business";
 import { adminUpdateAppearance } from "@/lib/admin/actions";
+import { contrastRatio } from "@/lib/format";
 
 interface AppearanceFormProps {
   business: Pick<
@@ -51,6 +52,14 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
     "idle"
   );
   const [error, setError] = useState("");
+
+  // Avisos de contraste (no bloquean el guardado — es la elección del
+  // dueño, solo lo alertamos si va a costar leerlo). Umbrales WCAG: 4.5:1
+  // para texto de cuerpo, 3:1 para el acento (eyebrows/bordes, texto corto).
+  const textContrast = contrastRatio(textColor, backgroundColor);
+  const accentContrast = contrastRatio(primaryColor, backgroundColor);
+  const lowTextContrast = textContrast !== null && textContrast < 4.5;
+  const lowAccentContrast = accentContrast !== null && accentContrast < 3;
 
   async function handleSubmit(formData: FormData) {
     setStatus("submitting");
@@ -123,6 +132,21 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
             />
           </div>
         </div>
+
+        {lowTextContrast ? (
+          <p className="mt-3 text-xs text-red-400">
+            ⚠️ El color de texto contrasta poco contra el fondo (
+            {textContrast?.toFixed(1)}:1) — puede costar leerlo. Se
+            recomienda al menos 4.5:1.
+          </p>
+        ) : null}
+        {lowAccentContrast ? (
+          <p className="mt-3 text-xs text-red-400">
+            ⚠️ El color principal contrasta poco contra el fondo (
+            {accentContrast?.toFixed(1)}:1) — se usa en títulos y bordes,
+            puede costar verlo. Se recomienda al menos 3:1.
+          </p>
+        ) : null}
       </div>
 
       {/* Tipografía */}

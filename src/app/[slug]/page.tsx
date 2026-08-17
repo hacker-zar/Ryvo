@@ -10,6 +10,7 @@ import BookingModal from "@/components/booking/BookingModal";
 import BookingQueryParamTrigger from "@/components/booking/BookingQueryParamTrigger";
 import MobileBookingBar from "@/components/booking/MobileBookingBar";
 import Gallery from "@/components/Gallery";
+import Professionals from "@/components/Professionals";
 import About from "@/components/About";
 import Reviews from "@/components/Reviews";
 import Contact from "@/components/Contact";
@@ -38,7 +39,7 @@ export default async function BusinessPage({ params }: PageProps) {
 
   if (!profile) notFound();
 
-  const { business, services, reviews, locations } = profile;
+  const { business, services, reviews, locations, professionals } = profile;
 
   // URL a la que apunta el QR: la página principal con un parámetro que
   // abre el modal de reserva automáticamente al cargar.
@@ -73,6 +74,10 @@ export default async function BusinessPage({ params }: PageProps) {
           }}
         />
         <Services services={services} primaryColor={business.primary_color} />
+        <Professionals
+          professionals={professionals}
+          primaryColor={business.primary_color}
+        />
         <Gallery
           images={business.gallery ?? []}
           businessName={business.name}

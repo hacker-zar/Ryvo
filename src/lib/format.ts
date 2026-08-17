@@ -33,6 +33,34 @@ export function whatsappLink(phone: string, message = ""): string {
   return `https://wa.me/${cleanPhone}${message ? `?text=${encoded}` : ""}`;
 }
 
+/** Normaliza "#abc"/"abc"/"#aabbcc" a "aabbcc", o null si no es un hex válido. */
+function normalizeHex(hex: string): string | null {
+  const cleaned = hex.trim().replace("#", "");
+  const full =
+    cleaned.length === 3
+      ? cleaned
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : cleaned;
+  return /^[0-9a-fA-F]{6}$/.test(full) ? full : null;
+}
+
+/** Luminancia relativa WCAG 2.x (0 = negro, 1 = blanco) de un color hex. */
+function relativeLuminance(hex: string): number | null {
+  const full = normalizeHex(hex);
+  if (!full) return null;
+
+  const [r, g, b] = [0, 2, 4].map(
+    (i) => parseInt(full.slice(i, i + 2), 16) / 255
+  );
+
+  const linear = (c: number) =>
+    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+
+  return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+}
+
 /**
  * Devuelve el color de texto (oscuro o claro) que mejor contrasta sobre
  * un color de fondo arbitrario, usando la fórmula de luminancia relativa
@@ -54,29 +82,28 @@ export function readableTextColor(
   const dark = options?.dark ?? "#1a1815";
   const light = options?.light ?? "#f7f4ee";
 
-  const hex = backgroundHex.trim().replace("#", "");
-  const full =
-    hex.length === 3
-      ? hex
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : hex;
-
-  if (!/^[0-9a-fA-F]{6}$/.test(full)) return dark;
-
-  const [r, g, b] = [0, 2, 4].map(
-    (i) => parseInt(full.slice(i, i + 2), 16) / 255
-  );
-
-  const linear = (c: number) =>
-    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-
-  const luminance =
-    0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+  const luminance = relativeLuminance(backgroundHex);
+  if (luminance === null) return dark;
 
   // ~0.179 es el punto donde el contraste contra negro puro e contra
   // blanco puro se cruza (fórmula de contraste WCAG); por encima, texto
   // oscuro contrasta mejor; por debajo, texto claro.
   return luminance > 0.179 ? dark : light;
+}
+
+/**
+ * Ratio de contraste WCAG 2.x entre dos colores hex (1 = sin contraste,
+ * 21 = máximo posible, negro sobre blanco). Devuelve null si algún color
+ * no es un hex válido. Usada en el admin (AppearanceForm) para avisarle
+ * al dueño del negocio si la combinación que eligió es difícil de leer —
+ * es un aviso, no un bloqueo: el color final sigue siendo su elección.
+ */
+export function contrastRatio(hexA: string, hexB: string): number | null {
+  const lumA = relativeLuminance(hexA);
+  const lumB = relativeLuminance(hexB);
+  if (lumA === null || lumB === null) return null;
+
+  const lighter = Math.max(lumA, lumB);
+  const darker = Math.min(lumA, lumB);
+  return (lighter + 0.05) / (darker + 0.05);
 }
