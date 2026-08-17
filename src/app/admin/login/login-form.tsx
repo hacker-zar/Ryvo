@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { loginAdmin } from "@/lib/admin/auth-actions";
+import { adminInputClasses } from "@/lib/ui-classes";
 
 interface LoginFormProps {
   /** true = login de dueño de negocio (usuario + contraseña, contra una
@@ -9,9 +10,6 @@ interface LoginFormProps {
    *  contra ADMIN_PASSWORD) — flujo independiente, sin usuario. */
   isOwnerLogin: boolean;
 }
-
-const inputClasses =
-  "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2.5 text-sm text-bone focus:outline-none focus:border-brass transition-colors";
 
 export default function LoginForm({ isOwnerLogin }: LoginFormProps) {
   const [error, setError] = useState("");
@@ -42,7 +40,7 @@ export default function LoginForm({ isOwnerLogin }: LoginFormProps) {
             autoComplete="username"
             required
             autoFocus
-            className={inputClasses}
+            className={adminInputClasses}
           />
         </div>
       ) : null}
@@ -58,7 +56,7 @@ export default function LoginForm({ isOwnerLogin }: LoginFormProps) {
           autoComplete="current-password"
           required
           autoFocus={!isOwnerLogin}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
 
@@ -67,7 +65,7 @@ export default function LoginForm({ isOwnerLogin }: LoginFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="section-eyebrow rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity disabled:opacity-60"
+        className="section-eyebrow rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity disabled:opacity-60"
       >
         {loading ? "Ingresando..." : "Ingresar"}
       </button>

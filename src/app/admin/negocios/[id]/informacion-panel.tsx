@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Business } from "@/types/business";
 import { adminUpdateBusiness } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
-
-const inputClasses =
-  "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2.5 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors";
+import { useAsyncStatus } from "@/lib/useAsyncStatus";
+import { adminInputClasses } from "@/lib/ui-classes";
+import SaveStatus from "@/components/ui/SaveStatus";
 
 interface InformacionPanelProps {
   business: Pick<
@@ -38,10 +38,7 @@ const FIELD_IDS: Record<string, string> = {
 
 export default function InformacionPanel({ business }: InformacionPanelProps) {
   const { target, refreshPreview } = useEditorSelection();
-  const [status, setStatus] = useState<"idle" | "submitting" | "saved" | "error">(
-    "idle"
-  );
-  const [error, setError] = useState("");
+  const { status, error, run, isPending } = useAsyncStatus();
 
   useEffect(() => {
     if (target?.category !== "informacion" || !target.field) return;
@@ -55,16 +52,8 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
   }, [target]);
 
   async function handleSubmit(formData: FormData) {
-    setStatus("submitting");
-    setError("");
-    const result = await adminUpdateBusiness(business.id, formData);
-    if (result.success) {
-      setStatus("saved");
-      refreshPreview();
-    } else {
-      setStatus("error");
-      setError(result.error ?? "No se pudo guardar.");
-    }
+    const result = await run(() => adminUpdateBusiness(business.id, formData));
+    if (result.success) refreshPreview();
   }
 
   return (
@@ -79,7 +68,7 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
           type="text"
           required
           defaultValue={business.name}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
 
@@ -92,7 +81,7 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
           name="description"
           rows={4}
           defaultValue={business.description}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
 
@@ -105,7 +94,7 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
           name="address"
           type="text"
           defaultValue={business.address}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
 
@@ -118,7 +107,7 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
           name="city"
           type="text"
           defaultValue={business.city}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
 
@@ -131,7 +120,7 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
           name="whatsapp"
           type="text"
           defaultValue={business.whatsapp}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
 
@@ -144,7 +133,7 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
           name="instagram"
           type="text"
           defaultValue={business.instagram}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
 
@@ -157,7 +146,7 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
           name="phone"
           type="text"
           defaultValue={business.phone}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
 
@@ -170,23 +159,18 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
           name="email"
           type="email"
           defaultValue={business.email}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
 
-      {status === "error" ? (
-        <p className="text-sm text-red-400">{error}</p>
-      ) : null}
-      {status === "saved" ? (
-        <p className="text-sm text-brass">Guardado.</p>
-      ) : null}
+      <SaveStatus status={status} error={error} />
 
       <button
         type="submit"
-        disabled={status === "submitting"}
+        disabled={isPending}
         className="section-eyebrow mt-2 rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity disabled:opacity-50 w-fit"
       >
-        {status === "submitting" ? "Guardando..." : "Guardar cambios"}
+        {isPending ? "Guardando..." : "Guardar cambios"}
       </button>
     </form>
   );

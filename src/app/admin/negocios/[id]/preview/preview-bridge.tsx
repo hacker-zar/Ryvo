@@ -15,6 +15,13 @@ import { useEffect } from "react";
  *   pulso de selección que ya existe (.select-pulse).
  */
 export default function PreviewBridge() {
+  // Avisa al parent que el árbol de React ya montó — más confiable que el
+  // onLoad del <iframe>, que dispara apenas llega HTML aunque la página
+  // todavía no sea interactiva (o incluso si el server devolvió un error).
+  useEffect(() => {
+    window.parent.postMessage({ type: "ryvo-editor-ready" }, window.location.origin);
+  }, []);
+
   useEffect(() => {
     function handleClick(event: MouseEvent) {
       const target = event.target as HTMLElement | null;

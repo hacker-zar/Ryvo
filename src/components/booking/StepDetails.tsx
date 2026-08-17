@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Business, Location, Service } from "@/types/business";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, isLikelyPhone } from "@/lib/format";
 
 interface StepDetailsProps {
   business: Pick<Business, "primary_color">;
@@ -42,6 +43,10 @@ export default function StepDetails({
   onChangePhone,
   onChangeEmail,
 }: StepDetailsProps) {
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const phoneInvalid =
+    phoneTouched && customerPhone.trim().length > 0 && !isLikelyPhone(customerPhone);
+
   return (
     <div>
       <p className="section-eyebrow" style={{ color: business.primary_color }}>
@@ -75,9 +80,14 @@ export default function StepDetails({
             required
             value={customerPhone}
             onChange={(e) => onChangePhone(e.target.value)}
-            className={inputClasses}
+            onBlur={() => setPhoneTouched(true)}
+            aria-invalid={phoneInvalid}
+            className={`${inputClasses} ${phoneInvalid ? "border-red-400" : ""}`}
             placeholder="11 1234-5678"
           />
+          {phoneInvalid ? (
+            <p className="text-xs text-red-400">Revisá tu número de teléfono.</p>
+          ) : null}
         </div>
 
         <div className="grid gap-1.5">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logoutAdmin } from "@/lib/admin/auth-actions";
 import { getAdminSession } from "@/lib/admin/session";
+import { adminThemeDataAttrs, adminThemeStyle } from "@/lib/ui-classes";
 
 export default async function AdminChrome({
   children,
@@ -12,7 +13,11 @@ export default async function AdminChrome({
     session?.role === "owner" ? `/admin/negocios/${session.businessId}` : "/admin";
 
   return (
-    <div className="min-h-screen bg-ink">
+    <div
+      className="min-h-screen bg-ink"
+      style={adminThemeStyle}
+      {...adminThemeDataAttrs}
+    >
       <header className="border-b border-ink-line">
         <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
           <Link href={homeHref} className="section-title text-sm text-bone">

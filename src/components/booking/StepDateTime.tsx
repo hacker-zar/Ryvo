@@ -12,6 +12,9 @@ interface StepDateTimeProps {
   selectedLocationId: string | null;
   selectedDate: string | null;
   selectedTime: string | null;
+  /** "Este horario acaba de ocuparse" — llega desde BookingModal cuando
+   *  confirmar el paso 3 devolvió un conflicto (ver createBooking). */
+  conflictMessage?: string;
   onSelectLocation: (locationId: string) => void;
   onSelectDate: (date: string) => void;
   onSelectTime: (time: string) => void;
@@ -24,12 +27,15 @@ export default function StepDateTime({
   selectedLocationId,
   selectedDate,
   selectedTime,
+  conflictMessage,
   onSelectLocation,
   onSelectDate,
   onSelectTime,
 }: StepDateTimeProps) {
   const [slots, setSlots] = useState<string[] | null>(null);
   const [slotsKey, setSlotsKey] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [pulsingLocationId, setPulsingLocationId] = useState<string | null>(
     null
   );
@@ -72,22 +78,30 @@ export default function StepDateTime({
       date: selectedDate,
       serviceDurationMin: service.duration,
       openingHours: activeLocation.opening_hours,
-    }).then((result) => {
-      if (!cancelled) {
-        setSlots(result);
-        setSlotsKey(key);
-      }
-    });
+    })
+      .then((result) => {
+        if (!cancelled) {
+          setSlots(result);
+          setSlotsKey(key);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setErrorKey(key);
+      });
     return () => {
       cancelled = true;
     };
-  }, [selectedDate, activeLocation, business.id, service.duration]);
+  }, [selectedDate, activeLocation, business.id, service.duration, retryCount]);
 
   // Mientras llega la respuesta para la fecha/local actuales, no mostramos
   // los horarios de la consulta anterior (evita un parpadeo de datos viejos).
   // Si hay fecha/local elegidos pero la key todavía no coincide, está cargando.
+  // El error también se deriva comparando keys (en vez de un booleano que
+  // haya que resetear a mano) — así una fecha/local nueva nunca arrastra
+  // el error de la consulta anterior.
   const currentKey = activeLocation ? `${activeLocation.id}|${selectedDate}` : null;
-  const loadingSlots = currentKey !== null && slotsKey !== currentKey;
+  const slotsError = errorKey !== null && errorKey === currentKey;
+  const loadingSlots = currentKey !== null && slotsKey !== currentKey && !slotsError;
   const visibleSlots = slotsKey === currentKey ? slots : null;
 
   return (
@@ -96,6 +110,12 @@ export default function StepDateTime({
         Paso 2
       </p>
       <h3 className="section-title mt-1 text-xl text-bone">Fecha y hora</h3>
+
+      {conflictMessage ? (
+        <p className="mt-3 rounded-sm border border-red-400/40 bg-red-400/10 px-3 py-2.5 text-sm text-red-400">
+          {conflictMessage}
+        </p>
+      ) : null}
 
       {/* Fecha */}
       <p className="text-xs text-bone-muted mt-6 mb-2">Fecha</p>
@@ -146,7 +166,18 @@ export default function StepDateTime({
       {selectedDate ? (
         <>
           <p className="text-xs text-bone-muted mt-6 mb-2">Horario</p>
-          {loadingSlots ? (
+          {slotsError ? (
+            <div className="text-sm text-bone-muted">
+              <p>No pudimos cargar los horarios disponibles.</p>
+              <button
+                type="button"
+                onClick={() => setRetryCount((c) => c + 1)}
+                className="section-eyebrow mt-2 text-xs px-4 py-2 rounded-sm border border-ink-line text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : loadingSlots ? (
             <p className="text-sm text-bone-muted">Buscando horarios...</p>
           ) : visibleSlots && visibleSlots.length > 0 ? (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">

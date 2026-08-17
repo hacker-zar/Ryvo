@@ -51,9 +51,15 @@ export default function About({ business }: AboutProps) {
           {image ? (
             <Reveal
               delay={100}
-              className="relative aspect-[4/5] md:aspect-square overflow-hidden order-first md:order-last"
+              className="relative aspect-[4/5] md:aspect-square overflow-hidden bg-ink-elevated order-first md:order-last"
             >
-              <Image src={image} alt={business.name} fill className="object-cover" />
+              <Image
+                src={image}
+                alt={business.name}
+                fill
+                sizes="(min-width: 768px) 40vw, 90vw"
+                className="object-cover"
+              />
             </Reveal>
           ) : null}
         </div>

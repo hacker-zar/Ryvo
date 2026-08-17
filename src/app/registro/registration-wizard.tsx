@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { registerBusiness } from "@/lib/actions/register-business";
+import { marketingInputClasses } from "@/lib/ui-classes";
 
 type Step = 1 | 2;
 
@@ -12,9 +13,6 @@ const BUSINESS_TYPES = [
   { value: "estilista", label: "Estilista independiente" },
   { value: "otro", label: "Otro" },
 ];
-
-const inputClasses =
-  "rounded-sm border border-graphite-line bg-graphite-elevated px-3 py-2.5 text-sm text-porcelain placeholder:text-porcelain-muted/50 focus:outline-none focus:border-signal transition-colors";
 
 /**
  * Wizard de registro self-service: dos pantallas (Cuenta → Negocio), una
@@ -102,7 +100,7 @@ export default function RegistrationWizard() {
                 value={ownerName}
                 onChange={(e) => setOwnerName(e.target.value)}
                 autoFocus
-                className={inputClasses}
+                className={marketingInputClasses}
               />
             </div>
             <div className="grid gap-1.5">
@@ -114,7 +112,7 @@ export default function RegistrationWizard() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={inputClasses}
+                className={marketingInputClasses}
               />
             </div>
             <div className="grid gap-1.5">
@@ -127,7 +125,7 @@ export default function RegistrationWizard() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo 8 caracteres"
-                className={inputClasses}
+                className={marketingInputClasses}
               />
             </div>
           </>
@@ -144,7 +142,7 @@ export default function RegistrationWizard() {
                 onChange={(e) => setBusinessName(e.target.value)}
                 autoFocus
                 placeholder="Ej: Bella Vista Peluquería"
-                className={inputClasses}
+                className={marketingInputClasses}
               />
             </div>
             <div className="grid gap-1.5">
@@ -155,7 +153,7 @@ export default function RegistrationWizard() {
                 id="business_type"
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
-                className={inputClasses}
+                className={marketingInputClasses}
               >
                 {BUSINESS_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -173,7 +171,7 @@ export default function RegistrationWizard() {
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className={inputClasses}
+                className={marketingInputClasses}
               />
             </div>
             <div className="grid gap-1.5">
@@ -186,7 +184,7 @@ export default function RegistrationWizard() {
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
                 placeholder="Con código de país, solo números"
-                className={inputClasses}
+                className={marketingInputClasses}
               />
             </div>
           </>
@@ -200,7 +198,7 @@ export default function RegistrationWizard() {
           <button
             type="button"
             onClick={() => goToStep(1, "backward")}
-            className="rounded-full border border-graphite-line text-porcelain text-sm px-6 py-3 hover:border-porcelain-muted transition-colors"
+            className="rounded-full border border-graphite-line text-porcelain text-sm px-6 py-3 hover:border-porcelain-muted focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-graphite transition-colors"
           >
             Atrás
           </button>
@@ -211,7 +209,7 @@ export default function RegistrationWizard() {
             type="button"
             disabled={!canContinueStep1}
             onClick={() => goToStep(2, "forward")}
-            className="flex-1 rounded-full bg-porcelain text-graphite text-sm font-semibold px-7 py-3 hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="flex-1 rounded-full bg-porcelain text-graphite text-sm font-semibold px-7 py-3 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-graphite transition-opacity disabled:opacity-40"
           >
             Continuar
           </button>
@@ -220,7 +218,7 @@ export default function RegistrationWizard() {
             type="button"
             disabled={!canSubmitStep2 || submitting}
             onClick={handleSubmit}
-            className="flex-1 rounded-full bg-porcelain text-graphite text-sm font-semibold px-7 py-3 hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="flex-1 rounded-full bg-porcelain text-graphite text-sm font-semibold px-7 py-3 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-graphite transition-opacity disabled:opacity-40"
           >
             {submitting ? "Creando..." : "Crear mi negocio"}
           </button>

@@ -9,10 +9,11 @@ import {
   adminUpdateProfessional,
 } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
+import { useAsyncStatus } from "@/lib/useAsyncStatus";
+import { adminInputClassesCompact } from "@/lib/ui-classes";
+import SaveStatus from "@/components/ui/SaveStatus";
+import EmptyState from "@/components/ui/EmptyState";
 import ImageUploadField from "@/components/admin/ImageUploadField";
-
-const inputClasses =
-  "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors";
 
 interface ProfessionalsManagerProps {
   businessId: string;
@@ -26,11 +27,17 @@ export default function ProfessionalsManager({
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
   const [items, setItems] = useState(professionals);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const editingId =
     target?.category === "profesionales" ? target.itemId ?? null : null;
 
+  const createStatus = useAsyncStatus();
+  const updateStatus = useAsyncStatus();
+
   async function handleCreate(formData: FormData) {
-    const result = await adminCreateProfessional(businessId, formData);
+    const result = await createStatus.run(() =>
+      adminCreateProfessional(businessId, formData)
+    );
     if (result.success) {
       router.refresh();
       refreshPreview();
@@ -38,10 +45,8 @@ export default function ProfessionalsManager({
   }
 
   async function handleUpdate(professionalId: string, formData: FormData) {
-    const result = await adminUpdateProfessional(
-      businessId,
-      professionalId,
-      formData
+    const result = await updateStatus.run(() =>
+      adminUpdateProfessional(businessId, professionalId, formData)
     );
     if (result.success) {
       select({ category: "profesionales" });
@@ -52,7 +57,9 @@ export default function ProfessionalsManager({
 
   async function handleDelete(professionalId: string) {
     if (!confirm("¿Borrar este profesional?")) return;
+    setDeletingId(professionalId);
     const result = await adminDeleteProfessional(businessId, professionalId);
+    setDeletingId(null);
     if (result.success) {
       setItems((prev) => prev.filter((p) => p.id !== professionalId));
       refreshPreview();
@@ -63,9 +70,10 @@ export default function ProfessionalsManager({
     <div className="mt-6">
       <div className="divide-y divide-ink-line border-t border-b border-ink-line">
         {items.length === 0 ? (
-          <p className="py-6 text-sm text-bone-muted">
-            Todavía no hay profesionales cargados.
-          </p>
+          <EmptyState
+            title="Todavía no hay profesionales cargados."
+            hint="Se muestran en la web pública como señal de confianza — es opcional."
+          />
         ) : (
           items.map((professional) =>
             editingId === professional.id ? (
@@ -84,20 +92,20 @@ export default function ProfessionalsManager({
                   name="name"
                   defaultValue={professional.name}
                   required
-                  className={inputClasses}
+                  className={adminInputClassesCompact}
                   placeholder="Nombre"
                 />
                 <input
                   name="role"
                   defaultValue={professional.role}
-                  className={inputClasses}
+                  className={adminInputClassesCompact}
                   placeholder="Rol (ej: Estilista, Barbero, Colorista)"
                 />
                 <textarea
                   name="bio"
                   defaultValue={professional.bio}
                   rows={2}
-                  className={inputClasses}
+                  className={adminInputClassesCompact}
                   placeholder="Breve trayectoria/especialidad"
                 />
                 <label className="flex items-center gap-2 text-xs text-bone-muted">
@@ -108,12 +116,14 @@ export default function ProfessionalsManager({
                   />
                   Activo
                 </label>
+                <SaveStatus status={updateStatus.status} error={updateStatus.error} />
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="section-eyebrow text-xs px-4 py-2 rounded-sm bg-brass text-ink font-semibold w-fit"
+                    disabled={updateStatus.isPending}
+                    className="section-eyebrow text-xs px-4 py-2 rounded-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50"
                   >
-                    Guardar
+                    {updateStatus.isPending ? "Guardando..." : "Guardar"}
                   </button>
                   <button
                     type="button"
@@ -162,10 +172,11 @@ export default function ProfessionalsManager({
                     Editar
                   </button>
                   <button
+                    disabled={deletingId === professional.id}
                     onClick={() => handleDelete(professional.id)}
-                    className="text-xs text-bone-muted hover:text-red-400 transition-colors"
+                    className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
                   >
-                    Borrar
+                    {deletingId === professional.id ? "Borrando..." : "Borrar"}
                   </button>
                 </div>
               </div>
@@ -180,29 +191,31 @@ export default function ProfessionalsManager({
         <input
           name="name"
           required
-          className={inputClasses}
+          className={adminInputClassesCompact}
           placeholder="Nombre"
         />
         <input
           name="role"
-          className={inputClasses}
+          className={adminInputClassesCompact}
           placeholder="Rol (ej: Estilista, Barbero, Colorista)"
         />
         <textarea
           name="bio"
           rows={2}
-          className={inputClasses}
+          className={adminInputClassesCompact}
           placeholder="Breve trayectoria/especialidad"
         />
         <label className="flex items-center gap-2 text-xs text-bone-muted">
           <input name="active" type="checkbox" defaultChecked />
           Activo
         </label>
+        <SaveStatus status={createStatus.status} error={createStatus.error} />
         <button
           type="submit"
-          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit"
+          disabled={createStatus.isPending}
+          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit disabled:opacity-50"
         >
-          + Agregar
+          {createStatus.isPending ? "Agregando..." : "+ Agregar"}
         </button>
       </form>
     </div>

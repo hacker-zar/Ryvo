@@ -22,7 +22,7 @@ export default function ImageUploadField({
   defaultValue,
 }: ImageUploadFieldProps) {
   const [url, setUrl] = useState(defaultValue ?? "");
-  const [status, setStatus] = useState<"idle" | "uploading" | "error">(
+  const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">(
     "idle"
   );
   const [error, setError] = useState("");
@@ -42,7 +42,9 @@ export default function ImageUploadField({
 
     if (result.success && result.url) {
       setUrl(result.url);
-      setStatus("idle");
+      setStatus("success");
+      // Flash breve de confirmación — no queda pegado indefinidamente.
+      window.setTimeout(() => setStatus((s) => (s === "success" ? "idle" : s)), 1500);
     } else {
       setStatus("error");
       setError(result.error ?? "No se pudo subir la imagen.");
@@ -62,7 +64,7 @@ export default function ImageUploadField({
       <div className="flex items-center gap-3">
         {url ? (
           <div className="relative h-14 w-14 shrink-0 rounded-sm overflow-hidden border border-ink-line bg-ink-elevated">
-            <Image src={url} alt="" fill className="object-cover" />
+            <Image src={url} alt="" fill sizes="56px" className="object-cover" />
           </div>
         ) : (
           <div className="h-14 w-14 shrink-0 rounded-sm border border-dashed border-ink-line flex items-center justify-center text-bone-muted text-[10px] text-center px-1">
@@ -70,12 +72,14 @@ export default function ImageUploadField({
           </div>
         )}
 
-        <label className="section-eyebrow text-[11px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors cursor-pointer">
+        <label className="section-eyebrow text-[11px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass focus-within:ring-2 focus-within:ring-brass/60 focus-within:ring-offset-2 focus-within:ring-offset-ink transition-colors cursor-pointer">
           {status === "uploading"
             ? "Subiendo..."
-            : url
-              ? "Cambiar"
-              : "Subir imagen"}
+            : status === "success"
+              ? "✓ Subida"
+              : url
+                ? "Cambiar"
+                : "Subir imagen"}
           <input
             ref={inputRef}
             type="file"

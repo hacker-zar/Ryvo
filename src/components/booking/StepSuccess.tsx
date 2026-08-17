@@ -1,10 +1,10 @@
 "use client";
 
 import { Business, Location, Service } from "@/types/business";
-import { readableTextColor } from "@/lib/format";
+import { readableTextColor, whatsappLink } from "@/lib/format";
 
 interface StepSuccessProps {
-  business: Pick<Business, "primary_color">;
+  business: Pick<Business, "name" | "primary_color" | "whatsapp">;
   service: Service;
   location: Location;
   date: string;
@@ -21,6 +21,37 @@ function formatDateLong(dateStr: string): string {
   });
 }
 
+// Sin librería: Google Calendar acepta un link con los datos del evento
+// como query params, sin necesidad de credenciales ni API.
+function googleCalendarUrl(opts: {
+  title: string;
+  details: string;
+  location: string;
+  date: string;
+  time: string;
+  durationMin: number;
+}): string {
+  const [y, m, d] = opts.date.split("-").map(Number);
+  const [h, min] = opts.time.split(":").map(Number);
+  const start = new Date(y, m - 1, d, h, min);
+  const end = new Date(start.getTime() + opts.durationMin * 60000);
+  const fmt = (dt: Date) =>
+    `${dt.getFullYear()}${String(dt.getMonth() + 1).padStart(2, "0")}${String(
+      dt.getDate()
+    ).padStart(2, "0")}T${String(dt.getHours()).padStart(2, "0")}${String(
+      dt.getMinutes()
+    ).padStart(2, "0")}00`;
+
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: opts.title,
+    dates: `${fmt(start)}/${fmt(end)}`,
+    details: opts.details,
+    location: opts.location,
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
 export default function StepSuccess({
   business,
   service,
@@ -29,6 +60,15 @@ export default function StepSuccess({
   time,
   onClose,
 }: StepSuccessProps) {
+  const calendarUrl = googleCalendarUrl({
+    title: `${service.name} — ${business.name}`,
+    details: `Turno reservado en ${business.name}.`,
+    location: location.name,
+    date,
+    time,
+    durationMin: service.duration,
+  });
+
   return (
     <div className="text-center py-6">
       <div
@@ -55,10 +95,36 @@ export default function StepSuccess({
 
       <p className="mt-6 text-sm text-bone-muted">Te esperamos.</p>
 
+      <div className="mt-6 flex flex-col gap-2.5 max-w-xs mx-auto">
+        {business.whatsapp ? (
+          <a
+            href={whatsappLink(
+              business.whatsapp,
+              `Hola! Quiero confirmar mi turno de ${service.name} el ${formatDateLong(
+                date
+              )} a las ${time}.`
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+          >
+            Confirmar por WhatsApp
+          </a>
+        ) : null}
+        <a
+          href={calendarUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+        >
+          Agregar al calendario
+        </a>
+      </div>
+
       <button
         type="button"
         onClick={onClose}
-        className="section-eyebrow mt-8 rounded-sm font-semibold text-xs px-7 py-3.5 hover:opacity-90 transition-opacity"
+        className="section-eyebrow mt-6 rounded-sm font-semibold text-xs px-7 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-opacity"
         style={{
           backgroundColor: business.primary_color,
           color: readableTextColor(business.primary_color),

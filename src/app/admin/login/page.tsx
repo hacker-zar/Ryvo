@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import { getBusinessIdBySlug } from "@/lib/data/business-repository";
+import { adminThemeDataAttrs, adminThemeStyle } from "@/lib/ui-classes";
 import LoginForm from "./login-form";
 
 interface PageProps {
@@ -32,7 +33,11 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
   // decidir a qué negocio pertenece la cuenta que se loguea. Eso lo
   // determina el server a partir del usuario ingresado.
   return (
-    <main className="flex-1 flex items-center justify-center px-4 bg-ink min-h-screen">
+    <main
+      className="flex-1 flex items-center justify-center px-4 bg-ink min-h-screen"
+      style={adminThemeStyle}
+      {...adminThemeDataAttrs}
+    >
       <div className="w-full max-w-sm">
         <p className="section-eyebrow text-brass text-center">
           Administración

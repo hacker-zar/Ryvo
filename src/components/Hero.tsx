@@ -31,6 +31,7 @@ export default function Hero({ business }: HeroProps) {
             alt=""
             fill
             priority
+            sizes="100vw"
             className="object-cover"
           />
           {/* Capa base pareja: garantiza un piso de contraste en TODO el

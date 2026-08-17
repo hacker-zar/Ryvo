@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Business, Location, Service } from "@/types/business";
 import { useBookingModal } from "@/lib/booking-modal-context";
 import { submitBooking } from "@/lib/actions/booking-actions";
-import { readableTextColor } from "@/lib/format";
+import { isLikelyPhone, readableTextColor } from "@/lib/format";
 import StepIndicator from "./StepIndicator";
 import StepService from "./StepService";
 import StepDateTime from "./StepDateTime";
@@ -12,7 +12,7 @@ import StepDetails from "./StepDetails";
 import StepSuccess from "./StepSuccess";
 
 interface BookingModalProps {
-  business: Pick<Business, "id" | "primary_color">;
+  business: Pick<Business, "id" | "name" | "primary_color" | "whatsapp">;
   services: Service[];
   locations: Location[];
 }
@@ -51,6 +51,10 @@ function BookingModalContent({
   const [customerEmail, setCustomerEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  // Si el horario se ocupó justo antes de confirmar (ver submitBooking /
+  // createBooking, campo `conflict`), en vez de un error genérico en el
+  // paso 3 volvemos al paso 2 con este mensaje y el horario limpio.
+  const [conflictMessage, setConflictMessage] = useState("");
 
   // Bloquea el scroll del body mientras el modal está abierto.
   useEffect(() => {
@@ -102,6 +106,12 @@ function BookingModalContent({
 
     if (result.success) {
       goToStep("success", "forward");
+    } else if (result.conflict) {
+      setTime(null);
+      setConflictMessage(
+        result.error ?? "Este horario acaba de ocuparse — elegí otro."
+      );
+      goToStep(2, "backward");
     } else {
       setSubmitError(result.error ?? "No se pudo completar la reserva.");
     }
@@ -109,7 +119,8 @@ function BookingModalContent({
 
   const canContinueStep1 = Boolean(selectedService);
   const canContinueStep2 = Boolean(activeLocation && date && time);
-  const canConfirmStep3 = customerName.trim() && customerPhone.trim();
+  const canConfirmStep3 =
+    customerName.trim() && isLikelyPhone(customerPhone);
   const ctaTextColor = readableTextColor(business.primary_color);
 
   return (
@@ -142,7 +153,7 @@ function BookingModalContent({
               type="button"
               onClick={close}
               aria-label="Cerrar"
-              className="text-bone-muted hover:text-bone transition-colors text-lg leading-none shrink-0"
+              className="text-bone-muted hover:text-bone focus-visible:ring-2 focus-visible:ring-brass rounded-sm transition-colors text-lg leading-none shrink-0"
             >
               ✕
             </button>
@@ -173,9 +184,16 @@ function BookingModalContent({
               selectedLocationId={locationId}
               selectedDate={date}
               selectedTime={time}
+              conflictMessage={conflictMessage}
               onSelectLocation={setLocationId}
-              onSelectDate={setDate}
-              onSelectTime={setTime}
+              onSelectDate={(d) => {
+                setDate(d);
+                setConflictMessage("");
+              }}
+              onSelectTime={(t) => {
+                setTime(t);
+                setConflictMessage("");
+              }}
             />
           ) : null}
 
@@ -224,7 +242,7 @@ function BookingModalContent({
                   onClick={() =>
                     goToStep(step === 3 ? 2 : step === 2 ? 1 : step, "backward")
                   }
-                  className="section-eyebrow text-xs px-5 py-3 btn-radius border border-ink-line text-bone-muted hover:text-bone transition-colors"
+                  className="section-eyebrow text-xs px-5 py-3 btn-radius border border-ink-line text-bone-muted hover:text-bone focus-visible:ring-2 focus-visible:ring-brass transition-colors"
                 >
                   Atrás
                 </button>
@@ -235,7 +253,7 @@ function BookingModalContent({
                   type="button"
                   disabled={!canContinueStep1}
                   onClick={() => goToStep(2, "forward")}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 transition-opacity"
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity"
                   style={{
                     backgroundColor: business.primary_color,
                     color: ctaTextColor,
@@ -250,7 +268,7 @@ function BookingModalContent({
                   type="button"
                   disabled={!canContinueStep2}
                   onClick={() => goToStep(3, "forward")}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 transition-opacity"
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity"
                   style={{
                     backgroundColor: business.primary_color,
                     color: ctaTextColor,
@@ -265,7 +283,7 @@ function BookingModalContent({
                   type="button"
                   disabled={!canConfirmStep3 || submitting}
                   onClick={handleConfirm}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 transition-opacity"
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity"
                   style={{
                     backgroundColor: business.primary_color,
                     color: ctaTextColor,

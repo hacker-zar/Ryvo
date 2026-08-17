@@ -10,10 +10,11 @@ import {
   adminUpdateLocation,
 } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
+import { useAsyncStatus } from "@/lib/useAsyncStatus";
+import { adminInputClassesCompact } from "@/lib/ui-classes";
+import SaveStatus from "@/components/ui/SaveStatus";
+import EmptyState from "@/components/ui/EmptyState";
 import WeekScheduleEditor from "@/components/admin/WeekScheduleEditor";
-
-const inputClasses =
-  "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors";
 
 interface LocationsManagerProps {
   businessId: string;
@@ -52,7 +53,8 @@ export default function LocationsManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<LocationFormState>(EMPTY_FORM);
   const [newForm, setNewForm] = useState<LocationFormState>(EMPTY_FORM);
-  const [creating, setCreating] = useState(false);
+  const createStatus = useAsyncStatus();
+  const updateStatus = useAsyncStatus();
 
   function startEditing(location: Location) {
     setEditingId(location.id);
@@ -66,7 +68,6 @@ export default function LocationsManager({
 
   async function handleCreate() {
     if (!newForm.name.trim()) return;
-    setCreating(true);
 
     const formData = new FormData();
     formData.set("name", newForm.name);
@@ -74,8 +75,9 @@ export default function LocationsManager({
     if (newForm.is_primary) formData.set("is_primary", "on");
     formData.set("opening_hours", JSON.stringify(newForm.opening_hours));
 
-    const result = await adminCreateLocation(businessId, formData);
-    setCreating(false);
+    const result = await createStatus.run(() =>
+      adminCreateLocation(businessId, formData)
+    );
     if (result.success) {
       router.refresh();
       refreshPreview();
@@ -89,7 +91,9 @@ export default function LocationsManager({
     if (editForm.is_primary) formData.set("is_primary", "on");
     formData.set("opening_hours", JSON.stringify(editForm.opening_hours));
 
-    const result = await adminUpdateLocation(businessId, locationId, formData);
+    const result = await updateStatus.run(() =>
+      adminUpdateLocation(businessId, locationId, formData)
+    );
     if (result.success) {
       setEditingId(null);
       router.refresh();
@@ -110,10 +114,10 @@ export default function LocationsManager({
     <div className="mt-6">
       <div className="divide-y divide-ink-line border-t border-b border-ink-line">
         {items.length === 0 ? (
-          <p className="py-6 text-sm text-bone-muted">
-            Todavía no hay locales cargados. Sin al menos uno con horario, no
-            se puede reservar turno.
-          </p>
+          <EmptyState
+            title="Todavía no hay locales cargados."
+            hint="Sin al menos uno con horario, no se puede reservar turno."
+          />
         ) : (
           items.map((location) =>
             editingId === location.id ? (
@@ -124,7 +128,7 @@ export default function LocationsManager({
                     setEditForm((f) => ({ ...f, name: e.target.value }))
                   }
                   required
-                  className={inputClasses}
+                  className={adminInputClassesCompact}
                   placeholder="Nombre del local"
                 />
                 <input
@@ -132,7 +136,7 @@ export default function LocationsManager({
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, address: e.target.value }))
                   }
-                  className={inputClasses}
+                  className={adminInputClassesCompact}
                   placeholder="Dirección"
                 />
                 <label className="flex items-center gap-2 text-xs text-bone-muted">
@@ -159,13 +163,15 @@ export default function LocationsManager({
                   }
                 />
 
+                <SaveStatus status={updateStatus.status} error={updateStatus.error} />
                 <div className="flex gap-3 mt-2">
                   <button
                     type="button"
+                    disabled={updateStatus.isPending}
                     onClick={() => handleUpdate(location.id)}
-                    className="section-eyebrow text-xs px-4 py-2 rounded-sm bg-brass text-ink font-semibold w-fit"
+                    className="section-eyebrow text-xs px-4 py-2 rounded-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50"
                   >
-                    Guardar
+                    {updateStatus.isPending ? "Guardando..." : "Guardar"}
                   </button>
                   <button
                     type="button"
@@ -224,7 +230,7 @@ export default function LocationsManager({
         <input
           value={newForm.name}
           onChange={(e) => setNewForm((f) => ({ ...f, name: e.target.value }))}
-          className={inputClasses}
+          className={adminInputClassesCompact}
           placeholder="Nombre del local"
         />
         <input
@@ -232,7 +238,7 @@ export default function LocationsManager({
           onChange={(e) =>
             setNewForm((f) => ({ ...f, address: e.target.value }))
           }
-          className={inputClasses}
+          className={adminInputClassesCompact}
           placeholder="Dirección"
         />
         <label className="flex items-center gap-2 text-xs text-bone-muted">
@@ -256,13 +262,14 @@ export default function LocationsManager({
           }
         />
 
+        <SaveStatus status={createStatus.status} error={createStatus.error} />
         <button
           type="button"
-          disabled={creating || !newForm.name.trim()}
+          disabled={createStatus.isPending || !newForm.name.trim()}
           onClick={handleCreate}
           className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit disabled:opacity-50"
         >
-          {creating ? "Agregando..." : "+ Agregar local"}
+          {createStatus.isPending ? "Agregando..." : "+ Agregar local"}
         </button>
       </div>
     </div>

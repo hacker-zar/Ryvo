@@ -10,9 +10,10 @@ import {
   adminUpdateService,
 } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
-
-const inputClasses =
-  "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors";
+import { useAsyncStatus } from "@/lib/useAsyncStatus";
+import { adminInputClassesCompact } from "@/lib/ui-classes";
+import SaveStatus from "@/components/ui/SaveStatus";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface ServicesManagerProps {
   businessId: string;
@@ -26,11 +27,17 @@ export default function ServicesManager({
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
   const [items, setItems] = useState(services);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const editingId =
     target?.category === "servicios" ? target.itemId ?? null : null;
 
+  const createStatus = useAsyncStatus();
+  const updateStatus = useAsyncStatus();
+
   async function handleCreate(formData: FormData) {
-    const result = await adminCreateService(businessId, formData);
+    const result = await createStatus.run(() =>
+      adminCreateService(businessId, formData)
+    );
     if (result.success) {
       router.refresh();
       refreshPreview();
@@ -38,7 +45,9 @@ export default function ServicesManager({
   }
 
   async function handleUpdate(serviceId: string, formData: FormData) {
-    const result = await adminUpdateService(businessId, serviceId, formData);
+    const result = await updateStatus.run(() =>
+      adminUpdateService(businessId, serviceId, formData)
+    );
     if (result.success) {
       select({ category: "servicios" });
       router.refresh();
@@ -48,7 +57,9 @@ export default function ServicesManager({
 
   async function handleDelete(serviceId: string) {
     if (!confirm("¿Borrar este servicio?")) return;
+    setDeletingId(serviceId);
     const result = await adminDeleteService(businessId, serviceId);
+    setDeletingId(null);
     if (result.success) {
       setItems((prev) => prev.filter((s) => s.id !== serviceId));
       refreshPreview();
@@ -59,9 +70,10 @@ export default function ServicesManager({
     <div className="mt-6">
       <div className="divide-y divide-ink-line border-t border-b border-ink-line">
         {items.length === 0 ? (
-          <p className="py-6 text-sm text-bone-muted">
-            Todavía no hay servicios cargados.
-          </p>
+          <EmptyState
+            title="Todavía no hay servicios cargados."
+            hint="Agregá al menos uno abajo para que tus clientes puedan reservar."
+          />
         ) : (
           items.map((service) =>
             editingId === service.id ? (
@@ -74,14 +86,14 @@ export default function ServicesManager({
                   name="name"
                   defaultValue={service.name}
                   required
-                  className={inputClasses}
+                  className={adminInputClassesCompact}
                   placeholder="Nombre"
                 />
                 <textarea
                   name="description"
                   defaultValue={service.description}
                   rows={2}
-                  className={inputClasses}
+                  className={adminInputClassesCompact}
                   placeholder="Descripción"
                 />
                 <div className="grid grid-cols-3 gap-3">
@@ -91,7 +103,7 @@ export default function ServicesManager({
                     step="1"
                     min="0"
                     defaultValue={service.price}
-                    className={inputClasses}
+                    className={adminInputClassesCompact}
                     placeholder="Precio"
                   />
                   <input
@@ -100,7 +112,7 @@ export default function ServicesManager({
                     step="5"
                     min="5"
                     defaultValue={service.duration}
-                    className={inputClasses}
+                    className={adminInputClassesCompact}
                     placeholder="Duración (min)"
                   />
                   <label className="flex items-center gap-2 text-xs text-bone-muted">
@@ -112,12 +124,14 @@ export default function ServicesManager({
                     Activo
                   </label>
                 </div>
+                <SaveStatus status={updateStatus.status} error={updateStatus.error} />
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="section-eyebrow text-xs px-4 py-2 rounded-sm bg-brass text-ink font-semibold w-fit"
+                    disabled={updateStatus.isPending}
+                    className="section-eyebrow text-xs px-4 py-2 rounded-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50"
                   >
-                    Guardar
+                    {updateStatus.isPending ? "Guardando..." : "Guardar"}
                   </button>
                   <button
                     type="button"
@@ -161,10 +175,11 @@ export default function ServicesManager({
                     Editar
                   </button>
                   <button
+                    disabled={deletingId === service.id}
                     onClick={() => handleDelete(service.id)}
-                    className="text-xs text-bone-muted hover:text-red-400 transition-colors"
+                    className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
                   >
-                    Borrar
+                    {deletingId === service.id ? "Borrando..." : "Borrar"}
                   </button>
                 </div>
               </div>
@@ -178,13 +193,13 @@ export default function ServicesManager({
         <input
           name="name"
           required
-          className={inputClasses}
+          className={adminInputClassesCompact}
           placeholder="Nombre"
         />
         <textarea
           name="description"
           rows={2}
-          className={inputClasses}
+          className={adminInputClassesCompact}
           placeholder="Descripción"
         />
         <div className="grid grid-cols-2 gap-3">
@@ -194,7 +209,7 @@ export default function ServicesManager({
             step="1"
             min="0"
             required
-            className={inputClasses}
+            className={adminInputClassesCompact}
             placeholder="Precio"
           />
           <input
@@ -204,7 +219,7 @@ export default function ServicesManager({
             min="5"
             defaultValue={30}
             required
-            className={inputClasses}
+            className={adminInputClassesCompact}
             placeholder="Duración (min)"
           />
         </div>
@@ -212,11 +227,13 @@ export default function ServicesManager({
           <input name="active" type="checkbox" defaultChecked />
           Activo
         </label>
+        <SaveStatus status={createStatus.status} error={createStatus.error} />
         <button
           type="submit"
-          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit"
+          disabled={createStatus.isPending}
+          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit disabled:opacity-50"
         >
-          + Agregar
+          {createStatus.isPending ? "Agregando..." : "+ Agregar"}
         </button>
       </form>
     </div>

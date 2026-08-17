@@ -69,7 +69,7 @@ export default function Lightbox({
         type="button"
         onClick={onClose}
         aria-label="Cerrar"
-        className="absolute top-4 right-4 sm:top-6 sm:right-6 h-10 w-10 rounded-full bg-black/50 text-bone text-lg flex items-center justify-center hover:bg-black/70 transition-colors"
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 h-10 w-10 rounded-full bg-black/50 text-bone text-lg flex items-center justify-center hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-brass transition-colors"
       >
         ✕
       </button>
@@ -80,7 +80,7 @@ export default function Lightbox({
             type="button"
             onClick={() => onNavigate((index - 1 + images.length) % images.length)}
             aria-label="Foto anterior"
-            className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/50 text-bone text-xl flex items-center justify-center hover:bg-black/70 transition-colors"
+            className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/50 text-bone text-xl flex items-center justify-center hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-brass transition-colors"
           >
             ‹
           </button>
@@ -88,7 +88,7 @@ export default function Lightbox({
             type="button"
             onClick={() => onNavigate((index + 1) % images.length)}
             aria-label="Foto siguiente"
-            className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/50 text-bone text-xl flex items-center justify-center hover:bg-black/70 transition-colors"
+            className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/50 text-bone text-xl flex items-center justify-center hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-brass transition-colors"
           >
             ›
           </button>

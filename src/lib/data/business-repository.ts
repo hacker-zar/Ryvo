@@ -141,12 +141,15 @@ export async function getBookedSlots(
 
 export async function createBooking(
   booking: Omit<Booking, "id" | "created_at" | "status">
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; conflict?: boolean }> {
   if (isSupabaseConfigured && supabase) {
     // Chequeo de disponibilidad antes de insertar. No es 100% atómico
     // (podría haber una carrera entre el check y el insert), por eso el
     // schema también tiene un índice único que rechaza el duplicado a
-    // nivel de base de datos como defensa final.
+    // nivel de base de datos como defensa final. `conflict: true`
+    // distingue este caso puntual de cualquier otro error — el wizard de
+    // reserva lo usa para volver a elegir horario en vez de solo mostrar
+    // un mensaje genérico.
     const existing = await getBookedSlots(
       booking.business_id,
       booking.location_id,
@@ -158,6 +161,7 @@ export async function createBooking(
     if (alreadyTaken) {
       return {
         success: false,
+        conflict: true,
         error: "Ese horario ya fue reservado. Elegí otro.",
       };
     }
@@ -173,6 +177,7 @@ export async function createBooking(
       if (error.code === "23505") {
         return {
           success: false,
+          conflict: true,
           error: "Ese horario ya fue reservado. Elegí otro.",
         };
       }

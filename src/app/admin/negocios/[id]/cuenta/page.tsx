@@ -3,6 +3,7 @@ import Link from "next/link";
 import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import { getBusinessById } from "@/lib/data/business-repository";
 import { listAccountsByBusiness } from "@/lib/data/accounts-repository";
+import { logoutAdmin } from "@/lib/admin/auth-actions";
 import AdminChrome from "@/components/admin/AdminChrome";
 import AccountManager from "../account-manager";
 
@@ -46,6 +47,22 @@ export default async function AccountPage({ params }: PageProps) {
 
       <div className="mt-8">
         <AccountManager businessId={business.id} accounts={accounts} />
+      </div>
+
+      <div className="mt-12 border-t border-ink-line pt-6">
+        <p className="section-eyebrow text-brass">Sesión</p>
+        <p className="text-xs text-bone-muted mt-2 max-w-md">
+          Para probar con otra cuenta (otro negocio, u otro rol de acceso)
+          cerrá esta sesión primero.
+        </p>
+        <form action={logoutAdmin} className="mt-4">
+          <button
+            type="submit"
+            className="section-eyebrow text-xs px-4 py-2 rounded-sm border border-ink-line text-bone hover:border-brass hover:text-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+          >
+            Cerrar sesión
+          </button>
+        </form>
       </div>
     </AdminChrome>
   );

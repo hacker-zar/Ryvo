@@ -7,9 +7,9 @@ import {
   adminCreateAccount,
   adminUpdateAccount,
 } from "@/lib/admin/actions";
-
-const inputClasses =
-  "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2.5 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors";
+import { useAsyncStatus } from "@/lib/useAsyncStatus";
+import { adminInputClasses } from "@/lib/ui-classes";
+import SaveStatus from "@/components/ui/SaveStatus";
 
 interface AccountManagerProps {
   businessId: string;
@@ -40,19 +40,11 @@ export default function AccountManager({
 }
 
 function CreateAccountForm({ businessId }: { businessId: string }) {
-  const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
-  const [error, setError] = useState("");
+  const { status, error, run, isPending } = useAsyncStatus();
 
   async function handleSubmit(formData: FormData) {
-    setStatus("submitting");
-    setError("");
-    const result = await adminCreateAccount(businessId, formData);
-    if (result.success) {
-      window.location.reload();
-    } else {
-      setStatus("error");
-      setError(result.error ?? "No se pudo crear la cuenta.");
-    }
+    const result = await run(() => adminCreateAccount(businessId, formData));
+    if (result.success) window.location.reload();
   }
 
   return (
@@ -65,13 +57,13 @@ function CreateAccountForm({ businessId }: { businessId: string }) {
         <label htmlFor="name" className="text-xs text-bone-muted">
           Nombre
         </label>
-        <input id="name" name="name" required className={inputClasses} />
+        <input id="name" name="name" required className={adminInputClasses} />
       </div>
       <div className="grid gap-1.5">
         <label htmlFor="username" className="text-xs text-bone-muted">
           Usuario
         </label>
-        <input id="username" name="username" required className={inputClasses} />
+        <input id="username" name="username" required className={adminInputClasses} />
       </div>
       <div className="grid gap-1.5">
         <label htmlFor="password" className="text-xs text-bone-muted">
@@ -84,16 +76,16 @@ function CreateAccountForm({ businessId }: { businessId: string }) {
           required
           minLength={8}
           placeholder="Mínimo 8 caracteres"
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
-      {status === "error" ? <p className="text-sm text-red-400">{error}</p> : null}
+      <SaveStatus status={status} error={error} />
       <button
         type="submit"
-        disabled={status === "submitting"}
+        disabled={isPending}
         className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
       >
-        {status === "submitting" ? "Creando..." : "Crear cuenta"}
+        {isPending ? "Creando..." : "Crear cuenta"}
       </button>
     </form>
   );
@@ -106,21 +98,10 @@ function ExistingAccount({
   businessId: string;
   account: Account;
 }) {
-  const [status, setStatus] = useState<"idle" | "submitting" | "saved" | "error">(
-    "idle"
-  );
-  const [error, setError] = useState("");
+  const { status, error, run, isPending } = useAsyncStatus();
 
   async function handleUpdate(formData: FormData) {
-    setStatus("submitting");
-    setError("");
-    const result = await adminUpdateAccount(businessId, account.id, formData);
-    if (result.success) {
-      setStatus("saved");
-    } else {
-      setStatus("error");
-      setError(result.error ?? "No se pudo guardar.");
-    }
+    await run(() => adminUpdateAccount(businessId, account.id, formData));
   }
 
   return (
@@ -135,7 +116,7 @@ function ExistingAccount({
             name="name"
             defaultValue={account.name}
             required
-            className={inputClasses}
+            className={adminInputClasses}
           />
         </div>
         <div className="grid gap-1.5">
@@ -147,7 +128,7 @@ function ExistingAccount({
             name="username"
             defaultValue={account.username}
             required
-            className={inputClasses}
+            className={adminInputClasses}
           />
         </div>
         <label className="flex items-center gap-2 text-xs text-bone-muted">
@@ -155,17 +136,14 @@ function ExistingAccount({
           Cuenta activa
         </label>
 
-        {status === "error" ? <p className="text-sm text-red-400">{error}</p> : null}
-        {status === "saved" ? (
-          <p className="text-sm text-brass">Guardado.</p>
-        ) : null}
+        <SaveStatus status={status} error={error} />
 
         <button
           type="submit"
-          disabled={status === "submitting"}
+          disabled={isPending}
           className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
         >
-          {status === "submitting" ? "Guardando..." : "Guardar cuenta"}
+          {isPending ? "Guardando..." : "Guardar cuenta"}
         </button>
       </form>
 
@@ -183,27 +161,18 @@ function ChangePasswordForm({
 }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitting" | "saved" | "error">(
-    "idle"
-  );
-  const [error, setError] = useState("");
+  const { status, error, run, isPending } = useAsyncStatus();
 
   async function handleSubmit(formData: FormData) {
-    if (password !== confirm) {
-      setStatus("error");
-      setError("Las contraseñas no coinciden.");
-      return;
-    }
-    setStatus("submitting");
-    setError("");
-    const result = await adminChangeAccountPassword(businessId, accountId, formData);
+    const result = await run(async () => {
+      if (password !== confirm) {
+        return { success: false, error: "Las contraseñas no coinciden." };
+      }
+      return adminChangeAccountPassword(businessId, accountId, formData);
+    });
     if (result.success) {
-      setStatus("saved");
       setPassword("");
       setConfirm("");
-    } else {
-      setStatus("error");
-      setError(result.error ?? "No se pudo cambiar la contraseña.");
     }
   }
 
@@ -223,7 +192,7 @@ function ChangePasswordForm({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Mínimo 8 caracteres"
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
       <div className="grid gap-1.5">
@@ -237,19 +206,16 @@ function ChangePasswordForm({
           minLength={8}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
-          className={inputClasses}
+          className={adminInputClasses}
         />
       </div>
-      {status === "error" ? <p className="text-sm text-red-400">{error}</p> : null}
-      {status === "saved" ? (
-        <p className="text-sm text-brass">Contraseña actualizada.</p>
-      ) : null}
+      <SaveStatus status={status} error={error} savedLabel="Contraseña actualizada." />
       <button
         type="submit"
-        disabled={status === "submitting"}
+        disabled={isPending}
         className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
       >
-        {status === "submitting" ? "Guardando..." : "Cambiar contraseña"}
+        {isPending ? "Guardando..." : "Cambiar contraseña"}
       </button>
     </form>
   );

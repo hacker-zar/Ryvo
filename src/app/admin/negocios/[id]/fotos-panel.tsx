@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { adminUpdateBusiness } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
+import { useAsyncStatus } from "@/lib/useAsyncStatus";
+import SaveStatus from "@/components/ui/SaveStatus";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import GalleryUploadField from "@/components/admin/GalleryUploadField";
 
@@ -20,22 +21,11 @@ export default function FotosPanel({
   gallery,
 }: FotosPanelProps) {
   const { refreshPreview } = useEditorSelection();
-  const [status, setStatus] = useState<"idle" | "submitting" | "saved" | "error">(
-    "idle"
-  );
-  const [error, setError] = useState("");
+  const { status, error, run, isPending } = useAsyncStatus();
 
   async function handleSubmit(formData: FormData) {
-    setStatus("submitting");
-    setError("");
-    const result = await adminUpdateBusiness(businessId, formData);
-    if (result.success) {
-      setStatus("saved");
-      refreshPreview();
-    } else {
-      setStatus("error");
-      setError(result.error ?? "No se pudo guardar.");
-    }
+    const result = await run(() => adminUpdateBusiness(businessId, formData));
+    if (result.success) refreshPreview();
   }
 
   return (
@@ -54,19 +44,14 @@ export default function FotosPanel({
           defaultValue={heroImage}
         />
 
-        {status === "error" ? (
-          <p className="text-sm text-red-400">{error}</p>
-        ) : null}
-        {status === "saved" ? (
-          <p className="text-sm text-brass">Guardado.</p>
-        ) : null}
+        <SaveStatus status={status} error={error} />
 
         <button
           type="submit"
-          disabled={status === "submitting"}
+          disabled={isPending}
           className="section-eyebrow rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity disabled:opacity-50 w-fit"
         >
-          {status === "submitting" ? "Guardando..." : "Guardar fotos"}
+          {isPending ? "Guardando..." : "Guardar fotos"}
         </button>
       </form>
 

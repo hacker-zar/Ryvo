@@ -28,13 +28,13 @@ export default function MarketingHero() {
         <div className="mt-10 flex flex-wrap justify-center gap-4">
           <Link
             href="/registro"
-            className="rounded-full bg-porcelain text-graphite text-sm font-semibold px-7 py-3.5 hover:opacity-90 transition-opacity"
+            className="rounded-full bg-porcelain text-graphite text-sm font-semibold px-7 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-graphite transition-opacity"
           >
             Quiero mi web
           </Link>
           <a
             href="#producto"
-            className="rounded-full border border-graphite-line text-porcelain text-sm px-7 py-3.5 hover:border-porcelain-muted transition-colors"
+            className="rounded-full border border-graphite-line text-porcelain text-sm px-7 py-3.5 hover:border-porcelain-muted focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-graphite transition-colors"
           >
             Ver el producto
           </a>

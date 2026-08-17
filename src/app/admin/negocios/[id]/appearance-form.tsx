@@ -10,6 +10,8 @@ import {
   backgroundVariantFor,
 } from "@/lib/appearance-presets";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
+import { useAsyncStatus } from "@/lib/useAsyncStatus";
+import SaveStatus from "@/components/ui/SaveStatus";
 
 interface AppearanceFormProps {
   business: Pick<
@@ -59,10 +61,7 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   const [buttonStyle, setButtonStyle] = useState<ButtonStyle>(
     business.button_style || "recto"
   );
-  const [status, setStatus] = useState<"idle" | "submitting" | "saved" | "error">(
-    "idle"
-  );
-  const [error, setError] = useState("");
+  const { status, error, run, isPending } = useAsyncStatus();
 
   const backgroundPreset = BACKGROUND_VARIANTS[backgroundVariant];
 
@@ -74,16 +73,8 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   const lowAccentContrast = accentContrast !== null && accentContrast < 3;
 
   async function handleSubmit(formData: FormData) {
-    setStatus("submitting");
-    setError("");
-    const result = await adminUpdateAppearance(business.id, formData);
-    if (result.success) {
-      setStatus("saved");
-      refreshPreview();
-    } else {
-      setStatus("error");
-      setError(result.error ?? "No se pudo guardar.");
-    }
+    const result = await run(() => adminUpdateAppearance(business.id, formData));
+    if (result.success) refreshPreview();
   }
 
   return (
@@ -222,22 +213,20 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
         </div>
       </div>
 
-      {status === "error" ? (
-        <p className="text-sm text-red-400">{error}</p>
-      ) : null}
-      {status === "saved" ? (
-        <p className="text-sm" style={{ color: primaryColor }}>
-          Guardado. Los cambios ya se ven en el sitio público.
-        </p>
-      ) : null}
+      <SaveStatus
+        status={status}
+        error={error}
+        savedLabel="Guardado. Los cambios ya se ven en el sitio público."
+        successColor={primaryColor}
+      />
 
       <button
         type="submit"
-        disabled={status === "submitting"}
+        disabled={isPending}
         className="section-eyebrow rounded-sm text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity disabled:opacity-50 w-fit"
         style={{ backgroundColor: primaryColor }}
       >
-        {status === "submitting" ? "Guardando..." : "Guardar apariencia"}
+        {isPending ? "Guardando..." : "Guardar apariencia"}
       </button>
     </form>
   );

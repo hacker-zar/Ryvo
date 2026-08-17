@@ -97,7 +97,12 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         <Footer business={{ name: business.name, slug: business.slug }} />
 
         <BookingModal
-          business={{ id: business.id, primary_color: business.primary_color }}
+          business={{
+            id: business.id,
+            name: business.name,
+            primary_color: business.primary_color,
+            whatsapp: business.whatsapp,
+          }}
           services={services}
           locations={locations}
         />

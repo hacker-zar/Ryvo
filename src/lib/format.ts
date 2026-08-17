@@ -27,6 +27,13 @@ export function dayLabel(day: string): string {
   return DAY_LABELS[day] ?? day;
 }
 
+/** Al menos unos pocos dígitos — deliberadamente laxo (no valida
+ *  formato/código de país): el objetivo es atajar un typo obvio en el
+ *  teléfono de una reserva, no imponer un formato único internacional. */
+export function isLikelyPhone(value: string): boolean {
+  return value.replace(/\D/g, "").length >= 6;
+}
+
 /** Fecha de hoy en hora local del servidor, formato "YYYY-MM-DD" — mismo
  *  formato que usa la columna `bookings.date`. */
 export function todayDateString(): string {

@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminCreateBusiness } from "@/lib/admin/actions";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import { adminInputClasses } from "@/lib/ui-classes";
 
-const inputClasses =
-  "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2.5 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors disabled:opacity-50";
+const inputClasses = `${adminInputClasses} disabled:opacity-50`;
 
 export default function NewBusinessForm({ disabled }: { disabled?: boolean }) {
   const router = useRouter();
@@ -207,7 +207,7 @@ export default function NewBusinessForm({ disabled }: { disabled?: boolean }) {
       <button
         type="submit"
         disabled={disabled || status === "submitting"}
-        className="section-eyebrow mt-2 rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity disabled:opacity-50 w-fit"
+        className="section-eyebrow mt-2 rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity disabled:opacity-50 w-fit"
       >
         {status === "submitting" ? "Creando..." : "Crear negocio"}
       </button>
