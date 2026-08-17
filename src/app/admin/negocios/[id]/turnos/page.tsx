@@ -6,6 +6,7 @@ import {
   listBookingsByBusiness,
 } from "@/lib/data/business-repository";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { todayDateString } from "@/lib/format";
 import AdminChrome from "@/components/admin/AdminChrome";
 import BookingsList from "./bookings-list";
 
@@ -25,11 +26,18 @@ export default async function AdminBookingsPage({
   if (!canManageBusiness(session, id)) redirect("/admin");
 
   const { date } = await searchParams;
+  const today = todayDateString();
+
+  // Sin ?date en la URL: por defecto se muestran los turnos de HOY (lo que
+  // el dueño quiere ver primero). ?date=all es el "ver todos" explícito;
+  // cualquier otra fecha filtra por ese día puntual.
+  const viewAll = date === "all";
+  const effectiveDate = date === undefined ? today : viewAll ? undefined : date;
 
   const business = await getBusinessById(id);
   if (!business) notFound();
 
-  const bookings = await listBookingsByBusiness(id, date);
+  const bookings = await listBookingsByBusiness(id, effectiveDate);
 
   return (
     <AdminChrome>
@@ -51,7 +59,13 @@ export default async function AdminBookingsPage({
           modo demo.
         </div>
       ) : (
-        <BookingsList businessId={id} bookings={bookings} selectedDate={date} />
+        <BookingsList
+          businessId={id}
+          bookings={bookings}
+          selectedDate={effectiveDate}
+          today={today}
+          viewAll={viewAll}
+        />
       )}
     </AdminChrome>
   );

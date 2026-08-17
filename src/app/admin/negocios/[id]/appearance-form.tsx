@@ -4,6 +4,11 @@ import { useState } from "react";
 import { Business, ButtonStyle, TypographyPreset } from "@/types/business";
 import { adminUpdateAppearance } from "@/lib/admin/actions";
 import { contrastRatio } from "@/lib/format";
+import {
+  BACKGROUND_VARIANTS,
+  BackgroundVariant,
+  backgroundVariantFor,
+} from "@/lib/appearance-presets";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 
 interface AppearanceFormProps {
@@ -31,6 +36,11 @@ const BUTTON_STYLE_OPTIONS: { value: ButtonStyle; label: string }[] = [
   { value: "recto", label: "Recto" },
 ];
 
+const BACKGROUND_OPTIONS = Object.entries(BACKGROUND_VARIANTS) as [
+  BackgroundVariant,
+  (typeof BACKGROUND_VARIANTS)[BackgroundVariant],
+][];
+
 const colorInputClasses =
   "h-10 w-full rounded-sm border border-ink-line bg-ink-elevated";
 
@@ -40,10 +50,9 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   const [secondaryColor, setSecondaryColor] = useState(
     business.secondary_color
   );
-  const [backgroundColor, setBackgroundColor] = useState(
-    business.background_color || "#1a1815"
+  const [backgroundVariant, setBackgroundVariant] = useState<BackgroundVariant>(
+    backgroundVariantFor(business.background_color)
   );
-  const [textColor, setTextColor] = useState(business.text_color || "#f7f4ee");
   const [typography, setTypography] = useState<TypographyPreset>(
     business.typography_preset || "elegante"
   );
@@ -55,12 +64,13 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   );
   const [error, setError] = useState("");
 
-  // Avisos de contraste (no bloquean el guardado — es la elección del
-  // dueño, solo lo alertamos si va a costar leerlo). Umbrales WCAG: 4.5:1
-  // para texto de cuerpo, 3:1 para el acento (eyebrows/bordes, texto corto).
-  const textContrast = contrastRatio(textColor, backgroundColor);
-  const accentContrast = contrastRatio(primaryColor, backgroundColor);
-  const lowTextContrast = textContrast !== null && textContrast < 4.5;
+  const backgroundPreset = BACKGROUND_VARIANTS[backgroundVariant];
+
+  // Aviso de contraste (no bloquea el guardado — es la elección del dueño,
+  // solo lo alertamos si va a costar leerlo). El fondo/texto ya vienen
+  // curados por RYVO con buen contraste entre sí; lo único que puede
+  // quedar bajo es el color principal elegido libremente contra ese fondo.
+  const accentContrast = contrastRatio(primaryColor, backgroundPreset.background);
   const lowAccentContrast = accentContrast !== null && accentContrast < 3;
 
   async function handleSubmit(formData: FormData) {
@@ -78,6 +88,46 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
 
   return (
     <form action={handleSubmit} className="grid gap-6 max-w-lg">
+      <p className="text-xs text-bone-muted -mt-1">
+        Personalizá los colores, la tipografía y el fondo de tu web. La
+        estructura y el diseño general son de RYVO — así se mantiene
+        profesional sin importar qué elijas.
+      </p>
+
+      {/* Fondo: variante prediseñada, no un color libre — ver
+          appearance-presets.ts. Se guarda en las mismas columnas
+          background_color/text_color de siempre. */}
+      <input type="hidden" name="background_color" value={backgroundPreset.background} />
+      <input type="hidden" name="text_color" value={backgroundPreset.text} />
+      <div>
+        <p className="section-eyebrow text-bone-muted mb-3">Fondo</p>
+        <div className="flex gap-3">
+          {BACKGROUND_OPTIONS.map(([value, preset]) => (
+            <label
+              key={value}
+              className="flex-1 flex items-center gap-3 rounded-sm border px-3 py-2.5 cursor-pointer"
+              style={{
+                borderColor:
+                  backgroundVariant === value ? primaryColor : "var(--ink-line)",
+              }}
+            >
+              <input
+                type="radio"
+                name="background_variant"
+                checked={backgroundVariant === value}
+                onChange={() => setBackgroundVariant(value)}
+              />
+              <span
+                aria-hidden="true"
+                className="h-6 w-6 rounded-full border border-ink-line shrink-0"
+                style={{ backgroundColor: preset.background }}
+              />
+              <span className="text-sm text-bone">{preset.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* Colores */}
       <div>
         <p className="section-eyebrow text-bone-muted mb-3">Colores</p>
@@ -108,44 +158,11 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
               className={colorInputClasses}
             />
           </div>
-          <div className="grid gap-1.5">
-            <label htmlFor="background_color" className="text-xs text-bone-muted">
-              Fondo
-            </label>
-            <input
-              id="background_color"
-              name="background_color"
-              type="color"
-              value={backgroundColor}
-              onChange={(e) => setBackgroundColor(e.target.value)}
-              className={colorInputClasses}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <label htmlFor="text_color" className="text-xs text-bone-muted">
-              Texto
-            </label>
-            <input
-              id="text_color"
-              name="text_color"
-              type="color"
-              value={textColor}
-              onChange={(e) => setTextColor(e.target.value)}
-              className={colorInputClasses}
-            />
-          </div>
         </div>
 
-        {lowTextContrast ? (
-          <p className="mt-3 text-xs text-red-400">
-            ⚠️ El color de texto contrasta poco contra el fondo (
-            {textContrast?.toFixed(1)}:1) — puede costar leerlo. Se
-            recomienda al menos 4.5:1.
-          </p>
-        ) : null}
         {lowAccentContrast ? (
           <p className="mt-3 text-xs text-red-400">
-            ⚠️ El color principal contrasta poco contra el fondo (
+            ⚠️ El color principal contrasta poco contra el fondo elegido (
             {accentContrast?.toFixed(1)}:1) — se usa en títulos y bordes,
             puede costar verlo. Se recomienda al menos 3:1.
           </p>

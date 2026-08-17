@@ -3,12 +3,15 @@ import Link from "next/link";
 import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import {
   getBusinessById,
+  listBookingsByBusiness,
   listLocationsByBusiness,
   listProfessionalsByBusiness,
   listServicesByBusiness,
 } from "@/lib/data/business-repository";
+import { nowTimeString, todayDateString } from "@/lib/format";
 import AdminChrome from "@/components/admin/AdminChrome";
 import EditorShell from "./editor-shell";
+import TodaySummary from "./today-summary";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -31,6 +34,7 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
   const services = await listServicesByBusiness(id);
   const locations = await listLocationsByBusiness(id);
   const professionals = await listProfessionalsByBusiness(id);
+  const todayBookings = await listBookingsByBusiness(id, todayDateString());
 
   return (
     <AdminChrome>
@@ -47,6 +51,10 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
           <h1 className="section-title mt-2 text-2xl text-bone">
             {business.name}
           </h1>
+          <p className="text-xs text-bone-muted mt-1 max-w-sm">
+            Tu web ya está diseñada por RYVO — personalizala con tu
+            contenido, fotos y colores en el panel de abajo.
+          </p>
           <a
             href={`/${business.slug}`}
             target="_blank"
@@ -71,6 +79,12 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
           </Link>
         </div>
       </div>
+
+      <TodaySummary
+        businessId={business.id}
+        bookings={todayBookings}
+        nowTime={nowTimeString()}
+      />
 
       <div className="mt-10">
         <EditorShell

@@ -4,17 +4,27 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { BookingWithDetails } from "@/lib/data/business-repository";
 import { adminUpdateBookingStatus } from "@/lib/admin/actions";
+import { whatsappLink } from "@/lib/format";
 
 interface BookingsListProps {
   businessId: string;
   bookings: BookingWithDetails[];
+  /** Fecha efectivamente filtrada — undefined solo cuando viewAll=true. */
   selectedDate?: string;
+  today: string;
+  viewAll: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pendiente",
   confirmed: "Confirmado",
   cancelled: "Cancelado",
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  pending: "var(--bone-muted)",
+  confirmed: "var(--brass)",
+  cancelled: "#f87171",
 };
 
 function formatDateLong(dateStr: string): string {
@@ -27,21 +37,78 @@ function formatDateLong(dateStr: string): string {
   });
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const color = STATUS_COLOR[status] ?? "var(--bone-muted)";
+  return (
+    <span
+      className="section-eyebrow text-[10px] px-2 py-0.5 rounded-sm shrink-0"
+      style={{ color, border: "1px solid currentColor" }}
+    >
+      {STATUS_LABELS[status] ?? status}
+    </span>
+  );
+}
+
+function QuickActions({
+  booking,
+  disabled,
+  onStatusChange,
+}: {
+  booking: BookingWithDetails;
+  disabled: boolean;
+  onStatusChange: (status: "confirmed" | "cancelled") => void;
+}) {
+  if (booking.status === "cancelled") return null;
+  return (
+    <div className="flex gap-2 flex-wrap">
+      {booking.status !== "confirmed" ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onStatusChange("confirmed")}
+          className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50"
+        >
+          Confirmar
+        </button>
+      ) : null}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onStatusChange("cancelled")}
+        className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone-muted hover:text-red-400 hover:border-red-400 transition-colors disabled:opacity-50"
+      >
+        Cancelar
+      </button>
+      <a
+        href={whatsappLink(
+          booking.customer_phone,
+          `Hola ${booking.customer_name}! Te escribo por tu turno de ${booking.service_name}.`
+        )}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone-muted hover:text-brass hover:border-brass transition-colors"
+      >
+        Contactar
+      </a>
+    </div>
+  );
+}
+
 export default function BookingsList({
   businessId,
   bookings,
   selectedDate,
+  today,
+  viewAll,
 }: BookingsListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [dateInput, setDateInput] = useState(selectedDate ?? "");
 
-  function applyDateFilter(date: string) {
-    setDateInput(date);
+  function goToDate(date: string) {
     const url = date
       ? `/admin/negocios/${businessId}/turnos?date=${date}`
-      : `/admin/negocios/${businessId}/turnos`;
+      : `/admin/negocios/${businessId}/turnos?date=all`;
     router.push(url);
   }
 
@@ -67,15 +134,24 @@ export default function BookingsList({
           <input
             id="date-filter"
             type="date"
-            value={dateInput}
-            onChange={(e) => applyDateFilter(e.target.value)}
+            value={selectedDate ?? ""}
+            onChange={(e) => goToDate(e.target.value)}
             className="rounded-sm border border-ink-line bg-ink-elevated px-3 py-2 text-sm text-bone focus:outline-none focus:border-brass transition-colors"
           />
         </div>
-        {dateInput ? (
+        {selectedDate !== today ? (
           <button
             type="button"
-            onClick={() => applyDateFilter("")}
+            onClick={() => goToDate(today)}
+            className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors mt-5"
+          >
+            Hoy
+          </button>
+        ) : null}
+        {!viewAll ? (
+          <button
+            type="button"
+            onClick={() => goToDate("")}
             className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors mt-5"
           >
             Ver todos
@@ -83,15 +159,25 @@ export default function BookingsList({
         ) : null}
       </div>
 
-      <div className="mt-6 divide-y divide-ink-line border-t border-b border-ink-line">
-        {bookings.length === 0 ? (
-          <p className="py-6 text-sm text-bone-muted">
-            {selectedDate
-              ? `No hay turnos para ${formatDateLong(selectedDate)}.`
-              : "Todavía no hay turnos reservados."}
-          </p>
-        ) : (
-          bookings.map((booking) => (
+      {!viewAll && selectedDate ? (
+        <p className="section-eyebrow text-brass mt-8">
+          {selectedDate === today ? "Hoy · " : ""}
+          {formatDateLong(selectedDate)}
+        </p>
+      ) : null}
+
+      {bookings.length === 0 ? (
+        <p className="mt-6 py-6 text-sm text-bone-muted border-t border-ink-line">
+          {viewAll
+            ? "Todavía no hay turnos reservados."
+            : selectedDate === today
+              ? "No tenés turnos para hoy."
+              : `No hay turnos para ${selectedDate ? formatDateLong(selectedDate) : "esta fecha"}.`}
+        </p>
+      ) : viewAll ? (
+        // Vista "todos": lista compacta multi-día, cronológica.
+        <div className="mt-6 divide-y divide-ink-line border-t border-b border-ink-line">
+          {bookings.map((booking) => (
             <div
               key={booking.id}
               className="py-4 flex items-start justify-between gap-4 flex-wrap"
@@ -101,20 +187,7 @@ export default function BookingsList({
                   <span className="ticket-number text-sm text-bone">
                     {formatDateLong(booking.date)} · {booking.time.slice(0, 5)}
                   </span>
-                  <span
-                    className="section-eyebrow text-[10px] px-2 py-0.5 rounded-sm"
-                    style={{
-                      color:
-                        booking.status === "cancelled"
-                          ? "#f87171"
-                          : booking.status === "confirmed"
-                            ? "var(--brass)"
-                            : "var(--bone-muted)",
-                      border: "1px solid currentColor",
-                    }}
-                  >
-                    {STATUS_LABELS[booking.status]}
-                  </span>
+                  <StatusBadge status={booking.status} />
                 </div>
                 <p className="text-bone font-medium text-sm mt-1.5">
                   {booking.customer_name} · {booking.customer_phone}
@@ -122,39 +195,56 @@ export default function BookingsList({
                 <p className="text-xs text-bone-muted mt-1">
                   {booking.service_name} · {booking.location_name}
                 </p>
-                {booking.customer_email ? (
-                  <p className="text-xs text-bone-muted mt-0.5">
-                    {booking.customer_email}
-                  </p>
-                ) : null}
               </div>
-
-              {booking.status !== "cancelled" ? (
-                <div className="flex gap-2 shrink-0">
-                  {booking.status !== "confirmed" ? (
-                    <button
-                      type="button"
-                      disabled={isPending && pendingId === booking.id}
-                      onClick={() => handleStatusChange(booking.id, "confirmed")}
-                      className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50"
-                    >
-                      Confirmar
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    disabled={isPending && pendingId === booking.id}
-                    onClick={() => handleStatusChange(booking.id, "cancelled")}
-                    className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone-muted hover:text-red-400 hover:border-red-400 transition-colors disabled:opacity-50"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : null}
+              <QuickActions
+                booking={booking}
+                disabled={isPending && pendingId === booking.id}
+                onStatusChange={(status) =>
+                  handleStatusChange(booking.id, status)
+                }
+              />
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        // Vista de un día puntual (por defecto, hoy): tarjetas grandes,
+        // hora primero — lo que el dueño necesita leer en segundos.
+        <div className="mt-4 grid gap-3">
+          {bookings.map((booking) => (
+            <div
+              key={booking.id}
+              className="rounded-sm border border-ink-line bg-ink-elevated p-4 flex items-start justify-between gap-4 flex-wrap"
+            >
+              <div className="flex items-start gap-4">
+                <span className="ticket-number text-2xl text-brass shrink-0">
+                  {booking.time.slice(0, 5)}
+                </span>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <p className="text-bone font-medium text-sm">
+                      {booking.customer_name}
+                    </p>
+                    <StatusBadge status={booking.status} />
+                  </div>
+                  <p className="text-xs text-bone-muted mt-1">
+                    {booking.service_name} · {booking.location_name}
+                  </p>
+                  <p className="text-xs text-bone-muted mt-0.5">
+                    {booking.customer_phone}
+                  </p>
+                </div>
+              </div>
+              <QuickActions
+                booking={booking}
+                disabled={isPending && pendingId === booking.id}
+                onStatusChange={(status) =>
+                  handleStatusChange(booking.id, status)
+                }
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

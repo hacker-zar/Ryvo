@@ -1,4 +1,5 @@
 import { Business } from "@/types/business";
+import { BACKGROUND_VARIANTS, backgroundVariantFor } from "@/lib/appearance-presets";
 
 interface AppearanceScopeProps {
   business: Pick<
@@ -29,14 +30,29 @@ export default function AppearanceScope({
   business,
   children,
 }: AppearanceScopeProps) {
+  // El fondo es una de dos variantes prediseñadas (oscuro/claro), no un
+  // color libre — ver appearance-presets.ts. Además de --ink/--bone,
+  // hace falta ajustar --ink-elevated/--ink-line (superficies alternadas,
+  // bordes) para que la variante clara no quede con bordes/tarjetas
+  // pensados para fondo oscuro encima de un fondo claro.
+  const preset = BACKGROUND_VARIANTS[backgroundVariantFor(business.background_color)];
+
   return (
     <div
       data-typography={business.typography_preset ?? "elegante"}
       data-button-style={business.button_style ?? "recto"}
+      // Pinta el fondo acá explícitamente: <body> usa --background/
+      // --foreground definidos en :root (siempre el default oscuro), y
+      // las variables de acá abajo solo alcanzan a los descendientes de
+      // este div, no a body. Sin esto, la variante clara dejaría un
+      // fondo oscuro asomando (overscroll, huecos entre secciones).
+      className="bg-ink text-bone min-h-screen"
       style={
         {
-          "--ink": business.background_color || "#1a1815",
-          "--bone": business.text_color || "#f7f4ee",
+          "--ink": business.background_color || preset.background,
+          "--bone": business.text_color || preset.text,
+          "--ink-elevated": preset.elevated,
+          "--ink-line": preset.line,
           "--brass": business.primary_color,
         } as React.CSSProperties
       }

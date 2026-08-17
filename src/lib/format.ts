@@ -27,6 +27,25 @@ export function dayLabel(day: string): string {
   return DAY_LABELS[day] ?? day;
 }
 
+/** Fecha de hoy en hora local del servidor, formato "YYYY-MM-DD" — mismo
+ *  formato que usa la columna `bookings.date`. */
+export function todayDateString(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Hora actual en hora local del servidor, formato "HH:MM" — mismo
+ *  formato que usa la columna `bookings.time`. */
+export function nowTimeString(): string {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, "0");
+  const m = String(now.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
 export function whatsappLink(phone: string, message = ""): string {
   const cleanPhone = phone.replace(/[^\d]/g, "");
   const encoded = encodeURIComponent(message);
