@@ -27,10 +27,10 @@ export default function MarketingHero() {
 
         <div className="mt-10 flex flex-wrap justify-center gap-4">
           <Link
-            href="/admin/login"
+            href="/registro"
             className="rounded-full bg-porcelain text-graphite text-sm font-semibold px-7 py-3.5 hover:opacity-90 transition-opacity"
           >
-            Sumá tu negocio
+            Quiero mi web
           </Link>
           <a
             href="#producto"

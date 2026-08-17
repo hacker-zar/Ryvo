@@ -30,6 +30,14 @@ export interface Business {
   text_color?: string;
   typography_preset?: TypographyPreset;
   button_style?: ButtonStyle;
+  // Onboarding self-service: tipo de negocio (texto libre, sin enum
+  // cerrado), en qué paso del onboarding quedó (0-5), y si ya es visible
+  // en /[slug]. Los negocios creados por el flujo del superadmin
+  // (adminCreateBusiness) nunca pasan por onboarding — quedan
+  // published=true de entrada (ver supabase/schema.sql).
+  business_type?: string;
+  onboarding_step?: number;
+  published?: boolean;
   created_at: string;
 }
 

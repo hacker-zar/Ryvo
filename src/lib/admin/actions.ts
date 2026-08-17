@@ -29,15 +29,7 @@ import {
   updateAccountPassword,
 } from "@/lib/data/accounts-repository";
 import { OpeningHours } from "@/types/business";
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { slugify } from "@/lib/slug";
 
 /**
  * Crear negocios nuevos es exclusivo de RYVO (superadmin) — un dueño no
@@ -533,4 +525,34 @@ export async function adminUploadImage(
     .getPublicUrl(path);
 
   return { success: true, url: data.publicUrl };
+}
+
+/**
+ * Guarda en qué paso del onboarding self-service quedó el negocio, para
+ * poder retomarlo donde lo dejó si vuelve más tarde (ver
+ * OnboardingChrome). No valida el rango del paso — es solo un puntero de
+ * navegación, no un gate de seguridad.
+ */
+export async function adminSetOnboardingStep(businessId: string, step: number) {
+  await requireAdminFor(businessId);
+  return updateBusiness(businessId, { onboarding_step: step });
+}
+
+/**
+ * Hace público el negocio en /[slug] — último paso del onboarding
+ * self-service ("Publicar mi web"). Los negocios creados por el
+ * superadmin (adminCreateBusiness) ya nacen publicados y nunca necesitan
+ * esta acción.
+ */
+export async function adminPublishBusiness(businessId: string) {
+  await requireAdminFor(businessId);
+  const result = await updateBusiness(businessId, {
+    published: true,
+    onboarding_step: 5,
+  });
+  if (result.success) {
+    revalidatePath("/admin");
+    revalidatePath(`/admin/negocios/${businessId}`);
+  }
+  return result;
 }

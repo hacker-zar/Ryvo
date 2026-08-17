@@ -11,6 +11,7 @@ import {
 import { nowTimeString, todayDateString } from "@/lib/format";
 import AdminChrome from "@/components/admin/AdminChrome";
 import EditorShell from "./editor-shell";
+import OnboardingChrome from "./onboarding-chrome";
 import TodaySummary from "./today-summary";
 
 interface PageProps {
@@ -34,6 +35,31 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
   const services = await listServicesByBusiness(id);
   const locations = await listLocationsByBusiness(id);
   const professionals = await listProfessionalsByBusiness(id);
+
+  // Un negocio creado por registro self-service arranca sin publicar
+  // (ver src/lib/actions/register-business.ts) — hasta que el dueño
+  // confirme "Publicar", esta misma página muestra el onboarding en vez
+  // del editor normal. Los negocios creados por el superadmin
+  // (adminCreateBusiness) nacen publicados y nunca pasan por acá.
+  if (business.published === false) {
+    return (
+      <AdminChrome>
+        <p className="section-eyebrow text-brass">Creando tu web</p>
+        <h1 className="section-title mt-2 text-2xl text-bone">
+          {business.name}
+        </h1>
+        <div className="mt-10">
+          <OnboardingChrome
+            business={business}
+            services={services}
+            professionals={professionals}
+            locations={locations}
+          />
+        </div>
+      </AdminChrome>
+    );
+  }
+
   const todayBookings = await listBookingsByBusiness(id, todayDateString());
 
   return (

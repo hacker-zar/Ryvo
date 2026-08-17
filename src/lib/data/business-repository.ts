@@ -28,7 +28,7 @@ import { virtualLocationFromBusiness } from "@/lib/availability";
 // funciones de autenticación de más abajo, porque el hash terminaría
 // serializado en el HTML/RSC payload aunque ningún componente lo muestre.
 const BUSINESS_PUBLIC_COLUMNS =
-  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, opening_hours, background_color, text_color, typography_preset, button_style, created_at";
+  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, opening_hours, background_color, text_color, typography_preset, button_style, business_type, onboarding_step, published, created_at";
 
 /**
  * Punto único de acceso a datos de negocio.

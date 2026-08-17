@@ -37,6 +37,8 @@ export const demoBusiness: Business = {
     { day: "sab", open: "09:00", close: "14:00" },
     { day: "dom", open: "", close: "", closed: true },
   ],
+  onboarding_step: 5,
+  published: true,
   created_at: "2024-01-15T00:00:00.000Z",
 };
 

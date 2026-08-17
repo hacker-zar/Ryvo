@@ -29,15 +29,33 @@ create table if not exists businesses (
     check (typography_preset in ('clasica', 'moderna', 'elegante')),
   button_style text not null default 'recto'
     check (button_style in ('redondeado', 'suave', 'recto')),
+  -- Metadata descriptiva del onboarding (Peluquería/Barbería/Estilista
+  -- independiente/Otro) — texto libre a propósito, sin CHECK, mismo
+  -- criterio que city/address: no es algo que el resto del sistema
+  -- necesite validar estrictamente.
+  business_type text default '',
+  -- En qué paso del onboarding quedó el negocio (0=recién creado, 5=todos
+  -- los pasos recorridos) — permite retomar donde lo dejó. Default 5:
+  -- cualquier negocio creado por el flujo actual del superadmin
+  -- (adminCreateBusiness, sin tocar) queda "completo" sin pasar por
+  -- ningún onboarding — solo el registro público inserta 0 explícito.
+  onboarding_step smallint not null default 5,
+  -- Si el negocio ya es visible en /[slug]. Default true por el mismo
+  -- motivo: no romper negocios ya existentes ni el flujo del superadmin.
+  -- Solo el registro público inserta false explícito.
+  published boolean not null default true,
   created_at timestamptz not null default now()
 );
 
--- Si la tabla ya existía de antes de agregar estas columnas de apariencia,
--- esto las suma sin tocar los datos existentes. Seguro de re-ejecutar.
+-- Si la tabla ya existía de antes de agregar estas columnas, esto las suma
+-- sin tocar los datos existentes. Seguro de re-ejecutar.
 alter table businesses add column if not exists background_color text default '#1a1815';
 alter table businesses add column if not exists text_color text default '#f7f4ee';
 alter table businesses add column if not exists typography_preset text not null default 'elegante';
 alter table businesses add column if not exists button_style text not null default 'recto';
+alter table businesses add column if not exists business_type text default '';
+alter table businesses add column if not exists onboarding_step smallint not null default 5;
+alter table businesses add column if not exists published boolean not null default true;
 
 -- DEPRECADA: contraseña única por negocio (hash scrypt "salt:hash" en hex).
 -- Reemplazada por la tabla `accounts` (usuario + contraseña por cuenta) —
