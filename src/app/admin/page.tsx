@@ -1,56 +1,67 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { hasValidAdminSession } from "@/lib/admin/session";
-import {
-  getBusinessById,
-  listBookingsByBusiness,
-} from "@/lib/data/business-repository";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { listBusinesses } from "@/lib/data/business-repository";
 import AdminChrome from "@/components/admin/AdminChrome";
-import BookingsList from "./bookings-list";
+import NewBusinessForm from "./new-business-form";
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ date?: string }>;
-}
-
-export default async function AdminBookingsPage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function AdminHomePage() {
   const isLoggedIn = await hasValidAdminSession();
   if (!isLoggedIn) redirect("/admin/login");
 
-  const { id } = await params;
-  const { date } = await searchParams;
-
-  const business = await getBusinessById(id);
-  if (!business) notFound();
-
-  const bookings = await listBookingsByBusiness(id, date);
+  const businesses = await listBusinesses();
 
   return (
     <AdminChrome>
-      <Link
-        href={`/admin/negocios/${id}`}
-        className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors"
-      >
-        ← Volver a {business.name}
-      </Link>
+      {!isSupabaseConfigured ? (
+        <div className="mb-8 rounded-sm border border-brass/40 bg-ink-elevated p-4 text-sm text-bone-muted">
+          Supabase no está configurado: estás viendo el negocio demo en modo
+          solo lectura. Para crear o editar negocios, completá{" "}
+          <code className="text-brass">NEXT_PUBLIC_SUPABASE_URL</code> y{" "}
+          <code className="text-brass">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> en
+          las variables de entorno.
+        </div>
+      ) : null}
 
-      <p className="section-eyebrow text-brass mt-6">Turnos</p>
+      <p className="section-eyebrow text-brass">Negocios</p>
       <h1 className="section-title mt-2 text-2xl text-bone">
-        {business.name}
+        Tus peluquerías y barberías
       </h1>
 
-      {!isSupabaseConfigured ? (
-        <div className="mt-6 rounded-sm border border-brass/40 bg-ink-elevated p-4 text-sm text-bone-muted">
-          Supabase no está configurado: no hay turnos reales para mostrar en
-          modo demo.
-        </div>
-      ) : (
-        <BookingsList businessId={id} bookings={bookings} selectedDate={date} />
-      )}
+      <div className="mt-8 divide-y divide-ink-line border-t border-b border-ink-line">
+        {businesses.length === 0 ? (
+          <p className="py-6 text-sm text-bone-muted">
+            Todavía no creaste ningún negocio.
+          </p>
+        ) : (
+          businesses.map((business) => (
+            <Link
+              key={business.id}
+              href={`/admin/negocios/${business.id}`}
+              className="flex items-center justify-between py-4 group"
+            >
+              <div>
+                <p className="text-bone font-medium group-hover:text-brass transition-colors">
+                  {business.name}
+                </p>
+                <p className="text-xs text-bone-muted mt-0.5">
+                  /{business.slug}
+                </p>
+              </div>
+              <span className="text-bone-muted text-sm">Editar →</span>
+            </Link>
+          ))
+        )}
+      </div>
+
+      <div className="mt-12">
+        <p className="section-eyebrow text-brass">Nuevo</p>
+        <h2 className="section-title mt-2 text-xl text-bone">
+          Crear negocio
+        </h2>
+        <NewBusinessForm disabled={!isSupabaseConfigured} />
+      </div>
     </AdminChrome>
   );
 }
