@@ -13,12 +13,14 @@ const VIEWPORTS = [
 
 type Viewport = (typeof VIEWPORTS)[number]["key"];
 
+// Categorías con contenido real en la preview (las de solo estructura —
+// productos/automatizaciones — no tienen ningún elemento clickeable en el
+// sitio público todavía, así que no forman parte de este puente).
 const VALID_CATEGORIES: EditorCategory[] = [
-  "informacion",
+  "pagina",
   "servicios",
   "profesionales",
-  "horarios",
-  "fotos",
+  "reservas",
   "apariencia",
 ];
 

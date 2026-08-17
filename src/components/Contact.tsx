@@ -59,7 +59,7 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
                 href={`https://www.google.com/maps/search/?api=1&query=${mapsQuery}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                data-editable-category="informacion"
+                data-editable-category="pagina"
                 data-editable-field="direccion"
                 className="text-sm text-bone hover:text-brass transition-colors"
               >
@@ -78,7 +78,7 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
                   rel="noopener noreferrer"
                   aria-label="WhatsApp"
                   title="WhatsApp"
-                  data-editable-category="informacion"
+                  data-editable-category="pagina"
                   data-editable-field="whatsapp"
                   className="h-11 w-11 flex items-center justify-center rounded-sm border border-ink-line text-bone hover:border-brass hover:text-brass transition-colors"
                 >
@@ -93,7 +93,7 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
                   rel="noopener noreferrer"
                   aria-label="Instagram"
                   title="Instagram"
-                  data-editable-category="informacion"
+                  data-editable-category="pagina"
                   data-editable-field="instagram"
                   className="h-11 w-11 flex items-center justify-center rounded-sm border border-ink-line text-bone hover:border-brass hover:text-brass transition-colors"
                 >
@@ -106,7 +106,7 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
                   href={`tel:${business.phone}`}
                   aria-label="Llamar"
                   title="Llamar"
-                  data-editable-category="informacion"
+                  data-editable-category="pagina"
                   data-editable-field="telefono"
                   className="h-11 w-11 flex items-center justify-center rounded-sm border border-ink-line text-bone hover:border-brass transition-colors text-lg"
                 >
@@ -118,7 +118,7 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
             {business.email ? (
               <a
                 href={`mailto:${business.email}`}
-                data-editable-category="informacion"
+                data-editable-category="pagina"
                 data-editable-field="email"
                 className="text-sm text-bone-muted hover:text-brass transition-colors"
               >
@@ -128,7 +128,7 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
 
             {business.opening_hours && business.opening_hours.length > 0 ? (
               <div
-                data-editable-category="horarios"
+                data-editable-category="reservas"
                 className="mt-2 pt-4 border-t border-ink-line"
               >
                 <p className="section-eyebrow text-bone-muted mb-3">

@@ -8,18 +8,29 @@ import {
   Booking,
   Business,
   BusinessProfile,
+  BusinessStats,
+  Client,
+  ClientBookingHistoryItem,
+  ClientProfile,
   Location,
+  Opportunity,
   Professional,
+  ProfessionalWithServices,
   Service,
 } from "@/types/business";
 import {
+  demoBookings,
   demoBusiness,
+  demoClients,
   demoLocations,
+  demoProfessionalServiceIds,
   demoProfessionals,
   demoReviews,
   demoServices,
 } from "@/lib/data/demo-business";
 import { virtualLocationFromBusiness } from "@/lib/availability";
+import { computeBusinessStats } from "@/lib/stats";
+import { detectOpportunities } from "@/lib/opportunities";
 
 // Todas las columnas públicas de `businesses`, es decir todas MENOS
 // admin_password_hash. Se usa en cualquier lectura cuyo resultado pueda
@@ -28,7 +39,7 @@ import { virtualLocationFromBusiness } from "@/lib/availability";
 // funciones de autenticación de más abajo, porque el hash terminaría
 // serializado en el HTML/RSC payload aunque ningún componente lo muestre.
 const BUSINESS_PUBLIC_COLUMNS =
-  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, opening_hours, background_color, text_color, typography_preset, button_style, business_type, onboarding_step, published, created_at";
+  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, opening_hours, background_color, text_color, typography_preset, button_style, business_type, onboarding_step, published, favicon, created_at";
 
 /**
  * Punto único de acceso a datos de negocio.
@@ -76,8 +87,11 @@ export async function getBusinessProfile(
         .select("*")
         .eq("business_id", business.id)
         .eq("active", true)
+        .order("display_order", { ascending: true })
         .order("created_at", { ascending: true }),
     ]);
+
+    const professionalsWithServices = await attachServiceIds(professionals ?? []);
 
     return {
       business,
@@ -90,7 +104,7 @@ export async function getBusinessProfile(
         locations && locations.length > 0
           ? locations
           : [virtualLocationFromBusiness(business)],
-      professionals: professionals ?? [],
+      professionals: professionalsWithServices,
     };
   }
 
@@ -101,21 +115,63 @@ export async function getBusinessProfile(
       services: demoServices,
       reviews: demoReviews,
       locations: demoLocations,
-      professionals: demoProfessionals,
+      professionals: demoProfessionals.map((p) => ({
+        ...p,
+        service_ids: demoProfessionalServiceIds[p.id] ?? [],
+      })),
     };
   }
 
   return null;
 }
 
+/** Suma `service_ids` a cada profesional consultando `professional_services`
+ *  en una sola query (no N+1). Vacío = califica para todos los servicios —
+ *  ver la regla de compatibilidad documentada en la migración. */
+async function attachServiceIds(
+  professionals: Professional[]
+): Promise<ProfessionalWithServices[]> {
+  if (professionals.length === 0 || !supabase) {
+    return professionals.map((p) => ({ ...p, service_ids: [] }));
+  }
+  const { data: links } = await supabase
+    .from("professional_services")
+    .select("professional_id, service_id")
+    .in(
+      "professional_id",
+      professionals.map((p) => p.id)
+    );
+  const byProfessional = new Map<string, string[]>();
+  for (const link of links ?? []) {
+    const list = byProfessional.get(link.professional_id) ?? [];
+    list.push(link.service_id);
+    byProfessional.set(link.professional_id, list);
+  }
+  return professionals.map((p) => ({
+    ...p,
+    service_ids: byProfessional.get(p.id) ?? [],
+  }));
+}
+
 /**
  * Devuelve las reservas activas (no canceladas) para un negocio/local/fecha,
  * usadas para calcular qué horarios ya están ocupados.
+ *
+ * `professionalId`, si se pasa, acota a las reservas de ESE profesional (o
+ * sin profesional asignado — el "OR IS NULL" es un puente de compatibilidad:
+ * una reserva vieja sin professional_id bloquea conservadoramente a
+ * cualquier profesional, hasta que pase su fecha o se cancele). Sin
+ * `professionalId`, el comportamiento es idéntico al de siempre.
+ *
+ * `excludeBookingId`, si se pasa, excluye esa reserva puntual — usado por
+ * reprogramar, para que el propio horario actual no se vea como ocupado.
  */
 export async function getBookedSlots(
   businessId: string,
   locationId: string | null,
-  date: string
+  date: string,
+  professionalId?: string,
+  excludeBookingId?: string
 ): Promise<Pick<Booking, "time" | "status">[]> {
   if (isSupabaseConfigured && supabase) {
     let query = supabase
@@ -131,17 +187,202 @@ export async function getBookedSlots(
       ? query.eq("location_id", locationId)
       : query.is("location_id", null);
 
+    if (professionalId) {
+      query = query.or(
+        `professional_id.eq.${professionalId},professional_id.is.null`
+      );
+    }
+    if (excludeBookingId) {
+      query = query.neq("id", excludeBookingId);
+    }
+
     const { data } = await query;
     return data ?? [];
   }
 
-  // Modo demo: no hay reservas reales persistidas, así que no hay ocupados.
+  // Modo demo: la disponibilidad de reserva se mantiene siempre abierta a
+  // propósito (igual que hoy) — demoBookings existe para estadísticas/CRM,
+  // no para bloquear horarios de un visitante probando el wizard.
   return [];
 }
 
+/** Variante de `getBookedSlots` para "cualquiera disponible": una sola
+ *  consulta (no N) que arma un mapa profesional→sus reservas del día,
+ *  para poder unir disponibilidades sin round-trips por profesional. */
+export async function getBookedSlotsForProfessionals(
+  businessId: string,
+  locationId: string | null,
+  date: string,
+  professionalIds: string[]
+): Promise<Map<string, Pick<Booking, "time" | "status">[]>> {
+  const result = new Map<string, Pick<Booking, "time" | "status">[]>();
+  if (professionalIds.length === 0) return result;
+
+  if (isSupabaseConfigured && supabase) {
+    let query = supabase
+      .from("bookings")
+      .select("time, status, professional_id")
+      .eq("business_id", businessId)
+      .eq("date", date)
+      .neq("status", "cancelled");
+    query = locationId
+      ? query.eq("location_id", locationId)
+      : query.is("location_id", null);
+
+    const { data } = await query;
+    const rows = data ?? [];
+    // Una reserva sin profesional asignado bloquea conservadoramente a
+    // todos — mismo criterio que el "OR IS NULL" de getBookedSlots.
+    const untagged = rows.filter((r) => !r.professional_id);
+    for (const id of professionalIds) {
+      const own = rows.filter((r) => r.professional_id === id);
+      result.set(id, [...own, ...untagged]);
+    }
+    return result;
+  }
+
+  for (const id of professionalIds) result.set(id, []);
+  return result;
+}
+
+/** Profesionales activos que pueden realizar `serviceId` — sin ninguna fila
+ *  en `professional_services` califica para todo (compatibilidad hacia
+ *  atrás, ver comentario de la migración). Ordenados por display_order. */
+export async function listQualifiedProfessionals(
+  businessId: string,
+  serviceId: string
+): Promise<Professional[]> {
+  if (isSupabaseConfigured && supabase) {
+    const { data: professionals } = await supabase
+      .from("professionals")
+      .select("*")
+      .eq("business_id", businessId)
+      .eq("active", true)
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (!professionals || professionals.length === 0) return [];
+
+    const { data: links } = await supabase
+      .from("professional_services")
+      .select("professional_id, service_id")
+      .in(
+        "professional_id",
+        professionals.map((p) => p.id)
+      );
+    const withAnyAssociation = new Set(
+      (links ?? []).map((l) => l.professional_id)
+    );
+    const qualifiedIds = new Set(
+      (links ?? [])
+        .filter((l) => l.service_id === serviceId)
+        .map((l) => l.professional_id)
+    );
+    return professionals.filter(
+      (p) => !withAnyAssociation.has(p.id) || qualifiedIds.has(p.id)
+    );
+  }
+
+  const demoQualified = demoProfessionals
+    .filter((p) => p.active)
+    .filter((p) => {
+      const ids = demoProfessionalServiceIds[p.id] ?? [];
+      return ids.length === 0 || ids.includes(serviceId);
+    });
+  return businessId === demoBusiness.id ? demoQualified : [];
+}
+
+/** Resuelve "cualquiera disponible" a UN profesional real, server-side, en
+ *  el momento de confirmar — nunca se inserta una reserva con un
+ *  profesional ambiguo. Primer calificado libre en ese horario exacto, por
+ *  display_order. Si dos clientes compiten por el mismo horario/último
+ *  profesional libre, el segundo insert choca contra el índice único de la
+ *  base y usa el mismo manejo de conflicto que ya existe en createBooking. */
+export async function resolveAnyProfessional(
+  businessId: string,
+  serviceId: string,
+  locationId: string | null,
+  date: string,
+  time: string
+): Promise<string | null> {
+  const qualified = await listQualifiedProfessionals(businessId, serviceId);
+  for (const professional of qualified) {
+    const booked = await getBookedSlots(
+      businessId,
+      locationId,
+      date,
+      professional.id
+    );
+    const taken = booked.some((b) => b.time.slice(0, 5) === time);
+    if (!taken) return professional.id;
+  }
+  return null;
+}
+
+/** Crea o actualiza el registro de `clients` correspondiente a esta
+ *  reserva (match por business_id+customer_phone). Usa supabaseAdmin
+ *  aunque la reserva en sí se inserte con el cliente anon público —
+ *  excepción deliberada y documentada al patrón "solo admin toca
+ *  clients": el dato (nombre/teléfono/email) ya fluye igual de expuesto
+ *  a `bookings` bajo la misma política pública hoy, así que espejarlo acá
+ *  no abre superficie nueva. Nunca debe romper la reserva si falla. */
+async function upsertClientForBooking(input: {
+  business_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string | null;
+}): Promise<string | null> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
+  try {
+    const { data: existingClient } = await supabaseAdmin
+      .from("clients")
+      .select("id, name, email")
+      .eq("business_id", input.business_id)
+      .eq("phone", input.customer_phone)
+      .maybeSingle();
+
+    if (existingClient) {
+      if (
+        existingClient.name !== input.customer_name ||
+        existingClient.email !== (input.customer_email ?? null)
+      ) {
+        await supabaseAdmin
+          .from("clients")
+          .update({
+            name: input.customer_name,
+            email: input.customer_email ?? null,
+          })
+          .eq("id", existingClient.id);
+      }
+      return existingClient.id;
+    }
+
+    const { data: created } = await supabaseAdmin
+      .from("clients")
+      .insert({
+        business_id: input.business_id,
+        name: input.customer_name,
+        phone: input.customer_phone,
+        email: input.customer_email ?? null,
+      })
+      .select("id")
+      .single();
+    return created?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function createBooking(
-  booking: Omit<Booking, "id" | "created_at" | "status">
-): Promise<{ success: boolean; error?: string; conflict?: boolean }> {
+  booking: Omit<
+    Booking,
+    "id" | "created_at" | "updated_at" | "status" | "client_id"
+  >
+): Promise<{
+  success: boolean;
+  error?: string;
+  conflict?: boolean;
+  id?: string;
+}> {
   if (isSupabaseConfigured && supabase) {
     // Chequeo de disponibilidad antes de insertar. No es 100% atómico
     // (podría haber una carrera entre el check y el insert), por eso el
@@ -153,7 +394,8 @@ export async function createBooking(
     const existing = await getBookedSlots(
       booking.business_id,
       booking.location_id,
-      booking.date
+      booking.date,
+      booking.professional_id ?? undefined
     );
     const alreadyTaken = existing.some(
       (b) => b.time.slice(0, 5) === booking.time
@@ -166,10 +408,18 @@ export async function createBooking(
       };
     }
 
-    const { error } = await supabase.from("bookings").insert({
-      ...booking,
-      status: "pending",
+    const clientId = await upsertClientForBooking({
+      business_id: booking.business_id,
+      customer_name: booking.customer_name,
+      customer_phone: booking.customer_phone,
+      customer_email: booking.customer_email,
     });
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .insert({ ...booking, status: "pending", client_id: clientId })
+      .select("id")
+      .single();
 
     if (error) {
       // El índice único de la base de datos devuelve este código si,
@@ -183,12 +433,12 @@ export async function createBooking(
       }
       return { success: false, error: error.message };
     }
-    return { success: true };
+    return { success: true, id: data?.id };
   }
 
   // Modo demo: no hay persistencia real, simulamos éxito.
   console.log("[demo] Reserva simulada:", booking);
-  return { success: true };
+  return { success: true, id: `demo-${Date.now()}` };
 }
 
 // ---------------------------------------------------------------------
@@ -351,28 +601,61 @@ export async function deleteService(
 }
 
 // ---------------------------------------------------------------------
-// Profesionales (equipo) — señal de confianza, gestionados desde /admin.
-// No ligados al flujo de reservas.
+// Profesionales (equipo), gestionados desde /admin. Ligados al flujo de
+// reservas vía Booking.professional_id y a servicios vía
+// professional_services (ver attachServiceIds/listQualifiedProfessionals).
 // ---------------------------------------------------------------------
 
 export async function listProfessionalsByBusiness(
   businessId: string
-): Promise<Professional[]> {
+): Promise<ProfessionalWithServices[]> {
   if (isSupabaseConfigured && supabase) {
     const { data } = await supabase
       .from("professionals")
       .select("*")
       .eq("business_id", businessId)
+      .order("display_order", { ascending: true })
       .order("created_at", { ascending: true });
-    return data ?? [];
+    return attachServiceIds(data ?? []);
   }
-  return businessId === demoBusiness.id ? demoProfessionals : [];
+  return businessId === demoBusiness.id
+    ? demoProfessionals.map((p) => ({
+        ...p,
+        service_ids: demoProfessionalServiceIds[p.id] ?? [],
+      }))
+    : [];
 }
 
-export type ProfessionalInput = Omit<Professional, "id" | "created_at">;
+export type ProfessionalInput = Omit<
+  Professional,
+  "id" | "created_at" | "display_order"
+>;
+
+/** Reemplaza las filas de `professional_services` de un profesional por el
+ *  set nuevo — borra e inserta, simple y correcto para un checklist chico
+ *  (no hace falta diff). */
+async function replaceProfessionalServices(
+  professionalId: string,
+  serviceIds: string[]
+) {
+  if (!supabaseAdmin) return;
+  await supabaseAdmin
+    .from("professional_services")
+    .delete()
+    .eq("professional_id", professionalId);
+  if (serviceIds.length > 0) {
+    await supabaseAdmin.from("professional_services").insert(
+      serviceIds.map((service_id) => ({
+        professional_id: professionalId,
+        service_id,
+      }))
+    );
+  }
+}
 
 export async function createProfessional(
-  input: ProfessionalInput
+  input: ProfessionalInput,
+  serviceIds: string[] = []
 ): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
@@ -381,14 +664,29 @@ export async function createProfessional(
         "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder crear profesionales.",
     };
   }
-  const { error } = await supabaseAdmin.from("professionals").insert(input);
+  const { data: maxOrderRow } = await supabaseAdmin
+    .from("professionals")
+    .select("display_order")
+    .eq("business_id", input.business_id)
+    .order("display_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const displayOrder = (maxOrderRow?.display_order ?? -1) + 1;
+
+  const { data: created, error } = await supabaseAdmin
+    .from("professionals")
+    .insert({ ...input, display_order: displayOrder })
+    .select("id")
+    .single();
   if (error) return { success: false, error: error.message };
+  await replaceProfessionalServices(created.id, serviceIds);
   return { success: true };
 }
 
 export async function updateProfessional(
   id: string,
-  input: Partial<ProfessionalInput>
+  input: Partial<ProfessionalInput>,
+  serviceIds?: string[]
 ): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
@@ -402,6 +700,49 @@ export async function updateProfessional(
     .update(input)
     .eq("id", id);
   if (error) return { success: false, error: error.message };
+  if (serviceIds) await replaceProfessionalServices(id, serviceIds);
+  return { success: true };
+}
+
+/** Sube o baja un profesional en el orden de aparición, intercambiando
+ *  display_order con el vecino inmediato — sin drag-and-drop. */
+export async function reorderProfessional(
+  businessId: string,
+  professionalId: string,
+  direction: "up" | "down"
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder reordenar profesionales.",
+    };
+  }
+  const { data: professionals } = await supabaseAdmin
+    .from("professionals")
+    .select("id, display_order")
+    .eq("business_id", businessId)
+    .order("display_order", { ascending: true });
+  if (!professionals) return { success: false, error: "No se encontraron profesionales." };
+
+  const index = professionals.findIndex((p) => p.id === professionalId);
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (index === -1 || swapIndex < 0 || swapIndex >= professionals.length) {
+    return { success: true }; // ya está en el extremo, no hay nada que hacer
+  }
+
+  const current = professionals[index];
+  const neighbor = professionals[swapIndex];
+  await Promise.all([
+    supabaseAdmin
+      .from("professionals")
+      .update({ display_order: neighbor.display_order })
+      .eq("id", current.id),
+    supabaseAdmin
+      .from("professionals")
+      .update({ display_order: current.display_order })
+      .eq("id", neighbor.id),
+  ]);
   return { success: true };
 }
 
@@ -509,8 +850,18 @@ export async function listBookingsByBusiness(
   date?: string
 ): Promise<BookingWithDetails[]> {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
-    // Modo demo: no hay reservas reales persistidas.
-    return [];
+    if (businessId !== demoBusiness.id) return [];
+    const serviceNames = new Map(demoServices.map((s) => [s.id, s.name]));
+    const locationNames = new Map(demoLocations.map((l) => [l.id, l.name]));
+    return demoBookings
+      .filter((b) => !date || b.date === date)
+      .map((b) => ({
+        ...b,
+        service_name: serviceNames.get(b.service_id) ?? "Servicio eliminado",
+        location_name: b.location_id
+          ? (locationNames.get(b.location_id) ?? "Local eliminado")
+          : "Local único",
+      }));
   }
 
   let query = supabaseAdmin
@@ -554,7 +905,7 @@ export async function listBookingsByBusiness(
 
 export async function updateBookingStatus(
   id: string,
-  status: "confirmed" | "cancelled"
+  status: "confirmed" | "completed" | "cancelled" | "no_show"
 ): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
@@ -569,4 +920,319 @@ export async function updateBookingStatus(
     .eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
+}
+
+// ---------------------------------------------------------------------
+// Gestión pública de un turno puntual — cancelar/reprogramar. El `id` de
+// la reserva (UUID, no adivinable) es el único token de acceso: no hay
+// sesión de cliente, así que poseer el link ES la autorización, igual que
+// hoy no existe ninguna otra forma de referenciar una reserva ajena.
+// Usan supabaseAdmin porque no hay política pública de UPDATE en bookings.
+// ---------------------------------------------------------------------
+
+export interface PublicBooking extends Booking {
+  business_slug: string;
+  business_name: string;
+  service_name: string;
+  service_duration: number;
+  professional_name: string | null;
+}
+
+/** Búsqueda pública de una reserva por id, con el negocio/servicio/
+ *  profesional ya resueltos para no requerir otro round-trip en la página
+ *  de gestión del turno. `null` si no existe. */
+export async function getBookingById(
+  id: string
+): Promise<PublicBooking | null> {
+  if (!isSupabaseConfigured || !supabase) {
+    const demo = demoBookings.find((b) => b.id === id);
+    if (!demo) return null;
+    const service = demoServices.find((s) => s.id === demo.service_id);
+    const professional = demoProfessionals.find(
+      (p) => p.id === demo.professional_id
+    );
+    return {
+      ...demo,
+      business_slug: demoBusiness.slug,
+      business_name: demoBusiness.name,
+      service_name: service?.name ?? "Servicio eliminado",
+      service_duration: service?.duration ?? 30,
+      professional_name: professional?.name ?? null,
+    };
+  }
+
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (!booking) return null;
+
+  const [{ data: business }, { data: service }, { data: professional }] =
+    await Promise.all([
+      supabase
+        .from("businesses")
+        .select("slug, name")
+        .eq("id", booking.business_id)
+        .maybeSingle(),
+      supabase
+        .from("services")
+        .select("name, duration")
+        .eq("id", booking.service_id)
+        .maybeSingle(),
+      booking.professional_id
+        ? supabase
+            .from("professionals")
+            .select("name")
+            .eq("id", booking.professional_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+  if (!business) return null;
+
+  return {
+    ...booking,
+    business_slug: business.slug,
+    business_name: business.name,
+    service_name: service?.name ?? "Servicio eliminado",
+    service_duration: service?.duration ?? 30,
+    professional_name: professional?.name ?? null,
+  };
+}
+
+export async function cancelBookingById(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  // Modo demo real (sin Supabase configurado en absoluto): no hay nada
+  // que cancelar de verdad, simulamos éxito — mismo criterio que
+  // createBooking. Pero si HAY Supabase real conectado y solo falta la
+  // service role key, no podemos escribir: hay que decirlo, no fingir
+  // éxito — lo contrario dejaría al cliente creyendo que canceló un
+  // turno que en realidad sigue activo en la base.
+  if (!isSupabaseConfigured) {
+    return { success: true };
+  }
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder cancelar turnos.",
+    };
+  }
+  const { error } = await supabaseAdmin
+    .from("bookings")
+    .update({ status: "cancelled" })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function rescheduleBookingById(
+  id: string,
+  date: string,
+  time: string
+): Promise<{ success: boolean; error?: string; conflict?: boolean }> {
+  if (!isSupabaseConfigured) {
+    return { success: true }; // modo demo real
+  }
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder reprogramar turnos.",
+    };
+  }
+  const booking = await getBookingById(id);
+  if (!booking) return { success: false, error: "Turno no encontrado." };
+
+  const existing = await getBookedSlots(
+    booking.business_id,
+    booking.location_id,
+    date,
+    booking.professional_id ?? undefined,
+    id
+  );
+  const alreadyTaken = existing.some((b) => b.time.slice(0, 5) === time);
+  if (alreadyTaken) {
+    return {
+      success: false,
+      conflict: true,
+      error: "Ese horario ya fue reservado. Elegí otro.",
+    };
+  }
+
+  const { error } = await supabaseAdmin
+    .from("bookings")
+    .update({ date, time })
+    .eq("id", id);
+  if (error) {
+    if (error.code === "23505") {
+      return {
+        success: false,
+        conflict: true,
+        error: "Ese horario ya fue reservado. Elegí otro.",
+      };
+    }
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------
+// Clientes (CRM) — gestionados desde /admin. Se arman automáticamente al
+// crear cada reserva (ver upsertClientForBooking); acá solo se leen y se
+// editan las notas.
+// ---------------------------------------------------------------------
+
+export async function listClientsByBusiness(
+  businessId: string
+): Promise<Client[]> {
+  if (isSupabaseAdminConfigured && supabaseAdmin) {
+    const { data } = await supabaseAdmin
+      .from("clients")
+      .select("*")
+      .eq("business_id", businessId)
+      .order("updated_at", { ascending: false });
+    return data ?? [];
+  }
+  return businessId === demoBusiness.id ? demoClients : [];
+}
+
+function mostFrequent(values: string[]): string | null {
+  if (values.length === 0) return null;
+  const counts = new Map<string, number>();
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
+export async function getClientProfile(
+  businessId: string,
+  clientId: string
+): Promise<ClientProfile | null> {
+  const [clients, bookings, services, professionals] = await Promise.all([
+    listClientsByBusiness(businessId),
+    listBookingsByBusiness(businessId),
+    listServicesByBusiness(businessId),
+    listProfessionalsByBusiness(businessId),
+  ]);
+  const client = clients.find((c) => c.id === clientId);
+  if (!client) return null;
+
+  const clientBookings = bookings.filter((b) => b.client_id === clientId);
+  const servicesById = new Map(services.map((s) => [s.id, s]));
+  const professionalsById = new Map(professionals.map((p) => [p.id, p]));
+
+  const completed = clientBookings
+    .filter((b) => b.status === "completed")
+    .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+  const upcoming = clientBookings
+    .filter((b) => b.status === "pending" || b.status === "confirmed")
+    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+
+  const totalSpent = completed.reduce(
+    (sum, b) => sum + (servicesById.get(b.service_id)?.price ?? 0),
+    0
+  );
+
+  const history: ClientBookingHistoryItem[] = [...clientBookings]
+    .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`))
+    .map((b) => ({
+      id: b.id,
+      date: b.date,
+      time: b.time,
+      status: b.status,
+      service_name: servicesById.get(b.service_id)?.name ?? "Servicio eliminado",
+      professional_name: b.professional_id
+        ? (professionalsById.get(b.professional_id)?.name ?? null)
+        : null,
+      price: servicesById.get(b.service_id)?.price ?? 0,
+    }));
+
+  const next = upcoming[0];
+
+  return {
+    client,
+    last_visit: completed[0]?.date ?? null,
+    next_appointment: next
+      ? {
+          date: next.date,
+          time: next.time,
+          service_name: servicesById.get(next.service_id)?.name ?? "Servicio eliminado",
+        }
+      : null,
+    visit_count: completed.length,
+    total_spent: totalSpent,
+    average_ticket: completed.length > 0 ? totalSpent / completed.length : 0,
+    favorite_service: mostFrequent(
+      completed.map((b) => servicesById.get(b.service_id)?.name).filter(Boolean) as string[]
+    ),
+    usual_professional: mostFrequent(
+      completed
+        .map((b) => (b.professional_id ? professionalsById.get(b.professional_id)?.name : null))
+        .filter(Boolean) as string[]
+    ),
+    history,
+  };
+}
+
+export async function updateClientNotes(
+  clientId: string,
+  notes: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder guardar notas.",
+    };
+  }
+  const { error } = await supabaseAdmin
+    .from("clients")
+    .update({ notes })
+    .eq("id", clientId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------
+// Estadísticas y oportunidades — wrappers finos que cargan los datos
+// (reales o demo) y delegan el cálculo a funciones puras en
+// src/lib/stats.ts / src/lib/opportunities.ts (sin llamadas a Supabase
+// adentro de esas dos, a propósito — ver comentario ahí).
+// ---------------------------------------------------------------------
+
+export async function getBusinessStats(
+  businessId: string,
+  rangeDays: number
+): Promise<BusinessStats> {
+  const [bookings, clients, services, locations] = await Promise.all([
+    listBookingsByBusiness(businessId),
+    listClientsByBusiness(businessId),
+    listServicesByBusiness(businessId),
+    listLocationsByBusiness(businessId),
+  ]);
+  return computeBusinessStats({
+    today: new Date().toISOString().slice(0, 10),
+    rangeDays,
+    bookings,
+    clients,
+    servicesById: Object.fromEntries(services.map((s) => [s.id, s])),
+    locations,
+  });
+}
+
+export async function getOpportunities(
+  businessId: string
+): Promise<Opportunity[]> {
+  const [bookings, clients, services, locations] = await Promise.all([
+    listBookingsByBusiness(businessId),
+    listClientsByBusiness(businessId),
+    listServicesByBusiness(businessId),
+    listLocationsByBusiness(businessId),
+  ]);
+  return detectOpportunities({
+    today: new Date().toISOString().slice(0, 10),
+    clients,
+    bookings,
+    servicesById: Object.fromEntries(services.map((s) => [s.id, s])),
+    locations,
+  });
 }

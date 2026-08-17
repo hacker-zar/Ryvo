@@ -1,6 +1,6 @@
 "use client";
 
-import { Business, Location, Professional, Service } from "@/types/business";
+import { Business, Location, ProfessionalWithServices, Service } from "@/types/business";
 import { EditorSelectionProvider } from "@/lib/admin/editor-selection-context";
 import CategoryPanel from "./category-panel";
 import PreviewPane from "./preview-pane";
@@ -9,7 +9,7 @@ import TwoColumnLayout from "./two-column-layout";
 interface EditorShellProps {
   business: Business;
   services: Service[];
-  professionals: Professional[];
+  professionals: ProfessionalWithServices[];
   locations: Location[];
 }
 

@@ -10,6 +10,7 @@ import {
 } from "@/lib/data/business-repository";
 import { nowTimeString, todayDateString } from "@/lib/format";
 import AdminChrome from "@/components/admin/AdminChrome";
+import BusinessNav from "./business-nav";
 import EditorShell from "./editor-shell";
 import OnboardingChrome from "./onboarding-chrome";
 import TodaySummary from "./today-summary";
@@ -90,20 +91,10 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
             Ver sitio público →
           </a>
         </div>
-        <div className="flex gap-4">
-          <Link
-            href={`/admin/negocios/${business.id}/turnos`}
-            className="text-xs text-bone-muted hover:text-brass transition-colors"
-          >
-            Turnos →
-          </Link>
-          <Link
-            href={`/admin/negocios/${business.id}/cuenta`}
-            className="text-xs text-bone-muted hover:text-brass transition-colors"
-          >
-            Cuenta →
-          </Link>
-        </div>
+      </div>
+
+      <div className="mt-8">
+        <BusinessNav businessId={business.id} active="editor" />
       </div>
 
       <TodaySummary

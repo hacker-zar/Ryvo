@@ -36,7 +36,7 @@ export async function loginAdmin(formData: FormData) {
       return { success: false, error: ACCOUNT_LOGIN_ERROR };
     }
 
-    await createOwnerSession(account.id, account.business_id);
+    await createOwnerSession(account.id, account.business_id, account.role);
     redirect(`/admin/negocios/${account.business_id}`);
   }
 

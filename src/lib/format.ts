@@ -53,6 +53,25 @@ export function nowTimeString(): string {
   return `${h}:${m}`;
 }
 
+/** `toDateStr - fromDateStr` en días. */
+export function daysBetween(fromDateStr: string, toDateStr: string): number {
+  const a = new Date(`${fromDateStr}T00:00:00`);
+  const b = new Date(`${toDateStr}T00:00:00`);
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
+}
+
+/** "hace N días"/"en N días", relativo a hoy — usado en CRM/oportunidades
+ *  para "última visita"/"próximo turno" sin repetir el cálculo en cada
+ *  componente nuevo. */
+export function daysAgoLabel(dateStr: string): string {
+  const diff = daysBetween(dateStr, todayDateString());
+  if (diff === 0) return "hoy";
+  if (diff === 1) return "ayer";
+  if (diff > 1) return `hace ${diff} días`;
+  if (diff === -1) return "mañana";
+  return `en ${-diff} días`;
+}
+
 export function whatsappLink(phone: string, message = ""): string {
   const cleanPhone = phone.replace(/[^\d]/g, "");
   const encoded = encodeURIComponent(message);

@@ -1,9 +1,13 @@
 "use server";
 
-import { getBookedSlots } from "@/lib/data/business-repository";
+import {
+  getBookedSlots,
+  getBookedSlotsForProfessionals,
+} from "@/lib/data/business-repository";
 import {
   filterAvailableSlots,
   generateSlotsForDay,
+  unionAvailableSlots,
 } from "@/lib/availability";
 import { OpeningHours } from "@/types/business";
 
@@ -13,6 +17,15 @@ export interface AvailabilityQuery {
   date: string;
   serviceDurationMin: number;
   openingHours: OpeningHours[];
+  // Reserva con UN profesional específico.
+  professionalId?: string;
+  // "Cualquiera disponible" — ya resueltos client-side (qualifiedProfessionalIds
+  // de src/lib/availability.ts) a partir de los profesionales activos del
+  // negocio y el servicio elegido.
+  qualifiedProfessionalIds?: string[];
+  // Reprogramar: excluye la propia reserva actual para que su horario no
+  // se vea como ocupado por sí misma.
+  excludeBookingId?: string;
 }
 
 export async function getAvailableSlots(
@@ -26,11 +39,34 @@ export async function getAvailableSlots(
 
   if (allSlots.length === 0) return [];
 
+  if (query.professionalId) {
+    const booked = await getBookedSlots(
+      query.businessId,
+      query.locationId,
+      query.date,
+      query.professionalId,
+      query.excludeBookingId
+    );
+    return filterAvailableSlots(allSlots, booked);
+  }
+
+  if (query.qualifiedProfessionalIds && query.qualifiedProfessionalIds.length > 0) {
+    const byProfessional = await getBookedSlotsForProfessionals(
+      query.businessId,
+      query.locationId,
+      query.date,
+      query.qualifiedProfessionalIds
+    );
+    return unionAvailableSlots(allSlots, byProfessional);
+  }
+
+  // Negocio sin profesionales configurados — mismo código de siempre.
   const booked = await getBookedSlots(
     query.businessId,
     query.locationId,
-    query.date
+    query.date,
+    undefined,
+    query.excludeBookingId
   );
-
   return filterAvailableSlots(allSlots, booked);
 }

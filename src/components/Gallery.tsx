@@ -31,7 +31,7 @@ export default function Gallery({
     <section id="galeria" className="py-16 md:py-24">
       <div className="mx-auto max-w-5xl px-4">
         <Reveal>
-          <div data-editable-category="fotos" data-editable-field="galeria">
+          <div data-editable-category="apariencia" data-editable-field="galeria">
             <p className="section-eyebrow" style={{ color: primaryColor }}>
               Trabajos
             </p>

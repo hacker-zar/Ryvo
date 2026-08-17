@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Business, ButtonStyle, TypographyPreset } from "@/types/business";
 import { adminUpdateAppearance } from "@/lib/admin/actions";
 import { contrastRatio } from "@/lib/format";
@@ -47,7 +47,8 @@ const colorInputClasses =
   "h-10 w-full rounded-sm border border-ink-line bg-ink-elevated";
 
 export default function AppearanceForm({ business }: AppearanceFormProps) {
-  const { refreshPreview } = useEditorSelection();
+  const { refreshPreview, setDirty, setSaveHandler } = useEditorSelection();
+  const formRef = useRef<HTMLFormElement>(null);
   const [primaryColor, setPrimaryColor] = useState(business.primary_color);
   const [secondaryColor, setSecondaryColor] = useState(
     business.secondary_color
@@ -61,7 +62,7 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   const [buttonStyle, setButtonStyle] = useState<ButtonStyle>(
     business.button_style || "recto"
   );
-  const { status, error, run, isPending } = useAsyncStatus();
+  const { status, error, run, isPending, dirty, markDirty } = useAsyncStatus();
 
   const backgroundPreset = BACKGROUND_VARIANTS[backgroundVariant];
 
@@ -72,13 +73,33 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   const accentContrast = contrastRatio(primaryColor, backgroundPreset.background);
   const lowAccentContrast = accentContrast !== null && accentContrast < 3;
 
-  async function handleSubmit(formData: FormData) {
+  async function save(formData: FormData) {
     const result = await run(() => adminUpdateAppearance(business.id, formData));
     if (result.success) refreshPreview();
+    return result.success;
   }
 
+  useEffect(() => {
+    setDirty(dirty);
+  }, [dirty, setDirty]);
+
+  useEffect(() => {
+    setSaveHandler(async () => {
+      if (!formRef.current) return false;
+      return save(new FormData(formRef.current));
+    });
+    return () => setSaveHandler(null);
+  });
+
   return (
-    <form action={handleSubmit} className="grid gap-6 max-w-lg">
+    <form
+      ref={formRef}
+      action={async (formData) => {
+        await save(formData);
+      }}
+      onChange={markDirty}
+      className="grid gap-6 max-w-lg"
+    >
       <p className="text-xs text-bone-muted -mt-1">
         Personalizá los colores, la tipografía y el fondo de tu web. La
         estructura y el diseño general son de RYVO — así se mantiene

@@ -23,7 +23,7 @@ export default function Hero({ business }: HeroProps) {
       {business.hero_image ? (
         <div
           className="absolute inset-0"
-          data-editable-category="fotos"
+          data-editable-category="apariencia"
           data-editable-field="hero_image"
         >
           <Image

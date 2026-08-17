@@ -5,10 +5,10 @@ import {
   getBusinessById,
   listBookingsByBusiness,
 } from "@/lib/data/business-repository";
-import { isSupabaseConfigured } from "@/lib/supabase";
-import { todayDateString } from "@/lib/format";
+import { nowTimeString, todayDateString } from "@/lib/format";
 import AdminChrome from "@/components/admin/AdminChrome";
 import BookingsList from "./bookings-list";
+import BusinessNav from "../business-nav";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -53,20 +53,18 @@ export default async function AdminBookingsPage({
         {business.name}
       </h1>
 
-      {!isSupabaseConfigured ? (
-        <div className="mt-6 rounded-sm border border-brass/40 bg-ink-elevated p-4 text-sm text-bone-muted">
-          Supabase no está configurado: no hay turnos reales para mostrar en
-          modo demo.
-        </div>
-      ) : (
-        <BookingsList
-          businessId={id}
-          bookings={bookings}
-          selectedDate={effectiveDate}
-          today={today}
-          viewAll={viewAll}
-        />
-      )}
+      <div className="mt-8">
+        <BusinessNav businessId={id} active="turnos" />
+      </div>
+
+      <BookingsList
+        businessId={id}
+        bookings={bookings}
+        selectedDate={effectiveDate}
+        today={today}
+        nowTime={nowTimeString()}
+        viewAll={viewAll}
+      />
     </AdminChrome>
   );
 }

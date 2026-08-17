@@ -15,6 +15,16 @@ interface StepDateTimeProps {
   /** "Este horario acaba de ocuparse" — llega desde BookingModal cuando
    *  confirmar el paso 3 devolvió un conflicto (ver createBooking). */
   conflictMessage?: string;
+  /** Reserva con UN profesional específico — acota los horarios a los
+   *  suyos. Ninguno de los dos = negocio sin profesionales, mismo
+   *  comportamiento de siempre. */
+  professionalId?: string;
+  /** "Cualquiera disponible" — unión de disponibilidad entre estos. */
+  qualifiedProfessionalIds?: string[];
+  /** Reprogramar: excluye la propia reserva actual de los horarios
+   *  ocupados, para que no se vea bloqueada a sí misma. */
+  excludeBookingId?: string;
+  stepNumber: number;
   onSelectLocation: (locationId: string) => void;
   onSelectDate: (date: string) => void;
   onSelectTime: (time: string) => void;
@@ -28,6 +38,10 @@ export default function StepDateTime({
   selectedDate,
   selectedTime,
   conflictMessage,
+  professionalId,
+  qualifiedProfessionalIds,
+  excludeBookingId,
+  stepNumber,
   onSelectLocation,
   onSelectDate,
   onSelectTime,
@@ -78,6 +92,9 @@ export default function StepDateTime({
       date: selectedDate,
       serviceDurationMin: service.duration,
       openingHours: activeLocation.opening_hours,
+      professionalId,
+      qualifiedProfessionalIds,
+      excludeBookingId,
     })
       .then((result) => {
         if (!cancelled) {
@@ -91,7 +108,16 @@ export default function StepDateTime({
     return () => {
       cancelled = true;
     };
-  }, [selectedDate, activeLocation, business.id, service.duration, retryCount]);
+  }, [
+    selectedDate,
+    activeLocation,
+    business.id,
+    service.duration,
+    professionalId,
+    qualifiedProfessionalIds,
+    excludeBookingId,
+    retryCount,
+  ]);
 
   // Mientras llega la respuesta para la fecha/local actuales, no mostramos
   // los horarios de la consulta anterior (evita un parpadeo de datos viejos).
@@ -107,7 +133,7 @@ export default function StepDateTime({
   return (
     <div>
       <p className="section-eyebrow" style={{ color: business.primary_color }}>
-        Paso 2
+        Paso {stepNumber}
       </p>
       <h3 className="section-title mt-1 text-xl text-bone">Fecha y hora</h3>
 

@@ -1,10 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { Business, Location, Service } from "@/types/business";
 import { readableTextColor, whatsappLink } from "@/lib/format";
 
 interface StepSuccessProps {
   business: Pick<Business, "name" | "primary_color" | "whatsapp">;
+  slug: string;
+  /** Null si el upsert de la reserva no devolvió id (no debería pasar en
+   *  modo real, pero el link "Gestionar mi turno" simplemente no se
+   *  muestra en ese caso en vez de romper la pantalla de éxito). */
+  bookingId: string | null;
   service: Service;
   location: Location;
   date: string;
@@ -54,6 +60,8 @@ function googleCalendarUrl(opts: {
 
 export default function StepSuccess({
   business,
+  slug,
+  bookingId,
   service,
   location,
   date,
@@ -119,6 +127,14 @@ export default function StepSuccess({
         >
           Agregar al calendario
         </a>
+        {bookingId ? (
+          <Link
+            href={`/${slug}/turno/${bookingId}`}
+            className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+          >
+            Gestionar mi turno
+          </Link>
+        ) : null}
       </div>
 
       <button

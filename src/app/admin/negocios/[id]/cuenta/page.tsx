@@ -6,6 +6,7 @@ import { listAccountsByBusiness } from "@/lib/data/accounts-repository";
 import { logoutAdmin } from "@/lib/admin/auth-actions";
 import AdminChrome from "@/components/admin/AdminChrome";
 import AccountManager from "../account-manager";
+import BusinessNav from "../business-nav";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -38,14 +39,22 @@ export default async function AccountPage({ params }: PageProps) {
         ← Volver al editor
       </Link>
 
-      <p className="section-eyebrow text-brass mt-6">Acceso</p>
-      <h1 className="section-title mt-2 text-2xl text-bone">Cuenta</h1>
+      <p className="section-eyebrow text-brass mt-6">Configuración</p>
+      <h1 className="section-title mt-2 text-2xl text-bone">
+        {business.name}
+      </h1>
+
+      <div className="mt-8">
+        <BusinessNav businessId={business.id} active="cuenta" />
+      </div>
+
+      <p className="section-eyebrow text-bone-muted">Acceso</p>
       <p className="text-xs text-bone-muted mt-2 max-w-md">
         Con esta cuenta el dueño de {business.name} entra directo a este
         panel — sin ver otros negocios.
       </p>
 
-      <div className="mt-8">
+      <div className="mt-6">
         <AccountManager businessId={business.id} accounts={accounts} />
       </div>
 

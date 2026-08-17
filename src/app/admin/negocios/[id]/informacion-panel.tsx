@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Business } from "@/types/business";
 import { adminUpdateBusiness } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
@@ -37,11 +37,13 @@ const FIELD_IDS: Record<string, string> = {
 };
 
 export default function InformacionPanel({ business }: InformacionPanelProps) {
-  const { target, refreshPreview } = useEditorSelection();
-  const { status, error, run, isPending } = useAsyncStatus();
+  const { target, refreshPreview, setDirty, setSaveHandler } =
+    useEditorSelection();
+  const { status, error, run, isPending, dirty, markDirty } = useAsyncStatus();
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (target?.category !== "informacion" || !target.field) return;
+    if (target?.category !== "pagina" || !target.field) return;
     const id = FIELD_IDS[target.field];
     if (!id) return;
     const el = document.getElementById(id);
@@ -51,13 +53,40 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
     }
   }, [target]);
 
-  async function handleSubmit(formData: FormData) {
+  async function save(formData: FormData) {
     const result = await run(() => adminUpdateBusiness(business.id, formData));
     if (result.success) refreshPreview();
+    return result.success;
   }
 
+  // Reporta el `dirty` de este panel al contexto del editor, que es quien
+  // decide si hace falta confirmar antes de cambiar de categoría — el
+  // panel no sabe (ni necesita saber) de esa lógica.
+  useEffect(() => {
+    setDirty(dirty);
+  }, [dirty, setDirty]);
+
+  // Sin array de deps a propósito: registra de nuevo en cada render para
+  // que el handler siempre cierre sobre el `save`/`formRef` actuales — el
+  // diálogo de "cambios sin guardar" puede dispararse en cualquier
+  // momento, no solo justo después de un cambio.
+  useEffect(() => {
+    setSaveHandler(async () => {
+      if (!formRef.current) return false;
+      return save(new FormData(formRef.current));
+    });
+    return () => setSaveHandler(null);
+  });
+
   return (
-    <form action={handleSubmit} className="grid gap-4 max-w-lg">
+    <form
+      ref={formRef}
+      action={async (formData) => {
+        await save(formData);
+      }}
+      onChange={markDirty}
+      className="grid gap-4 max-w-lg"
+    >
       <div className="grid gap-1.5">
         <label htmlFor="field-name" className="text-xs text-bone-muted">
           Nombre

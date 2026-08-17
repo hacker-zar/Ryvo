@@ -2,9 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Business, Location, Professional, Service } from "@/types/business";
+import { Business, Location, ProfessionalWithServices, Service } from "@/types/business";
 import { adminPublishBusiness, adminSetOnboardingStep } from "@/lib/admin/actions";
-import { EditorSelectionProvider } from "@/lib/admin/editor-selection-context";
+import {
+  EditorSelectionProvider,
+  useEditorSelection,
+} from "@/lib/admin/editor-selection-context";
 import InformacionPanel from "./informacion-panel";
 import FotosPanel from "./fotos-panel";
 import ServicesManager from "./services-manager";
@@ -17,7 +20,7 @@ import TwoColumnLayout from "./two-column-layout";
 interface OnboardingChromeProps {
   business: Business;
   services: Service[];
-  professionals: Professional[];
+  professionals: ProfessionalWithServices[];
   locations: Location[];
 }
 
@@ -40,13 +43,22 @@ const LAST_STEP = STEPS.length - 1;
  * al final, "Publicar" hace visible el negocio en /[slug] y la página
  * pasa a mostrar el editor normal (ver admin/negocios/[id]/page.tsx).
  */
-export default function OnboardingChrome({
+export default function OnboardingChrome(props: OnboardingChromeProps) {
+  return (
+    <EditorSelectionProvider>
+      <OnboardingSteps {...props} />
+    </EditorSelectionProvider>
+  );
+}
+
+function OnboardingSteps({
   business,
   services,
   professionals,
   locations,
 }: OnboardingChromeProps) {
   const router = useRouter();
+  const { guardNavigation } = useEditorSelection();
   const initialStep = Math.min(
     Math.max(business.onboarding_step ?? 0, 0),
     LAST_STEP
@@ -55,9 +67,13 @@ export default function OnboardingChrome({
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
 
-  async function goToStep(next: number) {
+  async function commitStep(next: number) {
     setStep(next);
     await adminSetOnboardingStep(business.id, next);
+  }
+
+  function goToStep(next: number) {
+    guardNavigation(() => commitStep(next));
   }
 
   async function handlePublish() {
@@ -73,7 +89,7 @@ export default function OnboardingChrome({
   }
 
   return (
-    <EditorSelectionProvider>
+    <>
       <div className="mb-10">
         <div className="flex items-center gap-1.5 flex-wrap text-xs">
           {STEPS.map((s, i) => {
@@ -122,6 +138,7 @@ export default function OnboardingChrome({
                   <ProfessionalsManager
                     businessId={business.id}
                     professionals={professionals}
+                    services={services}
                   />
                 ) : null}
                 {step === 3 ? (
@@ -137,6 +154,7 @@ export default function OnboardingChrome({
                       logo={business.logo}
                       heroImage={business.hero_image ?? ""}
                       gallery={business.gallery ?? []}
+                      favicon={business.favicon ?? ""}
                     />
                     <AppearanceForm business={business} />
                   </div>
@@ -198,6 +216,6 @@ export default function OnboardingChrome({
           </div>
         </div>
       )}
-    </EditorSelectionProvider>
+    </>
   );
 }

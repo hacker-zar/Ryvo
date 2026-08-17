@@ -35,7 +35,7 @@ export default function About({ business }: AboutProps) {
               Sobre {business.name}
             </h2>
             <p
-              data-editable-category="informacion"
+              data-editable-category="pagina"
               data-editable-field="bio"
               className="mt-6 text-base md:text-lg text-bone-muted leading-relaxed max-w-lg"
             >

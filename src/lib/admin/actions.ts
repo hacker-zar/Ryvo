@@ -16,8 +16,10 @@ import {
   deleteLocation,
   deleteProfessional,
   deleteService,
+  reorderProfessional,
   updateBookingStatus,
   updateBusiness,
+  updateClientNotes,
   updateLocation,
   updateProfessional,
   updateService,
@@ -127,6 +129,7 @@ const UPDATABLE_BUSINESS_FIELDS = [
   "email",
   "city",
   "hero_image",
+  "favicon",
 ] as const;
 
 /**
@@ -223,12 +226,14 @@ export async function adminCreateProfessional(
     role: String(formData.get("role") || ""),
     bio: String(formData.get("bio") || ""),
     photo: String(formData.get("photo") || ""),
+    experience: String(formData.get("experience") || ""),
     active: formData.get("active") === "on",
   };
+  const serviceIds = formData.getAll("service_ids").map(String);
 
   if (!input.name) return { success: false, error: "El nombre es obligatorio." };
 
-  const result = await createProfessional(input);
+  const result = await createProfessional(input, serviceIds);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
 }
@@ -245,10 +250,12 @@ export async function adminUpdateProfessional(
     role: String(formData.get("role") || ""),
     bio: String(formData.get("bio") || ""),
     photo: String(formData.get("photo") || ""),
+    experience: String(formData.get("experience") || ""),
     active: formData.get("active") === "on",
   };
+  const serviceIds = formData.getAll("service_ids").map(String);
 
-  const result = await updateProfessional(professionalId, input);
+  const result = await updateProfessional(professionalId, input, serviceIds);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
 }
@@ -263,14 +270,37 @@ export async function adminDeleteProfessional(
   return result;
 }
 
+export async function adminReorderProfessional(
+  businessId: string,
+  professionalId: string,
+  direction: "up" | "down"
+) {
+  await requireAdminFor(businessId);
+  const result = await reorderProfessional(businessId, professionalId, direction);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
 export async function adminUpdateBookingStatus(
   businessId: string,
   bookingId: string,
-  status: "confirmed" | "cancelled"
+  status: "confirmed" | "completed" | "cancelled" | "no_show"
 ) {
   await requireAdminFor(businessId);
   const result = await updateBookingStatus(bookingId, status);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}/turnos`);
+  return result;
+}
+
+export async function adminUpdateClientNotes(
+  businessId: string,
+  clientId: string,
+  formData: FormData
+) {
+  await requireAdminFor(businessId);
+  const notes = String(formData.get("notes") || "");
+  const result = await updateClientNotes(clientId, notes);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}/clientes/${clientId}`);
   return result;
 }
 

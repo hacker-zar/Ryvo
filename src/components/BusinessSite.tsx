@@ -64,6 +64,7 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         <Professionals
           professionals={professionals}
           primaryColor={business.primary_color}
+          slug={slug}
         />
         <Gallery
           images={business.gallery ?? []}
@@ -103,8 +104,10 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
             primary_color: business.primary_color,
             whatsapp: business.whatsapp,
           }}
+          slug={slug}
           services={services}
           locations={locations}
+          professionals={professionals}
         />
         <BookingQueryParamTrigger />
         <MobileBookingBar business={{ primary_color: business.primary_color }} />

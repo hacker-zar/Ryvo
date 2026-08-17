@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BookingWithDetails } from "@/lib/data/business-repository";
 import { adminUpdateBookingStatus } from "@/lib/admin/actions";
 import { whatsappLink } from "@/lib/format";
+import { BookingStatus } from "@/types/business";
 
 interface BookingsListProps {
   businessId: string;
@@ -12,19 +13,24 @@ interface BookingsListProps {
   /** Fecha efectivamente filtrada — undefined solo cuando viewAll=true. */
   selectedDate?: string;
   today: string;
+  nowTime: string;
   viewAll: boolean;
 }
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<BookingStatus, string> = {
   pending: "Pendiente",
   confirmed: "Confirmado",
+  completed: "Completado",
   cancelled: "Cancelado",
+  no_show: "No asistió",
 };
 
-const STATUS_COLOR: Record<string, string> = {
+const STATUS_COLOR: Record<BookingStatus, string> = {
   pending: "var(--bone-muted)",
   confirmed: "var(--brass)",
+  completed: "#4ade80",
   cancelled: "#f87171",
+  no_show: "#fb923c",
 };
 
 function formatDateLong(dateStr: string): string {
@@ -37,7 +43,7 @@ function formatDateLong(dateStr: string): string {
   });
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status: BookingStatus }) {
   const color = STATUS_COLOR[status] ?? "var(--bone-muted)";
   return (
     <span
@@ -49,36 +55,78 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/** Un turno "ya pasó" si su fecha es anterior a hoy, o es hoy pero su hora
+ *  ya pasó — recién ahí tiene sentido ofrecer marcarlo Completado/No
+ *  asistió (completar un turno futuro no tiene sentido). */
+function isPast(booking: BookingWithDetails, today: string, nowTime: string): boolean {
+  if (booking.date < today) return true;
+  if (booking.date > today) return false;
+  return booking.time.slice(0, 5) < nowTime;
+}
+
 function QuickActions({
   booking,
+  today,
+  nowTime,
   disabled,
   onStatusChange,
 }: {
   booking: BookingWithDetails;
+  today: string;
+  nowTime: string;
   disabled: boolean;
-  onStatusChange: (status: "confirmed" | "cancelled") => void;
+  onStatusChange: (
+    status: "confirmed" | "completed" | "cancelled" | "no_show"
+  ) => void;
 }) {
   if (booking.status === "cancelled") return null;
+  if (booking.status === "completed" || booking.status === "no_show") return null;
+
+  const past = isPast(booking, today, nowTime);
+
   return (
     <div className="flex gap-2 flex-wrap">
-      {booking.status !== "confirmed" ? (
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => onStatusChange("confirmed")}
-          className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50"
-        >
-          Confirmar
-        </button>
-      ) : null}
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onStatusChange("cancelled")}
-        className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone-muted hover:text-red-400 hover:border-red-400 transition-colors disabled:opacity-50"
-      >
-        Cancelar
-      </button>
+      {past ? (
+        <>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onStatusChange("completed")}
+            className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50"
+          >
+            Completado
+          </button>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onStatusChange("no_show")}
+            className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone-muted hover:text-orange-400 hover:border-orange-400 transition-colors disabled:opacity-50"
+          >
+            No asistió
+          </button>
+        </>
+      ) : (
+        <>
+          {booking.status !== "confirmed" ? (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onStatusChange("confirmed")}
+              className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50"
+            >
+              Confirmar
+            </button>
+          ) : null}
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onStatusChange("cancelled")}
+            className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone-muted hover:text-red-400 hover:border-red-400 transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+        </>
+      )}
       <a
         href={whatsappLink(
           booking.customer_phone,
@@ -99,6 +147,7 @@ export default function BookingsList({
   bookings,
   selectedDate,
   today,
+  nowTime,
   viewAll,
 }: BookingsListProps) {
   const router = useRouter();
@@ -114,7 +163,7 @@ export default function BookingsList({
 
   function handleStatusChange(
     bookingId: string,
-    status: "confirmed" | "cancelled"
+    status: "confirmed" | "completed" | "cancelled" | "no_show"
   ) {
     setPendingId(bookingId);
     startTransition(async () => {
@@ -198,6 +247,8 @@ export default function BookingsList({
               </div>
               <QuickActions
                 booking={booking}
+                today={today}
+                nowTime={nowTime}
                 disabled={isPending && pendingId === booking.id}
                 onStatusChange={(status) =>
                   handleStatusChange(booking.id, status)
@@ -236,6 +287,8 @@ export default function BookingsList({
               </div>
               <QuickActions
                 booking={booking}
+                today={today}
+                nowTime={nowTime}
                 disabled={isPending && pendingId === booking.id}
                 onStatusChange={(status) =>
                   handleStatusChange(booking.id, status)

@@ -13,6 +13,11 @@ interface ImageUploadFieldProps {
    *  y para mostrar el preview inicial. */
   name: string;
   defaultValue?: string;
+  /** El valor real (el hidden input) cambia por `setUrl`, no por un evento
+   *  nativo del navegador — el `onChange` delegado a nivel de `<form>` que
+   *  usa el resto de los campos no lo detecta. Este callback es el aviso
+   *  explícito para que el panel contenedor pueda marcar `dirty`. */
+  onChange?: () => void;
 }
 
 export default function ImageUploadField({
@@ -20,6 +25,7 @@ export default function ImageUploadField({
   label,
   name,
   defaultValue,
+  onChange,
 }: ImageUploadFieldProps) {
   const [url, setUrl] = useState(defaultValue ?? "");
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">(
@@ -42,6 +48,7 @@ export default function ImageUploadField({
 
     if (result.success && result.url) {
       setUrl(result.url);
+      onChange?.();
       setStatus("success");
       // Flash breve de confirmación — no queda pegado indefinidamente.
       window.setTimeout(() => setStatus((s) => (s === "success" ? "idle" : s)), 1500);
@@ -93,7 +100,10 @@ export default function ImageUploadField({
         {url ? (
           <button
             type="button"
-            onClick={() => setUrl("")}
+            onClick={() => {
+              setUrl("");
+              onChange?.();
+            }}
             className="text-xs text-bone-muted hover:text-red-400 transition-colors"
           >
             Quitar

@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Professional } from "@/types/business";
+import { ProfessionalWithServices, Service } from "@/types/business";
 import {
   adminCreateProfessional,
   adminDeleteProfessional,
+  adminReorderProfessional,
   adminUpdateProfessional,
 } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
@@ -17,17 +18,20 @@ import ImageUploadField from "@/components/admin/ImageUploadField";
 
 interface ProfessionalsManagerProps {
   businessId: string;
-  professionals: Professional[];
+  professionals: ProfessionalWithServices[];
+  services: Service[];
 }
 
 export default function ProfessionalsManager({
   businessId,
   professionals,
+  services,
 }: ProfessionalsManagerProps) {
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
   const [items, setItems] = useState(professionals);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
   const editingId =
     target?.category === "profesionales" ? target.itemId ?? null : null;
 
@@ -66,16 +70,26 @@ export default function ProfessionalsManager({
     }
   }
 
+  async function handleReorder(professionalId: string, direction: "up" | "down") {
+    setReorderingId(professionalId);
+    const result = await adminReorderProfessional(businessId, professionalId, direction);
+    setReorderingId(null);
+    if (result.success) {
+      router.refresh();
+      refreshPreview();
+    }
+  }
+
   return (
     <div className="mt-6">
       <div className="divide-y divide-ink-line border-t border-b border-ink-line">
         {items.length === 0 ? (
           <EmptyState
             title="Todavía no hay profesionales cargados."
-            hint="Se muestran en la web pública como señal de confianza — es opcional."
+            hint="Se muestran en la web pública y, si hay 2 o más, tus clientes pueden elegir con quién reservar."
           />
         ) : (
-          items.map((professional) =>
+          items.map((professional, index) =>
             editingId === professional.id ? (
               <form
                 key={professional.id}
@@ -99,7 +113,7 @@ export default function ProfessionalsManager({
                   name="role"
                   defaultValue={professional.role}
                   className={adminInputClassesCompact}
-                  placeholder="Rol (ej: Estilista, Barbero, Colorista)"
+                  placeholder="Rol / especialidad (ej: Estilista, Barbero, Colorista)"
                 />
                 <textarea
                   name="bio"
@@ -108,6 +122,38 @@ export default function ProfessionalsManager({
                   className={adminInputClassesCompact}
                   placeholder="Breve trayectoria/especialidad"
                 />
+                <input
+                  name="experience"
+                  defaultValue={professional.experience}
+                  className={adminInputClassesCompact}
+                  placeholder="Experiencia (opcional, ej: 12 años)"
+                />
+
+                {services.length > 0 ? (
+                  <fieldset className="grid gap-2">
+                    <legend className="text-xs text-bone-muted mb-1">
+                      Servicios que realiza
+                    </legend>
+                    <p className="text-[11px] text-bone-muted/70">
+                      Si no marcás ninguno, se lo considera disponible para todos.
+                    </p>
+                    {services.map((service) => (
+                      <label
+                        key={service.id}
+                        className="flex items-center gap-2 text-xs text-bone-muted"
+                      >
+                        <input
+                          type="checkbox"
+                          name="service_ids"
+                          value={service.id}
+                          defaultChecked={professional.service_ids.includes(service.id)}
+                        />
+                        {service.name}
+                      </label>
+                    ))}
+                  </fieldset>
+                ) : null}
+
                 <label className="flex items-center gap-2 text-xs text-bone-muted">
                   <input
                     name="active"
@@ -139,25 +185,55 @@ export default function ProfessionalsManager({
                 key={professional.id}
                 className="py-4 flex items-start justify-between gap-4"
               >
-                <div>
-                  <p className="text-bone font-medium">
-                    {professional.name}
-                    {!professional.active ? (
-                      <span className="ml-2 text-xs text-bone-muted">
-                        (inactivo)
-                      </span>
+                <div className="flex items-start gap-2">
+                  <div className="flex flex-col gap-0.5 mt-0.5">
+                    <button
+                      type="button"
+                      disabled={index === 0 || reorderingId === professional.id}
+                      onClick={() => handleReorder(professional.id, "up")}
+                      aria-label="Subir"
+                      className="text-bone-muted hover:text-brass disabled:opacity-30 transition-colors text-[10px] leading-none"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === items.length - 1 || reorderingId === professional.id}
+                      onClick={() => handleReorder(professional.id, "down")}
+                      aria-label="Bajar"
+                      className="text-bone-muted hover:text-brass disabled:opacity-30 transition-colors text-[10px] leading-none"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-bone font-medium">
+                      {professional.name}
+                      {!professional.active ? (
+                        <span className="ml-2 text-xs text-bone-muted">
+                          (inactivo)
+                        </span>
+                      ) : null}
+                    </p>
+                    {professional.role ? (
+                      <p className="text-xs text-bone-muted mt-1">
+                        {professional.role}
+                      </p>
                     ) : null}
-                  </p>
-                  {professional.role ? (
-                    <p className="text-xs text-bone-muted mt-1">
-                      {professional.role}
-                    </p>
-                  ) : null}
-                  {professional.bio ? (
-                    <p className="text-sm text-bone-muted mt-1">
-                      {professional.bio}
-                    </p>
-                  ) : null}
+                    {professional.bio ? (
+                      <p className="text-sm text-bone-muted mt-1">
+                        {professional.bio}
+                      </p>
+                    ) : null}
+                    {professional.service_ids.length > 0 ? (
+                      <p className="text-[11px] text-bone-muted/70 mt-1">
+                        {professional.service_ids
+                          .map((id) => services.find((s) => s.id === id)?.name)
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex gap-3 shrink-0">
                   <button
@@ -197,7 +273,7 @@ export default function ProfessionalsManager({
         <input
           name="role"
           className={adminInputClassesCompact}
-          placeholder="Rol (ej: Estilista, Barbero, Colorista)"
+          placeholder="Rol / especialidad (ej: Estilista, Barbero, Colorista)"
         />
         <textarea
           name="bio"
@@ -205,6 +281,30 @@ export default function ProfessionalsManager({
           className={adminInputClassesCompact}
           placeholder="Breve trayectoria/especialidad"
         />
+        <input
+          name="experience"
+          className={adminInputClassesCompact}
+          placeholder="Experiencia (opcional, ej: 12 años)"
+        />
+        {services.length > 0 ? (
+          <fieldset className="grid gap-2">
+            <legend className="text-xs text-bone-muted mb-1">
+              Servicios que realiza
+            </legend>
+            <p className="text-[11px] text-bone-muted/70">
+              Si no marcás ninguno, se lo considera disponible para todos.
+            </p>
+            {services.map((service) => (
+              <label
+                key={service.id}
+                className="flex items-center gap-2 text-xs text-bone-muted"
+              >
+                <input type="checkbox" name="service_ids" value={service.id} />
+                {service.name}
+              </label>
+            ))}
+          </fieldset>
+        ) : null}
         <label className="flex items-center gap-2 text-xs text-bone-muted">
           <input name="active" type="checkbox" defaultChecked />
           Activo

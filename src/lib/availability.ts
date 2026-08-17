@@ -1,4 +1,4 @@
-import { Booking, Location, OpeningHours } from "@/types/business";
+import { Booking, Location, OpeningHours, ProfessionalWithServices } from "@/types/business";
 
 const DAY_ORDER: OpeningHours["day"][] = [
   "dom",
@@ -76,6 +76,39 @@ export function filterAvailableSlots(
       .map((b) => b.time.slice(0, 5)) // normaliza "HH:mm:ss" -> "HH:mm"
   );
   return allSlots.filter((slot) => !takenTimes.has(slot));
+}
+
+/**
+ * "Cualquiera disponible": un horario está libre si AL MENOS UN
+ * profesional calificado lo tiene libre — es una unión de N sets de
+ * disponibilidad individuales, no un simple filtro (por eso no reutiliza
+ * `filterAvailableSlots` directamente, aunque lo llama por dentro para
+ * cada profesional).
+ */
+export function unionAvailableSlots(
+  allSlots: string[],
+  bookingsByProfessional: Map<string, Pick<Booking, "time" | "status">[]>
+): string[] {
+  const available = new Set<string>();
+  for (const bookings of bookingsByProfessional.values()) {
+    for (const slot of filterAvailableSlots(allSlots, bookings)) {
+      available.add(slot);
+    }
+  }
+  return allSlots.filter((s) => available.has(s));
+}
+
+/** Filtro puro client-side (sin red): profesionales activos que pueden
+ *  realizar `serviceId` — sin ninguna asociación explícita califica para
+ *  todos (misma regla de compatibilidad que el lado servidor). */
+export function qualifiedProfessionalIds(
+  professionals: Pick<ProfessionalWithServices, "id" | "active" | "service_ids">[],
+  serviceId: string
+): string[] {
+  return professionals
+    .filter((p) => p.active)
+    .filter((p) => p.service_ids.length === 0 || p.service_ids.includes(serviceId))
+    .map((p) => p.id);
 }
 
 /**

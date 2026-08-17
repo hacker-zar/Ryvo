@@ -38,6 +38,10 @@ export interface Business {
   business_type?: string;
   onboarding_step?: number;
   published?: boolean;
+  // Ícono de pestaña del navegador para /[slug]. Vacío = sin favicon
+  // propio (generateMetadata cae a logo, y si tampoco hay, al ícono
+  // global de RYVO — ver [slug]/page.tsx).
+  favicon?: string;
   created_at: string;
 }
 
@@ -68,13 +72,25 @@ export interface Service {
   active: boolean;
 }
 
-export type BookingStatus = "pending" | "confirmed" | "cancelled";
+export type BookingStatus =
+  | "pending"
+  | "confirmed"
+  | "completed"
+  | "cancelled"
+  | "no_show";
 
 export interface Booking {
   id: string;
   business_id: string;
   service_id: string;
   location_id: string | null;
+  // Nulo en negocios sin profesionales configurados, o en reservas
+  // anteriores a esta columna — ver getBookedSlots (OR IS NULL) para
+  // cómo se trata como "bloquea a cualquiera" durante la transición.
+  professional_id?: string | null;
+  // Nulo si el upsert en clients falló al crear la reserva (no debe
+  // bloquear la reserva en sí) — ver createBooking.
+  client_id?: string | null;
   customer_name: string;
   customer_phone: string;
   customer_email?: string | null;
@@ -82,6 +98,7 @@ export interface Booking {
   time: string; // "HH:mm"
   status: BookingStatus;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Review {
@@ -93,9 +110,9 @@ export interface Review {
   created_at: string;
 }
 
-// Equipo del negocio — señal de confianza en la web pública. Deliberadamente
-// NO está ligado al flujo de reservas (no hay "elegir profesional" en el
-// wizard): es solo presentación.
+// Equipo del negocio. Ligado al flujo de reservas vía Booking.professional_id
+// y a los servicios que puede realizar vía professional_services (ver
+// ProfessionalWithServices) — ya no es solo presentación.
 export interface Professional {
   id: string;
   business_id: string;
@@ -103,9 +120,32 @@ export interface Professional {
   role: string;
   bio: string;
   photo: string;
+  // Texto libre, opcional — igual convención que bio/role: vacío no se
+  // muestra en el perfil público.
+  experience?: string;
+  // Orden de aparición en el picker de reserva y en el perfil público.
+  display_order: number;
   active: boolean;
   created_at: string;
 }
+
+// Profesional + qué servicios califica a realizar. service_ids vacío
+// significa "sin asociación explícita configurada" — se interpreta como
+// "califica para todos los servicios activos" (compatibilidad hacia
+// atrás con profesionales cargados antes de esta relación existir — ver
+// listQualifiedProfessionals en business-repository.ts). Puerta abierta a
+// reviews por profesional en el futuro (Review.professional_id), sin
+// construirlo ahora.
+export interface ProfessionalWithServices extends Professional {
+  service_ids: string[];
+}
+
+// Rol dentro del negocio (distinto del `role` de sesión "super"/"owner"
+// de AdminSession, que es el nivel de autenticación, no el permiso
+// dentro del negocio). Hoy toda cuenta es "owner" — no hay UI todavía
+// para crear "admin"/"worker" — pero la estructura ya existe para
+// cuando se construya gestión de equipo (ver src/lib/admin/roles.ts).
+export type AccountRole = "owner" | "admin" | "worker";
 
 // Cuenta de acceso al panel (usuario + contraseña) de un negocio. NUNCA
 // incluye password_hash acá — ese campo solo existe en las funciones de
@@ -117,6 +157,7 @@ export interface Account {
   business_id: string;
   name: string;
   username: string;
+  role: AccountRole;
   active: boolean;
   created_at: string;
 }
@@ -128,5 +169,101 @@ export interface BusinessProfile {
   services: Service[];
   reviews: Review[];
   locations: Location[];
-  professionals: Professional[];
+  professionals: ProfessionalWithServices[];
+}
+
+// === CRM de clientes ===
+// No hay tabla de clientes separada del lado de la reserva pública — se
+// arma automáticamente al crear cada Booking (ver createBooking). phone
+// es la clave de identidad de facto dentro de un negocio.
+export interface Client {
+  id: string;
+  business_id: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientBookingHistoryItem {
+  id: string;
+  date: string;
+  time: string;
+  status: BookingStatus;
+  service_name: string;
+  professional_name: string | null;
+  price: number;
+}
+
+// Ficha del cliente — no es un simple contacto, agrega historial y
+// métricas ya calculadas para la vista de perfil del admin.
+export interface ClientProfile {
+  client: Client;
+  last_visit: string | null;
+  next_appointment: { date: string; time: string; service_name: string } | null;
+  visit_count: number;
+  total_spent: number;
+  average_ticket: number;
+  favorite_service: string | null;
+  usual_professional: string | null;
+  history: ClientBookingHistoryItem[];
+}
+
+// === Estadísticas ===
+// Todos los conteos vienen de un único pase de agregación sobre la misma
+// ventana de turnos — bookings_pending + confirmed + completed +
+// cancelled + no_show === bookings_total siempre, por construcción (ver
+// computeBusinessStats en src/lib/stats.ts).
+export interface BusinessStats {
+  range_days: number;
+  clients_total: number;
+  clients_new: number;
+  clients_returning: number;
+  bookings_total: number;
+  bookings_pending: number;
+  bookings_confirmed: number;
+  bookings_completed: number;
+  bookings_cancelled: number;
+  bookings_no_show: number;
+  revenue_estimated: number;
+  top_service: { service_id: string; name: string; count: number } | null;
+  occupancy_rate: number; // 0..1
+}
+
+// === Oportunidades ===
+// Tipo pensado como punto de enganche para automatizaciones futuras
+// (recordatorios, recuperación de clientes, etc.) — ver
+// src/lib/opportunities.ts.
+export type OpportunityType =
+  | "returning_soon"
+  | "never_returned"
+  | "cancelled_this_week"
+  | "low_occupancy_slot"
+  | "overdue_vs_frequency";
+
+export interface OpportunityClientRow {
+  client_id: string;
+  client_name: string;
+  client_phone: string;
+  last_visit: string | null;
+  service_name: string | null;
+  days_since_last_visit: number | null;
+  usual_frequency_days: number | null;
+  status: BookingStatus | null;
+}
+
+export interface LowOccupancySlot {
+  day_label: string;
+  location_name: string;
+  occupancy_rate: number;
+}
+
+export interface Opportunity {
+  type: OpportunityType;
+  title: string;
+  count: number;
+  clients?: OpportunityClientRow[];
+  slots?: LowOccupancySlot[];
 }

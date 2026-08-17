@@ -1,5 +1,5 @@
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
-import { Account } from "@/types/business";
+import { Account, AccountRole } from "@/types/business";
 
 // Todas las columnas de `accounts` MENOS password_hash — mismo criterio que
 // BUSINESS_PUBLIC_COLUMNS en business-repository.ts: cualquier lectura cuyo
@@ -8,7 +8,7 @@ import { Account } from "@/types/business";
 // pública (a diferencia de businesses): solo supabaseAdmin puede leerla, así
 // que la única protección real del hash es que estas funciones nunca lo
 // seleccionan.
-const ACCOUNT_PUBLIC_COLUMNS = "id, business_id, name, username, active, created_at";
+const ACCOUNT_PUBLIC_COLUMNS = "id, business_id, name, username, role, active, created_at";
 
 function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
@@ -22,12 +22,13 @@ export async function getAccountAuthByUsername(username: string): Promise<{
   id: string;
   business_id: string;
   password_hash: string;
+  role: AccountRole;
   active: boolean;
 } | null> {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
   const { data } = await supabaseAdmin
     .from("accounts")
-    .select("id, business_id, password_hash, active")
+    .select("id, business_id, password_hash, role, active")
     .eq("username", normalizeUsername(username))
     .single();
   return data ?? null;

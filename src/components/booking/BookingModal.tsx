@@ -1,48 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Business, Location, Service } from "@/types/business";
+import { useEffect, useMemo, useState } from "react";
+import { Business, Location, ProfessionalWithServices, Service } from "@/types/business";
 import { useBookingModal } from "@/lib/booking-modal-context";
 import { submitBooking } from "@/lib/actions/booking-actions";
 import { isLikelyPhone, readableTextColor } from "@/lib/format";
-import StepIndicator from "./StepIndicator";
+import { qualifiedProfessionalIds } from "@/lib/availability";
+import StepIndicator, { WizardStepId } from "./StepIndicator";
 import StepService from "./StepService";
+import StepProfessional from "./StepProfessional";
 import StepDateTime from "./StepDateTime";
 import StepDetails from "./StepDetails";
 import StepSuccess from "./StepSuccess";
 
 interface BookingModalProps {
   business: Pick<Business, "id" | "name" | "primary_color" | "whatsapp">;
+  slug: string;
   services: Service[];
   locations: Location[];
+  professionals: ProfessionalWithServices[];
 }
 
 export default function BookingModal(props: BookingModalProps) {
-  const { isOpen, openCount } = useBookingModal();
+  const { isOpen, openCount, seed } = useBookingModal();
 
   if (!isOpen) return null;
 
   // La key fuerza a remontar el contenido cada vez que se abre, así el
   // wizard arranca limpio sin necesidad de resetear estado en un efecto.
-  return <BookingModalContent key={openCount} {...props} />;
+  return <BookingModalContent key={openCount} {...props} seed={seed} />;
 }
 
-type WizardStep = 1 | 2 | 3 | "success";
+type Step = WizardStepId | "success";
 
 function BookingModalContent({
   business,
+  slug,
   services,
   locations,
-}: BookingModalProps) {
+  professionals,
+  seed,
+}: BookingModalProps & { seed: ReturnType<typeof useBookingModal>["seed"] }) {
   const { close } = useBookingModal();
 
-  const [step, setStep] = useState<WizardStep>(1);
+  const activeProfessionals = useMemo(
+    () => professionals.filter((p) => p.active),
+    [professionals]
+  );
+
+  const seededService = useMemo(
+    () => services.find((s) => s.id === seed?.serviceId) ?? null,
+    [services, seed?.serviceId]
+  );
+
+  const [step, setStep] = useState<Step>(seededService ? "datetime" : "service");
   const [direction, setDirection] = useState<"forward" | "backward">(
     "forward"
   );
   const [selectedService, setSelectedService] = useState<Service | null>(
-    null
+    seededService
   );
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<
+    string | "any"
+  >(() => {
+    if (seed?.professionalId) return seed.professionalId;
+    if (activeProfessionals.length === 1) return activeProfessionals[0].id;
+    return "any";
+  });
   const [locationId, setLocationId] = useState<string | null>(null);
   const [date, setDate] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
@@ -51,10 +75,45 @@ function BookingModalContent({
   const [customerEmail, setCustomerEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [bookingId, setBookingId] = useState<string | null>(null);
   // Si el horario se ocupó justo antes de confirmar (ver submitBooking /
   // createBooking, campo `conflict`), en vez de un error genérico en el
-  // paso 3 volvemos al paso 2 con este mensaje y el horario limpio.
+  // paso de datos volvemos al paso de horario con este mensaje.
   const [conflictMessage, setConflictMessage] = useState("");
+
+  // El paso "professional" solo existe si el servicio elegido tiene 2+
+  // profesionales calificados — no es una elección visual, cambia de
+  // verdad qué disponibilidad se consulta en el paso siguiente.
+  const steps: WizardStepId[] = useMemo(() => {
+    const qualifiedCount = selectedService
+      ? qualifiedProfessionalIds(activeProfessionals, selectedService.id).length
+      : activeProfessionals.length;
+    return qualifiedCount >= 2
+      ? ["service", "professional", "datetime", "details"]
+      : ["service", "datetime", "details"];
+  }, [selectedService, activeProfessionals]);
+
+  // Si cambia el servicio elegido, un profesional específico ya elegido
+  // podría no calificar más para el nuevo servicio — vuelve a "cualquiera
+  // disponible" en vez de dejar seleccionado a alguien que no puede hacer
+  // el servicio nuevo. Ajuste de estado durante el render (no en un
+  // efecto) siguiendo el patrón recomendado por React para "resetear
+  // estado cuando cambia otro valor" — evita el render en cascada extra
+  // que produciría un setState dentro de un efecto.
+  const [lastServiceIdForProfessionalCheck, setLastServiceIdForProfessionalCheck] =
+    useState(selectedService?.id);
+  if (selectedService?.id !== lastServiceIdForProfessionalCheck) {
+    setLastServiceIdForProfessionalCheck(selectedService?.id);
+    if (selectedProfessionalId !== "any") {
+      const qualified = qualifiedProfessionalIds(
+        activeProfessionals,
+        selectedService?.id ?? ""
+      );
+      if (!qualified.includes(selectedProfessionalId)) {
+        setSelectedProfessionalId("any");
+      }
+    }
+  }
 
   // Bloquea el scroll del body mientras el modal está abierto.
   useEffect(() => {
@@ -79,9 +138,21 @@ function BookingModalContent({
   const activeLocation =
     locations.find((l) => l.id === locationId) ?? locations[0];
 
-  function goToStep(next: WizardStep, dir: "forward" | "backward") {
+  const stepIndex = step === "success" ? -1 : steps.indexOf(step);
+
+  function goToStep(next: Step, dir: "forward" | "backward") {
     setDirection(dir);
     setStep(next);
+  }
+
+  function goNext() {
+    const next = steps[stepIndex + 1];
+    if (next) goToStep(next, "forward");
+  }
+
+  function goBack() {
+    const prev = steps[stepIndex - 1];
+    if (prev) goToStep(prev, "backward");
   }
 
   async function handleConfirm() {
@@ -95,6 +166,10 @@ function BookingModalContent({
       location_id: activeLocation.id.startsWith("virtual-")
         ? null
         : activeLocation.id,
+      // Negocio sin profesionales configurados → null, mismo camino de
+      // siempre. Con profesionales, "any" se resuelve server-side.
+      professional_id:
+        activeProfessionals.length > 0 ? selectedProfessionalId : null,
       customer_name: customerName,
       customer_phone: customerPhone,
       customer_email: customerEmail || undefined,
@@ -105,22 +180,31 @@ function BookingModalContent({
     setSubmitting(false);
 
     if (result.success) {
+      setBookingId(result.id ?? null);
       goToStep("success", "forward");
     } else if (result.conflict) {
       setTime(null);
       setConflictMessage(
         result.error ?? "Este horario acaba de ocuparse — elegí otro."
       );
-      goToStep(2, "backward");
+      goToStep("datetime", "backward");
     } else {
       setSubmitError(result.error ?? "No se pudo completar la reserva.");
     }
   }
 
-  const canContinueStep1 = Boolean(selectedService);
-  const canContinueStep2 = Boolean(activeLocation && date && time);
-  const canConfirmStep3 =
-    customerName.trim() && isLikelyPhone(customerPhone);
+  const professionalIdForQuery =
+    selectedProfessionalId !== "any" ? selectedProfessionalId : undefined;
+  const qualifiedIdsForQuery =
+    selectedProfessionalId === "any" &&
+    activeProfessionals.length > 0 &&
+    selectedService
+      ? qualifiedProfessionalIds(activeProfessionals, selectedService.id)
+      : undefined;
+
+  const canContinueService = Boolean(selectedService);
+  const canContinueDatetime = Boolean(activeLocation && date && time);
+  const canConfirmDetails = customerName.trim() && isLikelyPhone(customerPhone);
   const ctaTextColor = readableTextColor(business.primary_color);
 
   return (
@@ -146,7 +230,8 @@ function BookingModalContent({
         {step !== "success" ? (
           <div className="shrink-0 border-b border-ink-line px-5 py-4 flex items-center justify-between gap-3">
             <StepIndicator
-              currentStep={step}
+              steps={steps}
+              currentStepId={step}
               primaryColor={business.primary_color}
             />
             <button
@@ -167,7 +252,7 @@ function BookingModalContent({
             direction === "forward" ? "step-forward" : "step-backward"
           }`}
         >
-          {step === 1 ? (
+          {step === "service" ? (
             <StepService
               services={services}
               selectedServiceId={selectedService?.id ?? null}
@@ -176,7 +261,17 @@ function BookingModalContent({
             />
           ) : null}
 
-          {step === 2 && selectedService ? (
+          {step === "professional" ? (
+            <StepProfessional
+              professionals={activeProfessionals}
+              selectedProfessionalId={selectedProfessionalId}
+              onSelect={setSelectedProfessionalId}
+              primaryColor={business.primary_color}
+              stepNumber={steps.indexOf("professional") + 1}
+            />
+          ) : null}
+
+          {step === "datetime" && selectedService ? (
             <StepDateTime
               business={business}
               locations={locations}
@@ -185,6 +280,9 @@ function BookingModalContent({
               selectedDate={date}
               selectedTime={time}
               conflictMessage={conflictMessage}
+              professionalId={professionalIdForQuery}
+              qualifiedProfessionalIds={qualifiedIdsForQuery}
+              stepNumber={steps.indexOf("datetime") + 1}
               onSelectLocation={setLocationId}
               onSelectDate={(d) => {
                 setDate(d);
@@ -197,7 +295,7 @@ function BookingModalContent({
             />
           ) : null}
 
-          {step === 3 && selectedService && activeLocation && date && time ? (
+          {step === "details" && selectedService && activeLocation && date && time ? (
             <StepDetails
               business={business}
               service={selectedService}
@@ -220,6 +318,8 @@ function BookingModalContent({
           time ? (
             <StepSuccess
               business={business}
+              slug={slug}
+              bookingId={bookingId}
               service={selectedService}
               location={activeLocation}
               date={date}
@@ -232,62 +332,62 @@ function BookingModalContent({
         {/* Footer con acciones */}
         {step !== "success" ? (
           <div className="shrink-0 border-t border-ink-line px-5 py-4">
-            {step === 3 && submitError ? (
+            {step === "details" && submitError ? (
               <p className="text-sm text-red-400 mb-3">{submitError}</p>
             ) : null}
             <div className="flex gap-3">
-              {step !== 1 ? (
+              {stepIndex > 0 ? (
                 <button
                   type="button"
-                  onClick={() =>
-                    goToStep(step === 3 ? 2 : step === 2 ? 1 : step, "backward")
-                  }
+                  onClick={goBack}
                   className="section-eyebrow text-xs px-5 py-3 btn-radius border border-ink-line text-bone-muted hover:text-bone focus-visible:ring-2 focus-visible:ring-brass transition-colors"
                 >
                   Atrás
                 </button>
               ) : null}
 
-              {step === 1 ? (
+              {step === "service" ? (
                 <button
                   type="button"
-                  disabled={!canContinueStep1}
-                  onClick={() => goToStep(2, "forward")}
+                  disabled={!canContinueService}
+                  onClick={goNext}
                   className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity"
-                  style={{
-                    backgroundColor: business.primary_color,
-                    color: ctaTextColor,
-                  }}
+                  style={{ backgroundColor: business.primary_color, color: ctaTextColor }}
                 >
                   Continuar
                 </button>
               ) : null}
 
-              {step === 2 ? (
+              {step === "professional" ? (
                 <button
                   type="button"
-                  disabled={!canContinueStep2}
-                  onClick={() => goToStep(3, "forward")}
-                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity"
-                  style={{
-                    backgroundColor: business.primary_color,
-                    color: ctaTextColor,
-                  }}
+                  onClick={goNext}
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity"
+                  style={{ backgroundColor: business.primary_color, color: ctaTextColor }}
                 >
                   Continuar
                 </button>
               ) : null}
 
-              {step === 3 ? (
+              {step === "datetime" ? (
                 <button
                   type="button"
-                  disabled={!canConfirmStep3 || submitting}
+                  disabled={!canContinueDatetime}
+                  onClick={goNext}
+                  className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity"
+                  style={{ backgroundColor: business.primary_color, color: ctaTextColor }}
+                >
+                  Continuar
+                </button>
+              ) : null}
+
+              {step === "details" ? (
+                <button
+                  type="button"
+                  disabled={!canConfirmDetails || submitting}
                   onClick={handleConfirm}
                   className="section-eyebrow flex-1 text-xs px-5 py-3 btn-radius font-semibold disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity"
-                  style={{
-                    backgroundColor: business.primary_color,
-                    color: ctaTextColor,
-                  }}
+                  style={{ backgroundColor: business.primary_color, color: ctaTextColor }}
                 >
                   {submitting ? "Confirmando..." : "Confirmar turno"}
                 </button>

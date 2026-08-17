@@ -2,37 +2,47 @@
 
 import { Business } from "@/types/business";
 
+export type WizardStepId = "service" | "professional" | "datetime" | "details";
+
+const STEP_LABELS: Record<WizardStepId, string> = {
+  service: "Servicio",
+  professional: "Profesional",
+  datetime: "Fecha y hora",
+  details: "Tus datos",
+};
+
 interface StepIndicatorProps {
-  currentStep: 1 | 2 | 3;
+  steps: WizardStepId[];
+  currentStepId: WizardStepId;
   primaryColor: Business["primary_color"];
 }
 
-const STEPS = [
-  { n: 1, label: "Servicio" },
-  { n: 2, label: "Fecha y hora" },
-  { n: 3, label: "Tus datos" },
-];
-
+/** La cantidad de pasos ya no es fija — el paso "professional" solo
+ *  aparece cuando el servicio elegido tiene 2+ profesionales calificados
+ *  (ver BookingModal.tsx) — así que numera dinámicamente en vez de
+ *  asumir siempre 3. */
 export default function StepIndicator({
-  currentStep,
+  steps,
+  currentStepId,
   primaryColor,
 }: StepIndicatorProps) {
+  const currentIndex = steps.indexOf(currentStepId);
   return (
     <div className="flex items-center gap-1.5 text-xs">
-      {STEPS.map((step, i) => {
-        const isActive = step.n === currentStep;
-        const isDone = step.n < currentStep;
+      {steps.map((stepId, i) => {
+        const isActive = i === currentIndex;
+        const isDone = i < currentIndex;
         return (
-          <div key={step.n} className="flex items-center gap-1.5">
+          <div key={stepId} className="flex items-center gap-1.5">
             <span
               className="section-eyebrow whitespace-nowrap transition-colors"
               style={{
                 color: isActive || isDone ? primaryColor : "var(--bone-muted)",
               }}
             >
-              {step.n} {step.label}
+              {i + 1} {STEP_LABELS[stepId]}
             </span>
-            {i < STEPS.length - 1 ? (
+            {i < steps.length - 1 ? (
               <span className="text-bone-muted/40">→</span>
             ) : null}
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Business, Location, Professional, Service } from "@/types/business";
+import { Business, Location, ProfessionalWithServices, Service } from "@/types/business";
 import {
   EditorCategory,
   useEditorSelection,
@@ -11,26 +11,36 @@ import ServicesManager from "./services-manager";
 import ProfessionalsManager from "./professionals-manager";
 import LocationsManager from "./locations-manager";
 import AppearanceForm from "./appearance-form";
+import ComingSoonRow from "@/components/ui/ComingSoonRow";
 
 interface CategoryPanelProps {
   business: Business;
   services: Service[];
-  professionals: Professional[];
+  professionals: ProfessionalWithServices[];
   locations: Location[];
 }
 
 const CATEGORIES: { key: EditorCategory; label: string }[] = [
-  { key: "informacion", label: "Información" },
+  { key: "apariencia", label: "Apariencia" },
+  { key: "pagina", label: "Página" },
   { key: "servicios", label: "Servicios" },
   { key: "profesionales", label: "Profesionales" },
-  { key: "horarios", label: "Horarios" },
-  { key: "fotos", label: "Fotos" },
-  { key: "apariencia", label: "Apariencia" },
+  { key: "productos", label: "Productos" },
+  { key: "reservas", label: "Reservas" },
+  { key: "automatizaciones", label: "Automatizaciones" },
 ];
 
 /** Acordeón de categorías — solo una abierta a la vez. Qué categoría está
  *  abierta vive en EditorSelectionContext, así que un click en la preview
- *  (ver PreviewPane) abre la categoría correspondiente acá también. */
+ *  (ver PreviewPane) abre la categoría correspondiente acá también.
+ *
+ *  Reorganizado en 7 categorías (antes: Información/Servicios/
+ *  Profesionales/Horarios/Fotos/Apariencia, sin agrupar): Apariencia
+ *  fusiona Fotos con lo que ya tenía (colores/tipografía/botones) — se
+ *  muestran los dos paneles existentes bajo un mismo acordeón, sin
+ *  fusionar su código; Página reemplaza a Información; Reservas
+ *  reemplaza a Horarios (locales); Productos/Automatizaciones son nuevas,
+ *  todavía sin funcionalidad real (ver ComingSoonRow). */
 export default function CategoryPanel({
   business,
   services,
@@ -59,7 +69,29 @@ export default function CategoryPanel({
 
             {isOpen ? (
               <div className="pb-6">
-                {key === "informacion" ? (
+                {key === "apariencia" ? (
+                  <div className="grid gap-8">
+                    <div>
+                      <p className="section-eyebrow text-bone-muted mb-3">
+                        Imágenes
+                      </p>
+                      <FotosPanel
+                        businessId={business.id}
+                        logo={business.logo}
+                        heroImage={business.hero_image ?? ""}
+                        gallery={business.gallery ?? []}
+                        favicon={business.favicon ?? ""}
+                      />
+                    </div>
+                    <div>
+                      <p className="section-eyebrow text-bone-muted mb-3">
+                        Colores y tipografía
+                      </p>
+                      <AppearanceForm business={business} />
+                    </div>
+                  </div>
+                ) : null}
+                {key === "pagina" ? (
                   <InformacionPanel business={business} />
                 ) : null}
                 {key === "servicios" ? (
@@ -69,24 +101,49 @@ export default function CategoryPanel({
                   <ProfessionalsManager
                     businessId={business.id}
                     professionals={professionals}
+                    services={services}
                   />
                 ) : null}
-                {key === "horarios" ? (
-                  <LocationsManager
-                    businessId={business.id}
-                    locations={locations}
-                  />
+                {key === "productos" ? (
+                  <div className="mt-2">
+                    <p className="text-xs text-bone-muted mb-4 max-w-sm">
+                      Catálogo de productos para vender desde tu web — todavía
+                      no disponible.
+                    </p>
+                    <ComingSoonRow label="Activar catálogo" />
+                    <ComingSoonRow label="Productos" />
+                    <ComingSoonRow label="Precios y stock" />
+                    <ComingSoonRow label="Orden" />
+                  </div>
                 ) : null}
-                {key === "fotos" ? (
-                  <FotosPanel
-                    businessId={business.id}
-                    logo={business.logo}
-                    heroImage={business.hero_image ?? ""}
-                    gallery={business.gallery ?? []}
-                  />
+                {key === "reservas" ? (
+                  <div className="grid gap-6">
+                    <LocationsManager
+                      businessId={business.id}
+                      locations={locations}
+                    />
+                    <div>
+                      <p className="text-xs text-bone-muted mb-3 max-w-sm">
+                        Tus clientes ya pueden cancelar o reprogramar su
+                        turno desde el link que reciben al reservar.
+                      </p>
+                      <ComingSoonRow label="Anticipación mínima" />
+                      <ComingSoonRow label="Política de cancelación" />
+                    </div>
+                  </div>
                 ) : null}
-                {key === "apariencia" ? (
-                  <AppearanceForm business={business} />
+                {key === "automatizaciones" ? (
+                  <div className="mt-2">
+                    <p className="text-xs text-bone-muted mb-4 max-w-sm">
+                      RYVO ya detecta oportunidades de recontacto (ver
+                      Oportunidades) — enviarlas automáticamente todavía no
+                      está disponible.
+                    </p>
+                    <ComingSoonRow label="Recordatorios" />
+                    <ComingSoonRow label="Rebooking automático" />
+                    <ComingSoonRow label="Solicitud de reseñas" />
+                    <ComingSoonRow label="Recuperación de clientes" />
+                  </div>
                 ) : null}
               </div>
             ) : null}

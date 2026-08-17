@@ -1,10 +1,12 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Business, Professional } from "@/types/business";
 import Reveal from "@/components/Reveal";
 
 interface ProfessionalsProps {
   professionals: Professional[];
   primaryColor: Business["primary_color"];
+  slug: string;
 }
 
 function initials(name: string): string {
@@ -19,6 +21,7 @@ function initials(name: string): string {
 export default function Professionals({
   professionals,
   primaryColor,
+  slug,
 }: ProfessionalsProps) {
   if (professionals.length === 0) return null;
 
@@ -80,6 +83,13 @@ export default function Professionals({
                 {professional.bio}
               </p>
             ) : null}
+            <Link
+              href={`/${slug}/profesionales/${professional.id}`}
+              className="section-eyebrow mt-3 inline-block text-xs hover:opacity-80 transition-opacity"
+              style={{ color: primaryColor }}
+            >
+              Ver perfil →
+            </Link>
           </div>
         ))}
       </Reveal>
