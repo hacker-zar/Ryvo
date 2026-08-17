@@ -8,7 +8,9 @@ import Hero from "@/components/Hero";
 import Services from "@/components/Services";
 import BookingModal from "@/components/booking/BookingModal";
 import BookingQueryParamTrigger from "@/components/booking/BookingQueryParamTrigger";
+import MobileBookingBar from "@/components/booking/MobileBookingBar";
 import Gallery from "@/components/Gallery";
+import About from "@/components/About";
 import Reviews from "@/components/Reviews";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
@@ -76,6 +78,15 @@ export default async function BusinessPage({ params }: PageProps) {
           businessName={business.name}
           primaryColor={business.primary_color}
         />
+        <About
+          business={{
+            name: business.name,
+            description: business.description,
+            city: business.city,
+            gallery: business.gallery,
+            primary_color: business.primary_color,
+          }}
+        />
         <Reviews reviews={reviews} primaryColor={business.primary_color} />
         <Contact
           business={{
@@ -91,7 +102,7 @@ export default async function BusinessPage({ params }: PageProps) {
           }}
           bookingUrl={bookingUrl}
         />
-        <Footer business={{ name: business.name }} />
+        <Footer business={{ name: business.name, slug: business.slug }} />
 
         <BookingModal
           business={{ id: business.id, primary_color: business.primary_color }}
@@ -99,6 +110,7 @@ export default async function BusinessPage({ params }: PageProps) {
           locations={locations}
         />
         <BookingQueryParamTrigger />
+        <MobileBookingBar business={{ primary_color: business.primary_color }} />
       </BookingModalProvider>
     </AppearanceScope>
   );
