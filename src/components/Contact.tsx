@@ -98,9 +98,11 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
               {business.phone ? (
                 <a
                   href={`tel:${business.phone}`}
-                  className="section-eyebrow px-4 py-2 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors"
+                  aria-label="Llamar"
+                  title="Llamar"
+                  className="h-11 w-11 flex items-center justify-center rounded-sm border border-ink-line text-bone hover:border-brass transition-colors text-lg"
                 >
-                  Llamar
+                  <span aria-hidden="true">📞</span>
                 </a>
               ) : null}
             </div>
