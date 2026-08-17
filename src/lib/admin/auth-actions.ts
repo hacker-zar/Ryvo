@@ -2,16 +2,47 @@
 
 import { redirect } from "next/navigation";
 import {
-  checkAdminPassword,
+  checkSuperAdminPassword,
   clearAdminOrigin,
-  createAdminSession,
+  createOwnerSession,
+  createSuperAdminSession,
   destroyAdminSession,
   getAdminOrigin,
+  verifyBusinessPassword,
 } from "@/lib/admin/session";
+import { getBusinessAuthBySlug } from "@/lib/data/business-repository";
 
 export async function loginAdmin(formData: FormData) {
   const password = String(formData.get("password") || "");
+  const businessSlug = String(formData.get("business_slug") || "").trim();
 
+  // Login escopeado a UN negocio (vino de "¿Trabajás aquí?" en su sitio
+  // público, o de /admin/login?business=<slug>). Se autentica contra la
+  // contraseña propia de ese negocio, no contra ADMIN_PASSWORD.
+  if (businessSlug) {
+    const business = await getBusinessAuthBySlug(businessSlug);
+    if (!business) {
+      return { success: false, error: "No se encontró el negocio." };
+    }
+    if (!business.admin_password_hash) {
+      return {
+        success: false,
+        error:
+          "Este negocio todavía no tiene una contraseña de acceso asignada. Pedile a RYVO que te la configure.",
+      };
+    }
+    const valid = await verifyBusinessPassword(
+      password,
+      business.admin_password_hash
+    );
+    if (!valid) {
+      return { success: false, error: "Contraseña incorrecta." };
+    }
+    await createOwnerSession(business.id);
+    redirect(`/admin/negocios/${business.id}`);
+  }
+
+  // Sin negocio puntual: login de superadmin (RYVO), contra ADMIN_PASSWORD.
   if (!process.env.ADMIN_PASSWORD) {
     return {
       success: false,
@@ -20,11 +51,11 @@ export async function loginAdmin(formData: FormData) {
     };
   }
 
-  if (!checkAdminPassword(password)) {
+  if (!checkSuperAdminPassword(password)) {
     return { success: false, error: "Contraseña incorrecta." };
   }
 
-  await createAdminSession();
+  await createSuperAdminSession();
   redirect("/admin");
 }
 

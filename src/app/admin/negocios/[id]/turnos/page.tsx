@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { hasValidAdminSession } from "@/lib/admin/session";
+import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import {
   getBusinessById,
   listBookingsByBusiness,
@@ -18,10 +18,12 @@ export default async function AdminBookingsPage({
   params,
   searchParams,
 }: PageProps) {
-  const isLoggedIn = await hasValidAdminSession();
-  if (!isLoggedIn) redirect("/admin/login");
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
 
   const { id } = await params;
+  if (!canManageBusiness(session, id)) redirect("/admin");
+
   const { date } = await searchParams;
 
   const business = await getBusinessById(id);

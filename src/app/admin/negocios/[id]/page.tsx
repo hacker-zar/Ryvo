@@ -1,7 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { hasValidAdminSession } from "@/lib/admin/session";
+import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import {
+  businessHasAdminPassword,
   getBusinessById,
   listLocationsByBusiness,
   listServicesByBusiness,
@@ -12,21 +13,29 @@ import BusinessEditForm from "./business-edit-form";
 import ServicesManager from "./services-manager";
 import LocationsManager from "./locations-manager";
 import AppearanceForm from "./appearance-form";
+import AdminPasswordForm from "./admin-password-form";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function AdminBusinessDetailPage({ params }: PageProps) {
-  const isLoggedIn = await hasValidAdminSession();
-  if (!isLoggedIn) redirect("/admin/login");
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
 
   const { id } = await params;
+
+  // Un dueño solo puede ver/editar SU negocio — si el id no es el suyo, lo
+  // mandamos a /admin (que a un dueño lo rebota directo a su propia
+  // página), en vez de mostrar un error que confirme si ese id existe.
+  if (!canManageBusiness(session, id)) redirect("/admin");
+
   const business = await getBusinessById(id);
   if (!business) notFound();
 
   const services = await listServicesByBusiness(id);
   const locations = await listLocationsByBusiness(id);
+  const hasPassword = await businessHasAdminPassword(id);
 
   return (
     <AdminChrome>
@@ -57,7 +66,23 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
         Ver turnos →
       </Link>
 
-      <div className="mt-8">
+      <div className="mt-14">
+        <p className="section-eyebrow text-brass">Acceso</p>
+        <h2 className="section-title mt-2 text-xl text-bone">
+          Contraseña del panel
+        </h2>
+        <p className="text-xs text-bone-muted mt-2 max-w-md">
+          {hasPassword
+            ? "Este negocio ya tiene una contraseña propia — quien la tenga puede entrar solo a este panel, sin ver otros negocios."
+            : "Este negocio todavía no tiene contraseña propia asignada. Sin una, solo RYVO puede gestionarlo."}
+        </p>
+        <div className="mt-6">
+          <AdminPasswordForm businessId={business.id} hasPassword={hasPassword} />
+        </div>
+      </div>
+
+      <div className="mt-14">
+        <p className="section-eyebrow text-brass">Negocio</p>
         <BusinessEditForm business={business} />
       </div>
 

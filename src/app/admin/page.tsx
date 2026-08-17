@@ -1,14 +1,18 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { hasValidAdminSession } from "@/lib/admin/session";
+import { getAdminSession } from "@/lib/admin/session";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { listBusinesses } from "@/lib/data/business-repository";
 import AdminChrome from "@/components/admin/AdminChrome";
 import NewBusinessForm from "./new-business-form";
 
+// El listado de TODOS los negocios (y "crear negocio") es exclusivo del
+// superadmin (RYVO) — un dueño autenticado con la contraseña de su propio
+// negocio no debe poder ver ni el nombre de otros negocios.
 export default async function AdminHomePage() {
-  const isLoggedIn = await hasValidAdminSession();
-  if (!isLoggedIn) redirect("/admin/login");
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
+  if (session.role === "owner") redirect(`/admin/negocios/${session.businessId}`);
 
   const businesses = await listBusinesses();
 

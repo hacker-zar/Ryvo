@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { hasValidAdminSession } from "@/lib/admin/session";
+import { requireAdminFor, requireSuperAdmin } from "@/lib/admin/authorize";
+import { hashBusinessPassword } from "@/lib/admin/session";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 import {
   BusinessInput,
@@ -12,17 +13,13 @@ import {
   createService,
   deleteLocation,
   deleteService,
+  setBusinessAdminPasswordHash,
   updateBookingStatus,
   updateBusiness,
   updateLocation,
   updateService,
 } from "@/lib/data/business-repository";
 import { OpeningHours } from "@/types/business";
-
-async function requireAdmin() {
-  const ok = await hasValidAdminSession();
-  if (!ok) throw new Error("No autorizado.");
-}
 
 function slugify(value: string): string {
   return value
@@ -33,8 +30,10 @@ function slugify(value: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+/** Crear negocios nuevos es exclusivo de RYVO (superadmin) — un dueño no
+ *  debería poder crear otros negocios desde su propia sesión. */
 export async function adminCreateBusiness(formData: FormData) {
-  await requireAdmin();
+  await requireSuperAdmin();
 
   const name = String(formData.get("name") || "").trim();
   const slugRaw = String(formData.get("slug") || "").trim();
@@ -66,11 +65,8 @@ export async function adminCreateBusiness(formData: FormData) {
   return result;
 }
 
-export async function adminUpdateBusiness(
-  id: string,
-  formData: FormData
-) {
-  await requireAdmin();
+export async function adminUpdateBusiness(id: string, formData: FormData) {
+  await requireAdminFor(id);
 
   const input: Partial<BusinessInput> = {
     name: String(formData.get("name") || ""),
@@ -99,7 +95,7 @@ export async function adminCreateService(
   businessId: string,
   formData: FormData
 ) {
-  await requireAdmin();
+  await requireAdminFor(businessId);
 
   const input: ServiceInput = {
     business_id: businessId,
@@ -122,7 +118,7 @@ export async function adminUpdateService(
   serviceId: string,
   formData: FormData
 ) {
-  await requireAdmin();
+  await requireAdminFor(businessId);
 
   const input: Partial<ServiceInput> = {
     name: String(formData.get("name") || "").trim(),
@@ -141,7 +137,7 @@ export async function adminDeleteService(
   businessId: string,
   serviceId: string
 ) {
-  await requireAdmin();
+  await requireAdminFor(businessId);
   const result = await deleteService(serviceId);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
@@ -152,7 +148,7 @@ export async function adminUpdateBookingStatus(
   bookingId: string,
   status: "confirmed" | "cancelled"
 ) {
-  await requireAdmin();
+  await requireAdminFor(businessId);
   const result = await updateBookingStatus(bookingId, status);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}/turnos`);
   return result;
@@ -177,7 +173,7 @@ export async function adminCreateLocation(
   businessId: string,
   formData: FormData
 ) {
-  await requireAdmin();
+  await requireAdminFor(businessId);
 
   const input: LocationInput = {
     business_id: businessId,
@@ -201,7 +197,7 @@ export async function adminUpdateLocation(
   locationId: string,
   formData: FormData
 ) {
-  await requireAdmin();
+  await requireAdminFor(businessId);
 
   const input: Partial<LocationInput> = {
     name: String(formData.get("name") || "").trim(),
@@ -221,7 +217,7 @@ export async function adminDeleteLocation(
   businessId: string,
   locationId: string
 ) {
-  await requireAdmin();
+  await requireAdminFor(businessId);
   const result = await deleteLocation(locationId);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
@@ -234,7 +230,7 @@ export async function adminUpdateAppearance(
   businessId: string,
   formData: FormData
 ) {
-  await requireAdmin();
+  await requireAdminFor(businessId);
 
   const typography = String(formData.get("typography_preset") || "elegante");
   const buttonStyle = String(formData.get("button_style") || "recto");
@@ -257,6 +253,32 @@ export async function adminUpdateAppearance(
   return result;
 }
 
+/**
+ * Fija o cambia la contraseña de acceso propia de un negocio. El superadmin
+ * puede hacerlo para cualquier negocio (típicamente al onboardear un
+ * cliente nuevo); el dueño solo puede cambiar la de su propio negocio —
+ * ambos casos ya quedan cubiertos por requireAdminFor.
+ */
+export async function adminSetBusinessPassword(
+  businessId: string,
+  formData: FormData
+) {
+  await requireAdminFor(businessId);
+
+  const password = String(formData.get("password") || "");
+  if (password.length < 8) {
+    return {
+      success: false,
+      error: "La contraseña debe tener al menos 8 caracteres.",
+    };
+  }
+
+  const hash = await hashBusinessPassword(password);
+  const result = await setBusinessAdminPasswordHash(businessId, hash);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -273,14 +295,18 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
  *
  * `folder` agrupa las imágenes por negocio dentro del bucket. Al crear un
  * negocio nuevo (que todavía no tiene id), se usa "new" como carpeta
- * temporal — el archivo ya queda subido y con URL pública utilizable
- * igual, aunque no esté bajo el id definitivo del negocio.
+ * temporal — solo el superadmin pasa por ese caso, porque solo el
+ * superadmin puede crear negocios.
  */
 export async function adminUploadImage(
   folder: string,
   formData: FormData
 ): Promise<{ success: boolean; url?: string; error?: string }> {
-  await requireAdmin();
+  if (folder === "new") {
+    await requireSuperAdmin();
+  } else {
+    await requireAdminFor(folder);
+  }
 
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {

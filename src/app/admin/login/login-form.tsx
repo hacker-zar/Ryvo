@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { loginAdmin } from "@/lib/admin/auth-actions";
 
-export default function LoginForm() {
+interface LoginFormProps {
+  /** Si viene, este login se autentica contra la contraseña propia de ESE
+   *  negocio (no la de RYVO) — ver /admin/login?business=<slug>. */
+  businessSlug?: string;
+}
+
+export default function LoginForm({ businessSlug }: LoginFormProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,6 +26,10 @@ export default function LoginForm() {
 
   return (
     <form action={handleSubmit} className="mt-8 grid gap-4">
+      {businessSlug ? (
+        <input type="hidden" name="business_slug" value={businessSlug} />
+      ) : null}
+
       <div className="grid gap-1.5">
         <label htmlFor="password" className="text-xs text-bone-muted">
           Contraseña

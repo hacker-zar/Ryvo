@@ -1,19 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { hasValidAdminSession } from "@/lib/admin/session";
+import { requireAdminFor } from "@/lib/admin/authorize";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
-
-async function requireAdmin() {
-  const ok = await hasValidAdminSession();
-  if (!ok) throw new Error("No autorizado.");
-}
 
 export async function adminUpdateGallery(
   businessId: string,
   gallery: string[]
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAdmin();
+  await requireAdminFor(businessId);
 
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {

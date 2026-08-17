@@ -1,16 +1,21 @@
 import Link from "next/link";
 import { logoutAdmin } from "@/lib/admin/auth-actions";
+import { getAdminSession } from "@/lib/admin/session";
 
-export default function AdminChrome({
+export default async function AdminChrome({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getAdminSession();
+  const homeHref =
+    session?.role === "owner" ? `/admin/negocios/${session.businessId}` : "/admin";
+
   return (
     <div className="min-h-screen bg-ink">
       <header className="border-b border-ink-line">
         <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
-          <Link href="/admin" className="section-title text-sm text-bone">
+          <Link href={homeHref} className="section-title text-sm text-bone">
             Panel de administración
           </Link>
           <form action={logoutAdmin}>

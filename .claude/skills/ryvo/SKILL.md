@@ -20,7 +20,7 @@ Next.js 16 (App Router) + React 19 + TypeScript + Tailwind 4 + Supabase +
 |---|---|---|
 | `/` | Landing de RYVO como producto | Componentes `marketing/*`, paleta graphite/porcelain/signal (tech, no "barbería") |
 | `/[slug]` | Sitio público de un negocio | Multi-tenant vía `slug`/`business_id`, paleta cuero+bronce por defecto |
-| `/admin`, `/admin/negocios/[id]` | Panel del dueño | Password compartido, sin login individual |
+| `/admin`, `/admin/negocios/[id]` | Panel del dueño | Sesión con rol: superadmin (RYVO) o dueño de un negocio puntual — ver "Admin" abajo |
 
 **Multi-negocio**: `getBusinessProfile(slug)` en
 [`src/lib/data/business-repository.ts`](src/lib/data/business-repository.ts)
@@ -75,24 +75,48 @@ no tiene filas en `locations` usa un "local virtual" armado desde
 ⚠️ Bug conocido, no arreglado salvo pedido explícito: `generateSlotsForDay`
 no excluye horarios ya pasados cuando la fecha elegida es hoy.
 
-## Admin
+## Admin — aislamiento multi-tenant real
 
-Password único (`ADMIN_PASSWORD`) + cookie de sesión firmada con HMAC
-(`src/lib/admin/session.ts`) — no hay usuarios individuales, está fuera de
-alcance del MVP. Entrada amigable desde el sitio público: link "¿Trabajás
-aquí?" → `/admin/entrar?from=<slug>` (route handler) → `/admin/login` o
-directo a `/admin` si ya hay sesión.
+Dos roles de sesión, codificados y firmados (HMAC) en la cookie
+`admin_session` (`src/lib/admin/session.ts`, tipo `AdminSession`):
 
-`/admin/negocios/[id]/page.tsx` es el editor completo del negocio: datos
-básicos (`BusinessEditForm`), apariencia (`AppearanceForm`), locales/horarios
-(`LocationsManager` + `WeekScheduleEditor`), galería (`GalleryUploadField`),
-servicios (`ServicesManager`). `/admin/negocios/[id]/turnos/page.tsx` es una
-página **distinta**: el listado de reservas (`BookingsList`). No son
-intercambiables — ver sección de errores a evitar más abajo.
+- **`super`** — RYVO, autentica contra `ADMIN_PASSWORD` (env var, sin
+  negocio asociado). Puede gestionar cualquier negocio y es el único rol
+  que puede crear negocios nuevos (`adminCreateBusiness`).
+- **`owner`** — el dueño de UN negocio puntual, autentica contra la
+  contraseña propia de ESE negocio (`businesses.admin_password_hash`, hash
+  scrypt). Solo puede gestionar ese negocio — intentar entrar a
+  `/admin/negocios/<otro-id>` lo rebota a su propio negocio, nunca muestra
+  ni filtra datos ajenos.
 
-Escrituras admin usan `supabaseAdmin` (service role, salta RLS) desde server
-actions en `src/lib/admin/actions.ts` y `gallery-actions.ts`, protegidas por
-`requireAdmin()` (chequea la cookie de sesión) en cada función.
+**Regla de oro**: toda server action de `src/lib/admin/actions.ts` y
+`gallery-actions.ts` que reciba un `businessId` DEBE arrancar con
+`await requireAdminFor(businessId)` (de `src/lib/admin/authorize.ts`) —
+nunca alcanza con "hay alguna sesión válida". Antes de este cambio, esa
+era exactamente la vulnerabilidad crítica: cualquier sesión podía tocar
+cualquier negocio. No la reintroduzcas.
+
+Login escopeado: "¿Trabajás aquí?" en el sitio público (ahora en el
+footer) → `/admin/entrar?from=<slug>` (route handler) → si la sesión ya
+puede gestionar ESE negocio, directo a `/admin/negocios/<id>`; si no, a
+`/admin/login?business=<slug>`, que autentica contra la contraseña de ese
+negocio puntual, no la de RYVO. Sin `?business=`, `/admin/login` es el
+login de superadmin. `/admin` (listado de todos los negocios + "crear
+negocio") es exclusivo de superadmin — un `owner` que llega ahí se rebota
+directo a su propio negocio.
+
+`/admin/negocios/[id]/page.tsx` es el editor completo del negocio: acceso
+(`AdminPasswordForm` — fijar/cambiar la contraseña propia del negocio),
+datos básicos (`BusinessEditForm`), apariencia (`AppearanceForm`),
+locales/horarios (`LocationsManager` + `WeekScheduleEditor`), galería
+(`GalleryUploadField`), servicios (`ServicesManager`).
+`/admin/negocios/[id]/turnos/page.tsx` es una página **distinta**: el
+listado de reservas (`BookingsList`). No son intercambiables — ver
+"Incidentes reales" más abajo.
+
+Escrituras admin usan `supabaseAdmin` (service role, salta RLS) desde
+server actions — la autorización por negocio vive en la capa de
+sesión/aplicación (`requireAdminFor`/`requireSuperAdmin`), no en RLS.
 
 ## Supabase y seguridad
 
@@ -109,7 +133,14 @@ Dos clientes en `src/lib/supabase.ts`, nunca intercambiables:
 RLS (`supabase/schema.sql`): lectura pública de `businesses`/`services`/
 `locations`/`reviews`; insert público de `bookings`/`reviews`; todo lo demás
 (crear/editar negocios, servicios, locales, gestionar turnos, subir
-imágenes) requiere service role desde el server.
+imágenes) requiere service role desde el server. RLS filtra por FILA, no
+por columna — por eso `businesses.admin_password_hash` (hash scrypt de la
+contraseña propia del negocio) se protege en la capa de queries, no en
+RLS: **nunca** hacer `select("*")` sobre `businesses` fuera de las
+funciones de auth de `business-repository.ts` — usar siempre
+`BUSINESS_PUBLIC_COLUMNS` (constante ya definida ahí), porque cualquier
+select que incluya el hash y termine como prop de un Client Component lo
+serializa en el HTML/RSC payload aunque nada lo muestre.
 
 ## Convenciones de código de este repo
 
@@ -128,7 +159,11 @@ imágenes) requiere service role desde el server.
 
 Sitio público completo, booking wizard con disponibilidad real, apariencia
 personalizable, admin completo (negocio/apariencia/locales/galería/
-servicios/turnos), auth admin, multi-local, modo demo automático.
+servicios/turnos), multi-local, modo demo automático, y aislamiento
+multi-tenant real entre negocios (sesión con rol + `requireAdminFor` en
+cada acción — ver "Admin" arriba). El esquema real de Supabase
+(`businesses/services/locations/bookings/reviews`) está aplicado y
+verificado contra `supabase/schema.sql`.
 
 ## Roadmap — NO implementar sin pedido explícito
 
@@ -176,6 +211,14 @@ después se necesita".
   pensás cambiar, no solo el que sí.
 - No asumas "compila" = "funciona visualmente": este tipo de bug no lo
   agarra `tsc` ni `eslint`.
+- **El código puede estar perfecto y el negocio seguir roto si la
+  infraestructura no coincide**: hubo un período en que el proyecto de
+  Supabase real tenía un esquema completamente distinto al que
+  `business-repository.ts` esperaba (tablas en español, de una
+  implementación anterior, nunca reemplazadas por `schema.sql`). Todo el
+  código compilaba y tipeaba perfecto, pero cada query real fallaba en
+  producción (404 silencioso). Si algo "no anda" pese a que el código se
+  ve correcto, verificá el esquema real de Supabase antes de tocar código.
 
 ## DO NOT — requiere autorización explícita del usuario en el chat
 

@@ -39,6 +39,14 @@ alter table businesses add column if not exists text_color text default '#f7f4ee
 alter table businesses add column if not exists typography_preset text not null default 'elegante';
 alter table businesses add column if not exists button_style text not null default 'recto';
 
+-- Aislamiento multi-tenant: contraseña propia de ESTE negocio (hash scrypt
+-- "salt:hash" en hex, generado en src/lib/admin/session.ts — nunca texto
+-- plano). NULL = sin contraseña propia todavía, solo el superadmin
+-- (ADMIN_PASSWORD) puede gestionarlo. Nunca debe seleccionarse en una
+-- query cuyo resultado pueda llegar a un Client Component ni al sitio
+-- público — ver BUSINESS_PUBLIC_COLUMNS en business-repository.ts.
+alter table businesses add column if not exists admin_password_hash text;
+
 do $$
 begin
   if not exists (
@@ -153,9 +161,12 @@ create policy "public read bookings for availability" on bookings for select usi
 -- Reseñas: cualquiera puede dejar una reseña.
 create policy "public insert reviews" on reviews for insert with check (true);
 
--- NOTA: administración (crear negocios, servicios, gestionar bookings)
--- se hace con la service_role key desde un contexto seguro (no en el cliente),
--- fuera del alcance de este MVP.
+-- NOTA: administración (crear negocios, servicios, gestionar bookings) se
+-- hace con la service_role key desde server actions (src/lib/admin/*),
+-- nunca desde el cliente. La autorización por negocio (que el dueño de un
+-- negocio no pueda tocar otro) vive en la capa de sesión/aplicación
+-- (src/lib/admin/session.ts, authorize.ts), no en RLS — RLS acá solo cubre
+-- lectura pública e inserts públicos de bookings/reviews.
 
 -- =========================
 -- Storage: imágenes de negocios (logo, portada, galería)
