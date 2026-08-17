@@ -29,10 +29,16 @@ export default function Header({ business }: HeaderProps) {
               alt={business.name}
               width={32}
               height={32}
+              data-editable-category="fotos"
+              data-editable-field="logo"
               className="rounded-full object-cover ring-1 ring-ink-line"
             />
           ) : null}
-          <span className="section-title text-sm text-bone truncate">
+          <span
+            data-editable-category="informacion"
+            data-editable-field="nombre"
+            className="section-title text-sm text-bone truncate"
+          >
             {business.name}
           </span>
         </a>

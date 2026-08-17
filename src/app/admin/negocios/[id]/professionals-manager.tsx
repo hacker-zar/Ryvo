@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Professional } from "@/types/business";
 import {
@@ -7,6 +8,7 @@ import {
   adminDeleteProfessional,
   adminUpdateProfessional,
 } from "@/lib/admin/actions";
+import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 
 const inputClasses =
@@ -21,14 +23,17 @@ export default function ProfessionalsManager({
   businessId,
   professionals,
 }: ProfessionalsManagerProps) {
+  const router = useRouter();
+  const { target, select, refreshPreview } = useEditorSelection();
   const [items, setItems] = useState(professionals);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const editingId =
+    target?.category === "profesionales" ? target.itemId ?? null : null;
 
   async function handleCreate(formData: FormData) {
     const result = await adminCreateProfessional(businessId, formData);
     if (result.success) {
-      // Refrescamos la página para traer el nuevo registro con su id real.
-      window.location.reload();
+      router.refresh();
+      refreshPreview();
     }
   }
 
@@ -39,8 +44,9 @@ export default function ProfessionalsManager({
       formData
     );
     if (result.success) {
-      setEditingId(null);
-      window.location.reload();
+      select({ category: "profesionales" });
+      router.refresh();
+      refreshPreview();
     }
   }
 
@@ -49,6 +55,7 @@ export default function ProfessionalsManager({
     const result = await adminDeleteProfessional(businessId, professionalId);
     if (result.success) {
       setItems((prev) => prev.filter((p) => p.id !== professionalId));
+      refreshPreview();
     }
   }
 
@@ -110,7 +117,7 @@ export default function ProfessionalsManager({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditingId(null)}
+                    onClick={() => select({ category: "profesionales" })}
                     className="section-eyebrow text-xs px-4 py-2 rounded-sm border border-ink-line text-bone-muted w-fit"
                   >
                     Cancelar
@@ -144,7 +151,12 @@ export default function ProfessionalsManager({
                 </div>
                 <div className="flex gap-3 shrink-0">
                   <button
-                    onClick={() => setEditingId(professional.id)}
+                    onClick={() =>
+                      select({
+                        category: "profesionales",
+                        itemId: professional.id,
+                      })
+                    }
                     className="text-xs text-bone-muted hover:text-brass transition-colors"
                   >
                     Editar

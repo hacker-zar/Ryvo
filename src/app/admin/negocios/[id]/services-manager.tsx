@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Service } from "@/types/business";
 import { formatPrice } from "@/lib/format";
@@ -8,6 +9,7 @@ import {
   adminDeleteService,
   adminUpdateService,
 } from "@/lib/admin/actions";
+import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 
 const inputClasses =
   "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors";
@@ -21,22 +23,26 @@ export default function ServicesManager({
   businessId,
   services,
 }: ServicesManagerProps) {
+  const router = useRouter();
+  const { target, select, refreshPreview } = useEditorSelection();
   const [items, setItems] = useState(services);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const editingId =
+    target?.category === "servicios" ? target.itemId ?? null : null;
 
   async function handleCreate(formData: FormData) {
     const result = await adminCreateService(businessId, formData);
     if (result.success) {
-      // Refrescamos la página para traer el nuevo registro con su id real.
-      window.location.reload();
+      router.refresh();
+      refreshPreview();
     }
   }
 
   async function handleUpdate(serviceId: string, formData: FormData) {
     const result = await adminUpdateService(businessId, serviceId, formData);
     if (result.success) {
-      setEditingId(null);
-      window.location.reload();
+      select({ category: "servicios" });
+      router.refresh();
+      refreshPreview();
     }
   }
 
@@ -45,6 +51,7 @@ export default function ServicesManager({
     const result = await adminDeleteService(businessId, serviceId);
     if (result.success) {
       setItems((prev) => prev.filter((s) => s.id !== serviceId));
+      refreshPreview();
     }
   }
 
@@ -114,7 +121,7 @@ export default function ServicesManager({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditingId(null)}
+                    onClick={() => select({ category: "servicios" })}
                     className="section-eyebrow text-xs px-4 py-2 rounded-sm border border-ink-line text-bone-muted w-fit"
                   >
                     Cancelar
@@ -146,7 +153,9 @@ export default function ServicesManager({
                 </div>
                 <div className="flex gap-3 shrink-0">
                   <button
-                    onClick={() => setEditingId(service.id)}
+                    onClick={() =>
+                      select({ category: "servicios", itemId: service.id })
+                    }
                     className="text-xs text-bone-muted hover:text-brass transition-colors"
                   >
                     Editar

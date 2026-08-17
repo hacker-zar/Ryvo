@@ -8,41 +8,40 @@ import {
   createSuperAdminSession,
   destroyAdminSession,
   getAdminOrigin,
-  verifyBusinessPassword,
+  verifyPassword,
 } from "@/lib/admin/session";
-import { getBusinessAuthBySlug } from "@/lib/data/business-repository";
+import { getAccountAuthByUsername } from "@/lib/data/accounts-repository";
+
+// Mensaje único para cualquier fallo de login de cuenta (usuario
+// inexistente, contraseña incorrecta, o cuenta desactivada). Adrede: si
+// cada caso tuviera su propio mensaje, alguien podría usarlo para
+// averiguar qué usuarios existen o cuáles están desactivados.
+const ACCOUNT_LOGIN_ERROR = "Usuario o contraseña incorrectos.";
 
 export async function loginAdmin(formData: FormData) {
+  const username = String(formData.get("username") || "").trim();
   const password = String(formData.get("password") || "");
-  const businessSlug = String(formData.get("business_slug") || "").trim();
 
-  // Login escopeado a UN negocio (vino de "¿Trabajás aquí?" en su sitio
-  // público, o de /admin/login?business=<slug>). Se autentica contra la
-  // contraseña propia de ese negocio, no contra ADMIN_PASSWORD.
-  if (businessSlug) {
-    const business = await getBusinessAuthBySlug(businessSlug);
-    if (!business) {
-      return { success: false, error: "No se encontró el negocio." };
+  // Login de cuenta (dueño de un negocio): viene con "username" en el form.
+  // El negocio se determina en el server a partir de la cuenta encontrada
+  // (accounts.business_id) — nunca de algo que mande el cliente.
+  if (username) {
+    const account = await getAccountAuthByUsername(username);
+    if (!account || !account.active) {
+      return { success: false, error: ACCOUNT_LOGIN_ERROR };
     }
-    if (!business.admin_password_hash) {
-      return {
-        success: false,
-        error:
-          "Este negocio todavía no tiene una contraseña de acceso asignada. Pedile a RYVO que te la configure.",
-      };
-    }
-    const valid = await verifyBusinessPassword(
-      password,
-      business.admin_password_hash
-    );
+
+    const valid = await verifyPassword(password, account.password_hash);
     if (!valid) {
-      return { success: false, error: "Contraseña incorrecta." };
+      return { success: false, error: ACCOUNT_LOGIN_ERROR };
     }
-    await createOwnerSession(business.id);
-    redirect(`/admin/negocios/${business.id}`);
+
+    await createOwnerSession(account.id, account.business_id);
+    redirect(`/admin/negocios/${account.business_id}`);
   }
 
-  // Sin negocio puntual: login de superadmin (RYVO), contra ADMIN_PASSWORD.
+  // Sin username: login de superadmin (RYVO), independiente del sistema de
+  // cuentas, contra ADMIN_PASSWORD.
   if (!process.env.ADMIN_PASSWORD) {
     return {
       success: false,

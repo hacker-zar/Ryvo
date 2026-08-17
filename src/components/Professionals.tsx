@@ -38,7 +38,11 @@ export default function Professionals({
         className="mt-10 grid gap-8 sm:grid-cols-2 md:grid-cols-3"
       >
         {professionals.map((professional) => (
-          <div key={professional.id}>
+          <div
+            key={professional.id}
+            data-editable-category="profesionales"
+            data-editable-item={professional.id}
+          >
             <div className="relative aspect-square overflow-hidden bg-ink-elevated">
               {professional.photo ? (
                 <Image

@@ -19,13 +19,16 @@ const ORIGIN_COOKIE_TTL_SECONDS = 60 * 60 * 24; // 1 día
  * Dos formas de tener sesión de admin:
  * - "super": RYVO (contraseña compartida ADMIN_PASSWORD) — puede gestionar
  *   cualquier negocio, y es la única que puede crear negocios nuevos.
- * - "owner": el dueño de UN negocio puntual, autenticado con la contraseña
- *   propia de ese negocio (businesses.admin_password_hash) — solo puede
- *   gestionar ese negocio, nunca otro.
+ *   Independiente del sistema de cuentas: no tiene fila en `accounts`.
+ * - "owner": una cuenta real (tabla `accounts`, usuario + contraseña)
+ *   vinculada a UN negocio puntual. `businessId` viene de la cuenta
+ *   autenticada en el momento del login (`accounts.business_id`), nunca de
+ *   un parámetro que mande el cliente — por eso alcanza con leerlo de acá
+ *   para autorizar, sin volver a consultar la base en cada request.
  */
 export type AdminSession =
   | { role: "super" }
-  | { role: "owner"; businessId: string };
+  | { role: "owner"; accountId: string; businessId: string };
 
 function getSecret(): string {
   // En dev, si no se configuró, usamos un valor fijo: solo importa que
@@ -55,17 +58,18 @@ export function checkSuperAdminPassword(password: string): boolean {
 }
 
 /**
- * Hash de la contraseña propia de un negocio (scrypt + salt aleatoria, sin
- * dependencias nuevas — usa el módulo `crypto` nativo de Node, igual que el
- * resto de este archivo). Formato guardado: "salt:hash", ambos en hex.
+ * Hash de contraseña (scrypt + salt aleatoria, sin dependencias nuevas —
+ * usa el módulo `crypto` nativo de Node). Formato guardado: "salt:hash",
+ * ambos en hex. Genérico: lo usan las cuentas (accounts.password_hash);
+ * no depende de qué se está autenticando.
  */
-export async function hashBusinessPassword(password: string): Promise<string> {
+export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.randomBytes(16).toString("hex");
   const derived = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${salt}:${derived.toString("hex")}`;
 }
 
-export async function verifyBusinessPassword(
+export async function verifyPassword(
   password: string,
   storedHash: string
 ): Promise<boolean> {
@@ -79,7 +83,8 @@ export async function verifyBusinessPassword(
 
 function encodeSession(session: AdminSession, issuedAt: string): string {
   const businessId = session.role === "owner" ? session.businessId : "";
-  const payload = `${session.role}.${businessId}.${issuedAt}`;
+  const accountId = session.role === "owner" ? session.accountId : "";
+  const payload = `${session.role}.${businessId}.${accountId}.${issuedAt}`;
   return `${payload}.${sign(payload)}`;
 }
 
@@ -99,8 +104,8 @@ export async function createSuperAdminSession() {
   await setSessionCookie({ role: "super" });
 }
 
-export async function createOwnerSession(businessId: string) {
-  await setSessionCookie({ role: "owner", businessId });
+export async function createOwnerSession(accountId: string, businessId: string) {
+  await setSessionCookie({ role: "owner", accountId, businessId });
 }
 
 export async function destroyAdminSession() {
@@ -115,17 +120,19 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   if (!raw) return null;
 
   const parts = raw.split(".");
-  if (parts.length !== 4) return null;
-  const [role, businessId, issuedAt, signature] = parts;
+  if (parts.length !== 5) return null;
+  const [role, businessId, accountId, issuedAt, signature] = parts;
 
-  const payload = `${role}.${businessId}.${issuedAt}`;
+  const payload = `${role}.${businessId}.${accountId}.${issuedAt}`;
   if (!signaturesMatch(sign(payload), signature)) return null;
 
   const age = (Date.now() - Number(issuedAt)) / 1000;
   if (!(age >= 0 && age <= SESSION_TTL_SECONDS)) return null;
 
   if (role === "super") return { role: "super" };
-  if (role === "owner" && businessId) return { role: "owner", businessId };
+  if (role === "owner" && businessId && accountId) {
+    return { role: "owner", accountId, businessId };
+  }
   return null;
 }
 

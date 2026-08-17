@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminFor, requireSuperAdmin } from "@/lib/admin/authorize";
-import { hashBusinessPassword } from "@/lib/admin/session";
+import { hashPassword } from "@/lib/admin/session";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 import {
   BusinessInput,
@@ -16,13 +16,18 @@ import {
   deleteLocation,
   deleteProfessional,
   deleteService,
-  setBusinessAdminPasswordHash,
   updateBookingStatus,
   updateBusiness,
   updateLocation,
   updateProfessional,
   updateService,
 } from "@/lib/data/business-repository";
+import {
+  createAccount,
+  isUsernameTaken,
+  updateAccount,
+  updateAccountPassword,
+} from "@/lib/data/accounts-repository";
 import { OpeningHours } from "@/types/business";
 
 function slugify(value: string): string {
@@ -34,13 +39,25 @@ function slugify(value: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-/** Crear negocios nuevos es exclusivo de RYVO (superadmin) — un dueño no
- *  debería poder crear otros negocios desde su propia sesión. */
+/**
+ * Crear negocios nuevos es exclusivo de RYVO (superadmin) — un dueño no
+ * debería poder crear otros negocios desde su propia sesión.
+ *
+ * Crea el negocio Y la cuenta inicial del propietario juntas: sin cuenta,
+ * el negocio queda sin forma de que su dueño entre al editor. Si el
+ * negocio se crea pero la cuenta falla (ej: usuario duplicado en una
+ * carrera), no revertimos el negocio — devolvemos un error que lo deja en
+ * claro, y la cuenta se puede crear después desde la página del negocio
+ * (sección "Cuenta"), que ya contempla el caso de negocio sin cuenta.
+ */
 export async function adminCreateBusiness(formData: FormData) {
   await requireSuperAdmin();
 
   const name = String(formData.get("name") || "").trim();
   const slugRaw = String(formData.get("slug") || "").trim();
+  const ownerName = String(formData.get("owner_name") || "").trim();
+  const username = String(formData.get("username") || "").trim();
+  const password = String(formData.get("password") || "");
 
   const input: BusinessInput = {
     name,
@@ -63,29 +80,84 @@ export async function adminCreateBusiness(formData: FormData) {
   if (!input.name || !input.slug) {
     return { success: false, error: "Nombre y slug son obligatorios." };
   }
+  if (!ownerName || !username || !password) {
+    return {
+      success: false,
+      error: "Nombre, usuario y contraseña del propietario son obligatorios.",
+    };
+  }
+  if (password.length < 8) {
+    return {
+      success: false,
+      error: "La contraseña debe tener al menos 8 caracteres.",
+    };
+  }
+  if (await isUsernameTaken(username)) {
+    return { success: false, error: "Ese usuario ya está en uso." };
+  }
 
-  const result = await createBusiness(input);
-  if (result.success) revalidatePath("/admin");
-  return result;
+  const businessResult = await createBusiness(input);
+  if (!businessResult.success || !businessResult.id) return businessResult;
+
+  const passwordHash = await hashPassword(password);
+  const accountResult = await createAccount({
+    business_id: businessResult.id,
+    name: ownerName,
+    username,
+    password_hash: passwordHash,
+  });
+
+  revalidatePath("/admin");
+
+  if (!accountResult.success) {
+    return {
+      success: false,
+      id: businessResult.id,
+      error: `El negocio se creó, pero la cuenta no: ${accountResult.error} Podés crearla desde la página del negocio.`,
+    };
+  }
+
+  return businessResult;
 }
 
+// Campos de `businesses` que puede tocar esta acción, y a qué clave de
+// FormData corresponde cada uno (todas coinciden con el nombre de campo
+// menos por claridad de lectura). Deliberadamente NO incluye
+// primary_color/secondary_color: esos son de adminUpdateAppearance.
+const UPDATABLE_BUSINESS_FIELDS = [
+  "name",
+  "description",
+  "logo",
+  "whatsapp",
+  "instagram",
+  "address",
+  "phone",
+  "email",
+  "city",
+  "hero_image",
+] as const;
+
+/**
+ * El editor ahora manda cada categoría (Información, Fotos, ...) como un
+ * form separado, cada uno con solo SUS campos. Por eso el input se arma
+ * solo con las claves que efectivamente vinieron en el FormData
+ * (`formData.has`) — si armáramos el objeto completo con "" para lo
+ * ausente (como antes), guardar un panel borraría los campos del otro,
+ * porque `updateBusiness` hace un `.update()` real con lo que reciba.
+ */
 export async function adminUpdateBusiness(id: string, formData: FormData) {
   await requireAdminFor(id);
 
-  const input: Partial<BusinessInput> = {
-    name: String(formData.get("name") || ""),
-    description: String(formData.get("description") || ""),
-    logo: String(formData.get("logo") || ""),
-    primary_color: String(formData.get("primary_color") || "#111111"),
-    secondary_color: String(formData.get("secondary_color") || "#f5f5f5"),
-    whatsapp: String(formData.get("whatsapp") || ""),
-    instagram: String(formData.get("instagram") || ""),
-    address: String(formData.get("address") || ""),
-    phone: String(formData.get("phone") || ""),
-    email: String(formData.get("email") || ""),
-    city: String(formData.get("city") || ""),
-    hero_image: String(formData.get("hero_image") || ""),
-  };
+  const input: Partial<BusinessInput> = {};
+  for (const field of UPDATABLE_BUSINESS_FIELDS) {
+    if (formData.has(field)) {
+      input[field] = String(formData.get(field) || "");
+    }
+  }
+
+  if ("name" in input && !input.name?.trim()) {
+    return { success: false, error: "El nombre es obligatorio." };
+  }
 
   const result = await updateBusiness(id, input);
   if (result.success) {
@@ -310,13 +382,71 @@ export async function adminUpdateAppearance(
 }
 
 /**
- * Fija o cambia la contraseña de acceso propia de un negocio. El superadmin
- * puede hacerlo para cualquier negocio (típicamente al onboardear un
- * cliente nuevo); el dueño solo puede cambiar la de su propio negocio —
- * ambos casos ya quedan cubiertos por requireAdminFor.
+ * Crea la cuenta de acceso de un negocio que todavía no tiene ninguna
+ * (caso raro hoy: negocios creados antes de este sistema, o si la
+ * creación automática al crear el negocio falló). El superadmin puede
+ * hacerlo para cualquier negocio; el dueño solo para el suyo —
+ * requireAdminFor ya cubre ambos casos.
  */
-export async function adminSetBusinessPassword(
+export async function adminCreateAccount(businessId: string, formData: FormData) {
+  await requireAdminFor(businessId);
+
+  const name = String(formData.get("name") || "").trim();
+  const username = String(formData.get("username") || "").trim();
+  const password = String(formData.get("password") || "");
+
+  if (!name || !username || !password) {
+    return {
+      success: false,
+      error: "Nombre, usuario y contraseña son obligatorios.",
+    };
+  }
+  if (password.length < 8) {
+    return {
+      success: false,
+      error: "La contraseña debe tener al menos 8 caracteres.",
+    };
+  }
+  if (await isUsernameTaken(username)) {
+    return { success: false, error: "Ese usuario ya está en uso." };
+  }
+
+  const passwordHash = await hashPassword(password);
+  const result = await createAccount({
+    business_id: businessId,
+    name,
+    username,
+    password_hash: passwordHash,
+  });
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+/** Cambia nombre/usuario/estado de una cuenta existente (no la contraseña
+ *  — ver adminChangeAccountPassword para eso). */
+export async function adminUpdateAccount(
   businessId: string,
+  accountId: string,
+  formData: FormData
+) {
+  await requireAdminFor(businessId);
+
+  const name = String(formData.get("name") || "").trim();
+  const username = String(formData.get("username") || "").trim();
+  const active = formData.get("active") === "on";
+
+  if (!name || !username) {
+    return { success: false, error: "Nombre y usuario son obligatorios." };
+  }
+
+  const result = await updateAccount(accountId, { name, username, active });
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminChangeAccountPassword(
+  businessId: string,
+  accountId: string,
   formData: FormData
 ) {
   await requireAdminFor(businessId);
@@ -329,8 +459,8 @@ export async function adminSetBusinessPassword(
     };
   }
 
-  const hash = await hashBusinessPassword(password);
-  const result = await setBusinessAdminPasswordHash(businessId, hash);
+  const passwordHash = await hashPassword(password);
+  const result = await updateAccountPassword(accountId, passwordHash);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
 }

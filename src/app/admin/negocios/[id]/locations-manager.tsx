@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Location, OpeningHours } from "@/types/business";
 import { dayLabel } from "@/lib/format";
@@ -8,6 +9,7 @@ import {
   adminDeleteLocation,
   adminUpdateLocation,
 } from "@/lib/admin/actions";
+import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 import WeekScheduleEditor from "@/components/admin/WeekScheduleEditor";
 
 const inputClasses =
@@ -44,6 +46,8 @@ export default function LocationsManager({
   businessId,
   locations,
 }: LocationsManagerProps) {
+  const router = useRouter();
+  const { refreshPreview } = useEditorSelection();
   const [items, setItems] = useState(locations);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<LocationFormState>(EMPTY_FORM);
@@ -73,7 +77,8 @@ export default function LocationsManager({
     const result = await adminCreateLocation(businessId, formData);
     setCreating(false);
     if (result.success) {
-      window.location.reload();
+      router.refresh();
+      refreshPreview();
     }
   }
 
@@ -87,7 +92,8 @@ export default function LocationsManager({
     const result = await adminUpdateLocation(businessId, locationId, formData);
     if (result.success) {
       setEditingId(null);
-      window.location.reload();
+      router.refresh();
+      refreshPreview();
     }
   }
 
@@ -96,6 +102,7 @@ export default function LocationsManager({
     const result = await adminDeleteLocation(businessId, locationId);
     if (result.success) {
       setItems((prev) => prev.filter((l) => l.id !== locationId));
+      refreshPreview();
     }
   }
 

@@ -20,13 +20,17 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
       if (canManageBusiness(session, business.id)) {
         redirect(`/admin/negocios/${business.id}`);
       }
-      // Sesión válida pero de otro negocio/rol: se queda en el form para
-      // loguearse de nuevo, esta vez contra el negocio pedido.
+      // Sesión válida pero de otra cuenta/negocio: se queda en el form para
+      // loguearse de nuevo con la cuenta correcta.
     } else if (session.role === "super") {
       redirect("/admin");
     }
   }
 
+  // El slug (si vino desde "¿Trabajás aquí?") es solo para el título y para
+  // que "Cerrar sesión" sepa a qué sitio público volver — nunca se usa para
+  // decidir a qué negocio pertenece la cuenta que se loguea. Eso lo
+  // determina el server a partir del usuario ingresado.
   return (
     <main className="flex-1 flex items-center justify-center px-4 bg-ink min-h-screen">
       <div className="w-full max-w-sm">
@@ -36,7 +40,7 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
         <h1 className="section-title mt-2 text-xl text-bone text-center">
           {business ? `Ingresar a ${business.name}` : "Ingresar"}
         </h1>
-        <LoginForm businessSlug={businessSlug} />
+        <LoginForm isOwnerLogin={Boolean(business)} />
       </div>
     </main>
   );

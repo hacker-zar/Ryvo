@@ -39,12 +39,12 @@ alter table businesses add column if not exists text_color text default '#f7f4ee
 alter table businesses add column if not exists typography_preset text not null default 'elegante';
 alter table businesses add column if not exists button_style text not null default 'recto';
 
--- Aislamiento multi-tenant: contraseña propia de ESTE negocio (hash scrypt
--- "salt:hash" en hex, generado en src/lib/admin/session.ts — nunca texto
--- plano). NULL = sin contraseña propia todavía, solo el superadmin
--- (ADMIN_PASSWORD) puede gestionarlo. Nunca debe seleccionarse en una
--- query cuyo resultado pueda llegar a un Client Component ni al sitio
--- público — ver BUSINESS_PUBLIC_COLUMNS en business-repository.ts.
+-- DEPRECADA: contraseña única por negocio (hash scrypt "salt:hash" en hex).
+-- Reemplazada por la tabla `accounts` (usuario + contraseña por cuenta) —
+-- ver más abajo. Se conserva la columna sin usar, sin dropearla, porque la
+-- migración a `accounts` fue no destructiva (se copió el hash existente a
+-- la cuenta correspondiente en vez de perderlo). No leer ni escribir esta
+-- columna desde código nuevo.
 alter table businesses add column if not exists admin_password_hash text;
 
 do $$
@@ -62,6 +62,29 @@ begin
       check (button_style in ('redondeado', 'suave', 'recto'));
   end if;
 end $$;
+
+-- =========================
+-- accounts (login del dueño/staff de un negocio — usuario + contraseña)
+-- Reemplaza la contraseña única por negocio (businesses.admin_password_hash,
+-- deprecada arriba). Hoy la relación es 1 cuenta → 1 negocio, pero
+-- `business_id` NO tiene constraint de unicidad a propósito: el diseño ya
+-- soporta que más adelante un negocio tenga varias cuentas (roles/permisos
+-- distintos), sin cambiar el esquema, solo agregando filas.
+-- =========================
+create table if not exists accounts (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  name text not null,
+  username text not null,
+  password_hash text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists accounts_business_id_idx on accounts(business_id);
+-- Username único sin distinguir mayúsculas/minúsculas (se normaliza a
+-- minúsculas en el server antes de comparar/guardar).
+create unique index if not exists accounts_username_idx on accounts (lower(username));
 
 -- =========================
 -- services
@@ -163,6 +186,11 @@ alter table services enable row level security;
 alter table bookings enable row level security;
 alter table reviews enable row level security;
 alter table professionals enable row level security;
+-- accounts: RLS habilitada A PROPÓSITO sin ninguna política — ni lectura ni
+-- escritura pública. Solo accesible vía supabaseAdmin (service role, salta
+-- RLS) desde el server de login/gestión de cuentas. Nunca debe haber una
+-- política "public read accounts": expondría username/password_hash.
+alter table accounts enable row level security;
 
 -- Lectura pública (la web es pública, cualquiera puede ver negocios/servicios/reseñas/equipo).
 create policy "public read businesses" on businesses for select using (true);

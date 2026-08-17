@@ -33,7 +33,11 @@ export default function Services({ services, primaryColor }: ServicesProps) {
       </Reveal>
 
       <Reveal delay={100} className="mt-10">
-        <div className="border-b border-ink-line pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div
+          data-editable-category="servicios"
+          data-editable-item={featured.id}
+          className="border-b border-ink-line pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4"
+        >
           <div>
             <span className="ticket-number text-sm" style={{ color: primaryColor }}>
               01
@@ -61,7 +65,12 @@ export default function Services({ services, primaryColor }: ServicesProps) {
         {rest.length > 0 ? (
           <div className="divide-y divide-ink-line border-b border-ink-line">
             {rest.map((service, i) => (
-              <div key={service.id} className="flex items-start gap-5 py-5">
+              <div
+                key={service.id}
+                data-editable-category="servicios"
+                data-editable-item={service.id}
+                className="flex items-start gap-5 py-5"
+              >
                 <span
                   className="ticket-number text-sm md:text-base pt-0.5 w-9 shrink-0"
                   style={{ color: primaryColor }}

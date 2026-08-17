@@ -225,6 +225,20 @@ body {
   animation: selectPulse 0.2s ease-out;
 }
 
+/* Indicador de edición en la preview del editor (ver
+   /admin/negocios/[id]/preview): solo se activa dentro de
+   [data-editor-preview], nunca en el sitio público real, que no lleva
+   ese atributo. */
+[data-editor-preview] [data-editable-category] {
+  cursor: pointer;
+  outline: 1px dashed transparent;
+  outline-offset: 4px;
+  transition: outline-color 0.15s ease-out;
+}
+[data-editor-preview] [data-editable-category]:hover {
+  outline-color: var(--brass);
+}
+
 /* Oculta la scrollbar del filmstrip de la galería sin depender de un
    plugin de Tailwind: el scroll sigue funcionando (mouse, trackpad,
    swipe), solo se esconde la barra visual. */

@@ -99,6 +99,20 @@ export interface Professional {
   created_at: string;
 }
 
+// Cuenta de acceso al panel (usuario + contraseña) de un negocio. NUNCA
+// incluye password_hash acá — ese campo solo existe en las funciones de
+// autenticación de accounts-repository.ts, igual que admin_password_hash
+// en Business antes. Hoy 1 cuenta → 1 negocio, pero business_id no es
+// único: el modelo ya tolera varias cuentas por negocio a futuro.
+export interface Account {
+  id: string;
+  business_id: string;
+  name: string;
+  username: string;
+  active: boolean;
+  created_at: string;
+}
+
 // Vista completa de un negocio, tal como la consumen los componentes de la
 // plantilla. Se arma combinando las tablas anteriores.
 export interface BusinessProfile {

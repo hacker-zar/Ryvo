@@ -21,7 +21,11 @@ export default function Hero({ business }: HeroProps) {
       className="relative overflow-hidden bg-ink min-h-[85svh] flex items-center"
     >
       {business.hero_image ? (
-        <div className="absolute inset-0">
+        <div
+          className="absolute inset-0"
+          data-editable-category="fotos"
+          data-editable-field="hero_image"
+        >
           <Image
             src={business.hero_image}
             alt=""

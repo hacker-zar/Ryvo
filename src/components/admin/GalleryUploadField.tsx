@@ -8,11 +8,15 @@ import { adminUpdateGallery } from "@/lib/admin/gallery-actions";
 interface GalleryUploadFieldProps {
   businessId: string;
   initialImages: string[];
+  /** Se llama después de cada guardado exitoso (agregar o quitar una
+   *  foto) — el editor lo usa para refrescar la preview en vivo. */
+  onSaved?: () => void;
 }
 
 export default function GalleryUploadField({
   businessId,
   initialImages,
+  onSaved,
 }: GalleryUploadFieldProps) {
   const [images, setImages] = useState(initialImages);
   const [status, setStatus] = useState<"idle" | "uploading" | "error">(
@@ -26,6 +30,8 @@ export default function GalleryUploadField({
     if (!result.success) {
       setStatus("error");
       setError(result.error ?? "No se pudo guardar la galería.");
+    } else {
+      onSaved?.();
     }
   }
 

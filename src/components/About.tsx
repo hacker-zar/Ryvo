@@ -34,7 +34,11 @@ export default function About({ business }: AboutProps) {
             <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">
               Sobre {business.name}
             </h2>
-            <p className="mt-6 text-base md:text-lg text-bone-muted leading-relaxed max-w-lg">
+            <p
+              data-editable-category="informacion"
+              data-editable-field="bio"
+              className="mt-6 text-base md:text-lg text-bone-muted leading-relaxed max-w-lg"
+            >
               {business.description}
             </p>
             {business.city ? (

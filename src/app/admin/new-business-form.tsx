@@ -148,6 +148,60 @@ export default function NewBusinessForm({ disabled }: { disabled?: boolean }) {
 
       <ImageUploadField folder="new" label="Logo" name="logo" />
 
+      <div className="mt-4 pt-4 border-t border-ink-line grid gap-4">
+        <div>
+          <p className="section-eyebrow text-brass">Cuenta del propietario</p>
+          <p className="text-xs text-bone-muted mt-1">
+            Con este usuario y contraseña el dueño va a entrar directo a su
+            panel.
+          </p>
+        </div>
+
+        <div className="grid gap-1.5">
+          <label htmlFor="owner_name" className="text-xs text-bone-muted">
+            Nombre del propietario
+          </label>
+          <input
+            id="owner_name"
+            name="owner_name"
+            type="text"
+            required
+            disabled={disabled}
+            className={inputClasses}
+          />
+        </div>
+
+        <div className="grid gap-1.5">
+          <label htmlFor="username" className="text-xs text-bone-muted">
+            Usuario
+          </label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            required
+            disabled={disabled}
+            className={inputClasses}
+          />
+        </div>
+
+        <div className="grid gap-1.5">
+          <label htmlFor="password" className="text-xs text-bone-muted">
+            Contraseña
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            minLength={8}
+            placeholder="Mínimo 8 caracteres"
+            disabled={disabled}
+            className={inputClasses}
+          />
+        </div>
+      </div>
+
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
       <button

@@ -235,65 +235,10 @@ export async function getBusinessIdBySlug(
     : null;
 }
 
-// ---------------------------------------------------------------------
-// Autenticación por negocio — únicas funciones autorizadas a leer/escribir
-// admin_password_hash. Usan supabaseAdmin (service role) a propósito: RLS
-// filtra por FILA, no por columna, así que el cliente anónimo igual podría
-// leer este campo si se lo pidiera vía el cliente público. La única
-// protección real de esta columna es que ninguna otra función de este
-// archivo la selecciona (ver BUSINESS_PUBLIC_COLUMNS más arriba).
-// ---------------------------------------------------------------------
-
-export async function getBusinessAuthBySlug(
-  slug: string
-): Promise<{ id: string; admin_password_hash: string | null } | null> {
-  if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
-  const { data } = await supabaseAdmin
-    .from("businesses")
-    .select("id, admin_password_hash")
-    .eq("slug", slug)
-    .single();
-  return data ?? null;
-}
-
-/** Solo devuelve si el negocio YA tiene una contraseña propia asignada —
- *  nunca el hash en sí, para que ni por accidente termine en una prop. */
-export async function businessHasAdminPassword(
-  businessId: string
-): Promise<boolean> {
-  const auth = await getBusinessAuthById(businessId);
-  return Boolean(auth?.admin_password_hash);
-}
-
-async function getBusinessAuthById(
-  businessId: string
-): Promise<{ admin_password_hash: string | null } | null> {
-  if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
-  const { data } = await supabaseAdmin
-    .from("businesses")
-    .select("admin_password_hash")
-    .eq("id", businessId)
-    .single();
-  return data ?? null;
-}
-
-export async function setBusinessAdminPasswordHash(
-  businessId: string,
-  hash: string
-): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
-    return {
-      success: false,
-      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY.",
-    };
-  }
-  const { error } = await supabaseAdmin
-    .from("businesses")
-    .update({ admin_password_hash: hash })
-    .eq("id", businessId);
-  if (error) return { success: false, error: error.message };
-  return { success: true };
-}
+// La autenticación por negocio (admin_password_hash) fue reemplazada por el
+// sistema de cuentas — ver src/lib/data/accounts-repository.ts. La columna
+// admin_password_hash queda deprecada en la base (sin dropear, migración no
+// destructiva) pero ningún código nuevo debe leerla ni escribirla.
 
 export async function listServicesByBusiness(
   businessId: string

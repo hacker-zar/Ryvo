@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Business, ButtonStyle, TypographyPreset } from "@/types/business";
 import { adminUpdateAppearance } from "@/lib/admin/actions";
 import { contrastRatio } from "@/lib/format";
+import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 
 interface AppearanceFormProps {
   business: Pick<
@@ -34,6 +35,7 @@ const colorInputClasses =
   "h-10 w-full rounded-sm border border-ink-line bg-ink-elevated";
 
 export default function AppearanceForm({ business }: AppearanceFormProps) {
+  const { refreshPreview } = useEditorSelection();
   const [primaryColor, setPrimaryColor] = useState(business.primary_color);
   const [secondaryColor, setSecondaryColor] = useState(
     business.secondary_color
@@ -67,6 +69,7 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
     const result = await adminUpdateAppearance(business.id, formData);
     if (result.success) {
       setStatus("saved");
+      refreshPreview();
     } else {
       setStatus("error");
       setError(result.error ?? "No se pudo guardar.");
