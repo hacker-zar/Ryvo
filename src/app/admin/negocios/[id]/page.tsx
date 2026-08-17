@@ -5,12 +5,14 @@ import {
   businessHasAdminPassword,
   getBusinessById,
   listLocationsByBusiness,
+  listProfessionalsByBusiness,
   listServicesByBusiness,
 } from "@/lib/data/business-repository";
 import AdminChrome from "@/components/admin/AdminChrome";
 import GalleryUploadField from "@/components/admin/GalleryUploadField";
 import BusinessEditForm from "./business-edit-form";
 import ServicesManager from "./services-manager";
+import ProfessionalsManager from "./professionals-manager";
 import LocationsManager from "./locations-manager";
 import AppearanceForm from "./appearance-form";
 import AdminPasswordForm from "./admin-password-form";
@@ -35,6 +37,7 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
 
   const services = await listServicesByBusiness(id);
   const locations = await listLocationsByBusiness(id);
+  const professionals = await listProfessionalsByBusiness(id);
   const hasPassword = await businessHasAdminPassword(id);
 
   return (
@@ -125,6 +128,19 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
           Servicios y precios
         </h2>
         <ServicesManager businessId={business.id} services={services} />
+      </div>
+
+      <div className="mt-14">
+        <p className="section-eyebrow text-brass">Profesionales</p>
+        <h2 className="section-title mt-2 text-xl text-bone">
+          Tu equipo
+        </h2>
+        <p className="text-xs text-bone-muted mt-2 max-w-md">
+          Se muestra en la web pública como señal de confianza. No está
+          ligado a las reservas — el cliente no elige profesional al
+          reservar.
+        </p>
+        <ProfessionalsManager businessId={business.id} professionals={professionals} />
       </div>
     </AdminChrome>
   );

@@ -53,7 +53,10 @@ cambio en el repository debe seguir funcionando en ambos modos.
 - `readableTextColor()` en `src/lib/format.ts` calcula contraste WCAG contra
   el `primary_color` que el dueño elige libre con un `<input type="color">` —
   úsala siempre que se pinte texto sobre `primary_color`, nunca asumas que un
-  tono fijo (oscuro o claro) va a contrastar bien.
+  tono fijo (oscuro o claro) va a contrastar bien. `contrastRatio()` (mismo
+  archivo) devuelve el ratio numérico WCAG entre dos colores — usado en
+  `AppearanceForm` para avisar (no bloquear) si la combinación elegida
+  contrasta poco.
 
 ## Reservas (lo más sensible del producto)
 
@@ -109,10 +112,10 @@ directo a su propio negocio.
 (`AdminPasswordForm` — fijar/cambiar la contraseña propia del negocio),
 datos básicos (`BusinessEditForm`), apariencia (`AppearanceForm`),
 locales/horarios (`LocationsManager` + `WeekScheduleEditor`), galería
-(`GalleryUploadField`), servicios (`ServicesManager`).
-`/admin/negocios/[id]/turnos/page.tsx` es una página **distinta**: el
-listado de reservas (`BookingsList`). No son intercambiables — ver
-"Incidentes reales" más abajo.
+(`GalleryUploadField`), servicios (`ServicesManager`), profesionales
+(`ProfessionalsManager`). `/admin/negocios/[id]/turnos/page.tsx` es una
+página **distinta**: el listado de reservas (`BookingsList`). No son
+intercambiables — ver "Incidentes reales" más abajo.
 
 Escrituras admin usan `supabaseAdmin` (service role, salta RLS) desde
 server actions — la autorización por negocio vive en la capa de
@@ -159,11 +162,19 @@ serializa en el HTML/RSC payload aunque nada lo muestre.
 
 Sitio público completo, booking wizard con disponibilidad real, apariencia
 personalizable, admin completo (negocio/apariencia/locales/galería/
-servicios/turnos), multi-local, modo demo automático, y aislamiento
-multi-tenant real entre negocios (sesión con rol + `requireAdminFor` en
-cada acción — ver "Admin" arriba). El esquema real de Supabase
-(`businesses/services/locations/bookings/reviews`) está aplicado y
-verificado contra `supabase/schema.sql`.
+servicios/profesionales/turnos), multi-local, modo demo automático, y
+aislamiento multi-tenant real entre negocios (sesión con rol +
+`requireAdminFor` en cada acción — ver "Admin" arriba). El esquema real de
+Supabase (`businesses/services/locations/bookings/reviews/professionals`)
+está aplicado y verificado contra `supabase/schema.sql`.
+
+**Profesionales** (`professionals` table, `Professional` type,
+`src/components/Professionals.tsx`): señal de confianza en la web pública
+(nombre, rol, bio, foto opcional con fallback de iniciales) — deliberada y
+explícitamente **no** ligado al flujo de reservas, no hay "elegir
+profesional" en el wizard. Se renderiza entre Servicios y Galería. Si se
+llega a pedir en el futuro conectar profesionales con servicios/booking,
+es un cambio de alcance nuevo, no una extensión trivial de esto.
 
 ## Roadmap — NO implementar sin pedido explícito
 

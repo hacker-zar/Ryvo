@@ -9,11 +9,13 @@ import {
   Business,
   BusinessProfile,
   Location,
+  Professional,
   Service,
 } from "@/types/business";
 import {
   demoBusiness,
   demoLocations,
+  demoProfessionals,
   demoReviews,
   demoServices,
 } from "@/lib/data/demo-business";
@@ -48,24 +50,34 @@ export async function getBusinessProfile(
 
     if (businessError || !business) return null;
 
-    const [{ data: services }, { data: reviews }, { data: locations }] =
-      await Promise.all([
-        supabase
-          .from("services")
-          .select("*")
-          .eq("business_id", business.id)
-          .eq("active", true),
-        supabase
-          .from("reviews")
-          .select("*")
-          .eq("business_id", business.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("locations")
-          .select("*")
-          .eq("business_id", business.id)
-          .order("is_primary", { ascending: false }),
-      ]);
+    const [
+      { data: services },
+      { data: reviews },
+      { data: locations },
+      { data: professionals },
+    ] = await Promise.all([
+      supabase
+        .from("services")
+        .select("*")
+        .eq("business_id", business.id)
+        .eq("active", true),
+      supabase
+        .from("reviews")
+        .select("*")
+        .eq("business_id", business.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("locations")
+        .select("*")
+        .eq("business_id", business.id)
+        .order("is_primary", { ascending: false }),
+      supabase
+        .from("professionals")
+        .select("*")
+        .eq("business_id", business.id)
+        .eq("active", true)
+        .order("created_at", { ascending: true }),
+    ]);
 
     return {
       business,
@@ -78,6 +90,7 @@ export async function getBusinessProfile(
         locations && locations.length > 0
           ? locations
           : [virtualLocationFromBusiness(business)],
+      professionals: professionals ?? [],
     };
   }
 
@@ -88,6 +101,7 @@ export async function getBusinessProfile(
       services: demoServices,
       reviews: demoReviews,
       locations: demoLocations,
+      professionals: demoProfessionals,
     };
   }
 
@@ -382,6 +396,79 @@ export async function deleteService(
     };
   }
   const { error } = await supabaseAdmin.from("services").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------
+// Profesionales (equipo) — señal de confianza, gestionados desde /admin.
+// No ligados al flujo de reservas.
+// ---------------------------------------------------------------------
+
+export async function listProfessionalsByBusiness(
+  businessId: string
+): Promise<Professional[]> {
+  if (isSupabaseConfigured && supabase) {
+    const { data } = await supabase
+      .from("professionals")
+      .select("*")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: true });
+    return data ?? [];
+  }
+  return businessId === demoBusiness.id ? demoProfessionals : [];
+}
+
+export type ProfessionalInput = Omit<Professional, "id" | "created_at">;
+
+export async function createProfessional(
+  input: ProfessionalInput
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder crear profesionales.",
+    };
+  }
+  const { error } = await supabaseAdmin.from("professionals").insert(input);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function updateProfessional(
+  id: string,
+  input: Partial<ProfessionalInput>
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder editar profesionales.",
+    };
+  }
+  const { error } = await supabaseAdmin
+    .from("professionals")
+    .update(input)
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function deleteProfessional(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder borrar profesionales.",
+    };
+  }
+  const { error } = await supabaseAdmin
+    .from("professionals")
+    .delete()
+    .eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }

@@ -7,16 +7,20 @@ import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 import {
   BusinessInput,
   LocationInput,
+  ProfessionalInput,
   ServiceInput,
   createBusiness,
   createLocation,
+  createProfessional,
   createService,
   deleteLocation,
+  deleteProfessional,
   deleteService,
   setBusinessAdminPasswordHash,
   updateBookingStatus,
   updateBusiness,
   updateLocation,
+  updateProfessional,
   updateService,
 } from "@/lib/data/business-repository";
 import { OpeningHours } from "@/types/business";
@@ -139,6 +143,58 @@ export async function adminDeleteService(
 ) {
   await requireAdminFor(businessId);
   const result = await deleteService(serviceId);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminCreateProfessional(
+  businessId: string,
+  formData: FormData
+) {
+  await requireAdminFor(businessId);
+
+  const input: ProfessionalInput = {
+    business_id: businessId,
+    name: String(formData.get("name") || "").trim(),
+    role: String(formData.get("role") || ""),
+    bio: String(formData.get("bio") || ""),
+    photo: String(formData.get("photo") || ""),
+    active: formData.get("active") === "on",
+  };
+
+  if (!input.name) return { success: false, error: "El nombre es obligatorio." };
+
+  const result = await createProfessional(input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminUpdateProfessional(
+  businessId: string,
+  professionalId: string,
+  formData: FormData
+) {
+  await requireAdminFor(businessId);
+
+  const input: Partial<ProfessionalInput> = {
+    name: String(formData.get("name") || "").trim(),
+    role: String(formData.get("role") || ""),
+    bio: String(formData.get("bio") || ""),
+    photo: String(formData.get("photo") || ""),
+    active: formData.get("active") === "on",
+  };
+
+  const result = await updateProfessional(professionalId, input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminDeleteProfessional(
+  businessId: string,
+  professionalId: string
+) {
+  await requireAdminFor(businessId);
+  const result = await deleteProfessional(professionalId);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
 }

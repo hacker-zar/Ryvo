@@ -85,6 +85,20 @@ export interface Review {
   created_at: string;
 }
 
+// Equipo del negocio — señal de confianza en la web pública. Deliberadamente
+// NO está ligado al flujo de reservas (no hay "elegir profesional" en el
+// wizard): es solo presentación.
+export interface Professional {
+  id: string;
+  business_id: string;
+  name: string;
+  role: string;
+  bio: string;
+  photo: string;
+  active: boolean;
+  created_at: string;
+}
+
 // Vista completa de un negocio, tal como la consumen los componentes de la
 // plantilla. Se arma combinando las tablas anteriores.
 export interface BusinessProfile {
@@ -92,4 +106,5 @@ export interface BusinessProfile {
   services: Service[];
   reviews: Review[];
   locations: Location[];
+  professionals: Professional[];
 }

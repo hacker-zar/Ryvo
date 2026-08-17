@@ -1,4 +1,4 @@
-import { Business, Location, Review, Service } from "@/types/business";
+import { Business, Location, Professional, Review, Service } from "@/types/business";
 
 // Datos de demostración de una peluquería ficticia.
 // Sirven como fixture para desarrollo local y como referencia de forma
@@ -108,6 +108,29 @@ export const demoServices: Service[] = [
     price: 9000,
     duration: 50,
     active: true,
+  },
+];
+
+export const demoProfessionals: Professional[] = [
+  {
+    id: "p1",
+    business_id: "demo-business-id",
+    name: "Bella Fernández",
+    role: "Estilista y colorista",
+    bio: "Más de 10 años especializada en color y tratamientos capilares.",
+    photo: "",
+    active: true,
+    created_at: "2024-01-15T00:00:00.000Z",
+  },
+  {
+    id: "p2",
+    business_id: "demo-business-id",
+    name: "Martín Sosa",
+    role: "Barbero",
+    bio: "Cortes clásicos y arreglo de barba, formado en Buenos Aires.",
+    photo: "",
+    active: true,
+    created_at: "2024-01-15T00:00:00.000Z",
   },
 ];
 
