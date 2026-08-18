@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Business } from "@/types/business";
+import { Business, TemplateLayoutId } from "@/types/business";
 
 interface FooterProps {
   business: Pick<Business, "name" | "slug">;
@@ -10,13 +10,19 @@ interface FooterProps {
    *  `showPoweredBy={business.plan !== "white_label"}` (o el campo que
    *  corresponda) sin tocar este componente ni el resto del footer. */
   showPoweredBy?: boolean;
+  layout?: TemplateLayoutId;
 }
 
-export default function Footer({ business, showPoweredBy = true }: FooterProps) {
+export default function Footer({ business, showPoweredBy = true, layout }: FooterProps) {
+  // Atelier/Editorial: footer editorial, más aire arriba (coherente con
+  // el "lujo discreto"/espacio negativo pedido para ambas). El resto de
+  // la estructura (link admin + Powered by) no cambia en ninguna plantilla.
+  const airy = layout === "atelier" || layout === "editorial";
+
   return (
     // Padding inferior extra en mobile: deja lugar a la barra fija de
     // reserva (MobileBookingBar) para que no tape el texto del footer.
-    <footer className="border-t border-ink-line pt-8 pb-24 md:pb-8">
+    <footer className={`border-t border-ink-line pb-24 md:pb-8 ${airy ? "pt-14" : "pt-8"}`}>
       <div className="mx-auto max-w-5xl px-4 flex flex-col items-center gap-2 text-center text-xs text-bone-muted/70">
         <p>
           © {new Date().getFullYear()} {business.name}

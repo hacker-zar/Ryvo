@@ -13,6 +13,22 @@
 
   --background: var(--ink);
   --foreground: var(--bone);
+
+  /* Sistema de plantillas: alias semánticos puros de los tokens de
+     arriba, para que componentes nuevos (Marquee/Statement/BeforeAfter/
+     SocialGrid, y cualquier plantilla futura) usen nombres genéricos de
+     diseño en vez de hardcodear colores — sin que ningún componente
+     existente tenga que cambiar (siguen usando --ink/--bone/etc. vía las
+     clases Tailwind que ya usan). AppearanceScope sigue siendo el único
+     lugar que resuelve los valores reales por negocio; estos alias solo
+     los reexponen con otro nombre. */
+  --surface: var(--ink-elevated);
+  --primary: var(--bone);
+  --secondary: var(--bone-muted);
+  --accent: var(--brass);
+  --text: var(--bone);
+  --text-muted: var(--bone-muted);
+  --border: var(--ink-line);
 }
 
 /* Identidad de marca de RYVO como plataforma (landing en "/", nav, etc).
@@ -44,6 +60,13 @@
   --color-porcelain: var(--porcelain);
   --color-porcelain-muted: var(--porcelain-muted);
   --color-signal: var(--signal);
+  --color-surface: var(--surface);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
   --font-display: var(--font-display-stack);
   --font-sans: var(--font-sans-stack);
 }
@@ -285,6 +308,17 @@ body {
   transform: translateY(0) scale(1);
 }
 
+/* Marquee.tsx (plantillas Noir/Bold) — el contenido se duplica 2 veces
+   en el componente, así -50% es un loop perfectamente continuo. */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee-scroll 22s linear infinite;
+  width: max-content;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-\[fadeIn_0\.2s_ease-out\],
   .animate-\[slideUp_0\.25s_ease-out\],
@@ -302,5 +336,8 @@ body {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  .marquee-track {
+    animation: none;
   }
 }

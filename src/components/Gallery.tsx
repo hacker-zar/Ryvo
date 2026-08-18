@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Business } from "@/types/business";
+import { Business, TemplateLayoutId } from "@/types/business";
 import Reveal from "@/components/Reveal";
 import Lightbox from "@/components/Lightbox";
 
@@ -10,81 +10,165 @@ interface GalleryProps {
   images: NonNullable<Business["gallery"]>;
   businessName: string;
   primaryColor: Business["primary_color"];
+  layout?: TemplateLayoutId;
 }
 
-// Patrón de mosaico editorial para desktop: algunas fotos ocupan más
-// espacio que otras en vez de una grilla pareja de cuadraditos. Se repite
-// cada 6 imágenes para que el ritmo se mantenga con cualquier cantidad de
-// fotos que cargue el negocio.
-const FEATURE_PATTERN = [true, false, false, true, false, false];
+// Patrones de mosaico por plantilla — mismo mecanismo (col-span/row-span
+// sobre una grilla de 3 o 4 columnas), solo cambia el ritmo de repetición
+// para que cada plantilla se sienta distinta sin duplicar el componente.
+const FEATURE_PATTERNS: Record<string, boolean[]> = {
+  default: [true, false, false, true, false, false],
+  editorial: [false, false, true, false, true, false],
+  bold: [true, false, true, false, false, true],
+};
 
 export default function Gallery({
   images,
   businessName,
   primaryColor,
+  layout,
 }: GalleryProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   if (!images || images.length === 0) return null;
 
+  const eyebrowAndTitle = (
+    <div data-editable-category="apariencia" data-editable-field="galeria">
+      <p className="section-eyebrow" style={{ color: primaryColor }}>
+        Trabajos
+      </p>
+      <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">Galería</h2>
+    </div>
+  );
+
+  // === NOIR — foto grande, una o dos columnas, hover marcado: la galería
+  // como pieza cinematográfica, no como grilla de miniaturas. ===
+  if (layout === "noir") {
+    return (
+      <section id="galeria" className="py-16 md:py-24">
+        <div className="mx-auto max-w-5xl px-4">
+          <Reveal>{eyebrowAndTitle}</Reveal>
+        </div>
+        <div className="mt-10 flex gap-2 overflow-x-auto pb-2 px-4 snap-x snap-mandatory hide-scrollbar md:hidden">
+          {images.map((src, i) => (
+            <Reveal key={src + i} delay={100 + Math.min(i, 5) * 60} className="shrink-0 w-[85vw] snap-start">
+              <button
+                type="button"
+                onClick={() => setOpenIndex(i)}
+                aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
+                className="relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated"
+              >
+                <Image src={src} alt={`${businessName} - foto ${i + 1}`} fill sizes="85vw" className="object-cover" />
+              </button>
+            </Reveal>
+          ))}
+        </div>
+        <div className="mt-10 hidden md:grid md:grid-cols-2 md:gap-3 md:px-8">
+          {images.map((src, i) => (
+            <Reveal key={src + i} delay={100 + Math.min(i, 5) * 60}>
+              <button
+                type="button"
+                onClick={() => setOpenIndex(i)}
+                aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
+                className="relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated group"
+              >
+                <Image
+                  src={src}
+                  alt={`${businessName} - foto ${i + 1}`}
+                  fill
+                  sizes="45vw"
+                  className="object-cover grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700"
+                />
+                <div className="absolute inset-0 bg-ink/20 group-hover:bg-ink/0 transition-colors duration-500" />
+              </button>
+            </Reveal>
+          ))}
+        </div>
+        {openIndex !== null ? (
+          <Lightbox images={images} index={openIndex} altPrefix={businessName} onClose={() => setOpenIndex(null)} onNavigate={setOpenIndex} />
+        ) : null}
+      </section>
+    );
+  }
+
+  // === STUDIO — grilla pareja y limpia (sin mosaico asimétrico). ===
+  if (layout === "studio") {
+    return (
+      <section id="galeria" className="py-16 md:py-24">
+        <div className="mx-auto max-w-5xl px-4">
+          <Reveal>{eyebrowAndTitle}</Reveal>
+        </div>
+        <div className="mt-10 flex gap-2 overflow-x-auto pb-2 px-4 snap-x snap-mandatory hide-scrollbar md:hidden">
+          {images.map((src, i) => (
+            <Reveal key={src + i} delay={100 + Math.min(i, 5) * 60} className="shrink-0 w-[78vw] snap-start">
+              <button
+                type="button"
+                onClick={() => setOpenIndex(i)}
+                aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
+                className="relative aspect-square w-full overflow-hidden rounded-sm bg-ink-elevated"
+              >
+                <Image src={src} alt={`${businessName} - foto ${i + 1}`} fill sizes="78vw" className="object-cover" />
+              </button>
+            </Reveal>
+          ))}
+        </div>
+        <div className="mt-10 hidden md:grid md:grid-cols-3 md:gap-4 md:px-8">
+          {images.map((src, i) => (
+            <Reveal key={src + i} delay={100 + Math.min(i, 5) * 60}>
+              <button
+                type="button"
+                onClick={() => setOpenIndex(i)}
+                aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
+                className="relative aspect-square w-full overflow-hidden rounded-sm bg-ink-elevated group"
+              >
+                <Image
+                  src={src}
+                  alt={`${businessName} - foto ${i + 1}`}
+                  fill
+                  sizes="30vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </button>
+            </Reveal>
+          ))}
+        </div>
+        {openIndex !== null ? (
+          <Lightbox images={images} index={openIndex} altPrefix={businessName} onClose={() => setOpenIndex(null)} onNavigate={setOpenIndex} />
+        ) : null}
+      </section>
+    );
+  }
+
+  // === Atelier / Editorial / Bold / default — mosaico editorial, mismo
+  // mecanismo de siempre con distinto patrón de repetición por plantilla. ===
+  const pattern = FEATURE_PATTERNS[layout ?? "default"] ?? FEATURE_PATTERNS.default;
+
   return (
     <section id="galeria" className="py-16 md:py-24">
       <div className="mx-auto max-w-5xl px-4">
-        <Reveal>
-          <div data-editable-category="apariencia" data-editable-field="galeria">
-            <p className="section-eyebrow" style={{ color: primaryColor }}>
-              Trabajos
-            </p>
-            <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">
-              Galería
-            </h2>
-          </div>
-        </Reveal>
+        <Reveal>{eyebrowAndTitle}</Reveal>
       </div>
 
-      {/* Mobile: filmstrip horizontal con peek — se mantiene tal cual
-          funcionaba, ya es el patrón correcto para esta pantalla. Cada
-          foto en su propio Reveal (antes: uno solo envolviendo el
-          filmstrip completo) para el stagger leve del preset dinámico —
-          las clases de layout (ancho/shrink/snap) se mueven al wrapper
-          de Reveal, que pasa a ser el ítem flex real. */}
       <div className="mt-10 flex gap-2 overflow-x-auto pb-2 px-4 snap-x snap-mandatory hide-scrollbar md:hidden">
         {images.map((src, i) => (
-          <Reveal
-            key={src + i}
-            delay={100 + Math.min(i, 5) * 60}
-            className="shrink-0 w-[78vw] snap-start"
-          >
+          <Reveal key={src + i} delay={100 + Math.min(i, 5) * 60} className="shrink-0 w-[78vw] snap-start">
             <button
               type="button"
               onClick={() => setOpenIndex(i)}
               aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
               className="relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset"
             >
-              <Image
-                src={src}
-                alt={`${businessName} - foto ${i + 1}`}
-                fill
-                sizes="78vw"
-                className="object-cover"
-              />
+              <Image src={src} alt={`${businessName} - foto ${i + 1}`} fill sizes="78vw" className="object-cover" />
             </button>
           </Reveal>
         ))}
       </div>
 
-      {/* Desktop: mosaico editorial con tamaños variables, borde a borde.
-          Mismo criterio: el col-span/row-span del patrón de mosaico se
-          mueve al wrapper de Reveal, que es el ítem de grid real. */}
       <div className="mt-10 hidden md:grid md:grid-cols-4 md:auto-rows-[180px] md:gap-2 md:grid-flow-dense md:px-8">
         {images.map((src, i) => {
-          const featured = FEATURE_PATTERN[i % FEATURE_PATTERN.length];
+          const featured = pattern[i % pattern.length];
           return (
-            <Reveal
-              key={src + i}
-              delay={100 + Math.min(i, 5) * 60}
-              className={featured ? "md:col-span-2 md:row-span-2" : ""}
-            >
+            <Reveal key={src + i} delay={100 + Math.min(i, 5) * 60} className={featured ? "md:col-span-2 md:row-span-2" : ""}>
               <button
                 type="button"
                 onClick={() => setOpenIndex(i)}
@@ -105,13 +189,7 @@ export default function Gallery({
       </div>
 
       {openIndex !== null ? (
-        <Lightbox
-          images={images}
-          index={openIndex}
-          altPrefix={businessName}
-          onClose={() => setOpenIndex(null)}
-          onNavigate={setOpenIndex}
-        />
+        <Lightbox images={images} index={openIndex} altPrefix={businessName} onClose={() => setOpenIndex(null)} onNavigate={setOpenIndex} />
       ) : null}
     </section>
   );

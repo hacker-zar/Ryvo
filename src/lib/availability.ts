@@ -19,9 +19,29 @@ export function dayCodeForDate(dateStr: string): OpeningHours["day"] {
   return DAY_ORDER[date.getDay()];
 }
 
-function timeToMinutes(time: string): number {
+export function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;
+}
+
+/**
+ * true si el intervalo [aStartMin, aStartMin+aDurationMin) se solapa con
+ * [bStartMin, bStartMin+bDurationMin) — semiabierto en ambos: un fin
+ * exacto no cuenta como solapamiento (10:00-11:00 no choca con
+ * 11:00-11:30). Única fuente de la matemática de solapamiento — la
+ * reutilizan filterAvailableSlots, resolveAnyProfessional y createBooking
+ * (business-repository.ts) para que los tres puntos de chequeo no puedan
+ * volver a divergir entre sí.
+ */
+export function intervalsOverlap(
+  aStartMin: number,
+  aDurationMin: number,
+  bStartMin: number,
+  bDurationMin: number
+): boolean {
+  const aEnd = aStartMin + aDurationMin;
+  const bEnd = bStartMin + bDurationMin;
+  return aStartMin < bEnd && bStartMin < aEnd;
 }
 
 function minutesToTime(mins: number): string {
@@ -63,19 +83,28 @@ export function generateSlotsForDay(
 }
 
 /**
- * Filtra los horarios ya ocupados por reservas válidas (no canceladas)
- * para ese negocio/local/fecha.
+ * Filtra los horarios cuyo intervalo [slot, slot+durationMin) se
+ * solaparía con alguna reserva válida (no cancelada) existente — no solo
+ * los que coinciden en la hora exacta de inicio (ver intervalsOverlap).
  */
 export function filterAvailableSlots(
   allSlots: string[],
-  existingBookings: Pick<Booking, "time" | "status">[]
+  existingBookings: Pick<Booking, "time" | "status" | "duration_min">[],
+  durationMin: number
 ): string[] {
-  const takenTimes = new Set(
-    existingBookings
-      .filter((b) => b.status !== "cancelled")
-      .map((b) => b.time.slice(0, 5)) // normaliza "HH:mm:ss" -> "HH:mm"
-  );
-  return allSlots.filter((slot) => !takenTimes.has(slot));
+  const activeRanges = existingBookings
+    .filter((b) => b.status !== "cancelled")
+    .map((b) => ({
+      start: timeToMinutes(b.time.slice(0, 5)), // normaliza "HH:mm:ss" -> "HH:mm"
+      duration: b.duration_min,
+    }));
+
+  return allSlots.filter((slot) => {
+    const slotStart = timeToMinutes(slot);
+    return !activeRanges.some((r) =>
+      intervalsOverlap(slotStart, durationMin, r.start, r.duration)
+    );
+  });
 }
 
 /**
@@ -87,11 +116,12 @@ export function filterAvailableSlots(
  */
 export function unionAvailableSlots(
   allSlots: string[],
-  bookingsByProfessional: Map<string, Pick<Booking, "time" | "status">[]>
+  bookingsByProfessional: Map<string, Pick<Booking, "time" | "status" | "duration_min">[]>,
+  durationMin: number
 ): string[] {
   const available = new Set<string>();
   for (const bookings of bookingsByProfessional.values()) {
-    for (const slot of filterAvailableSlots(allSlots, bookings)) {
+    for (const slot of filterAvailableSlots(allSlots, bookings, durationMin)) {
       available.add(slot);
     }
   }

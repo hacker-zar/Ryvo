@@ -47,7 +47,7 @@ export async function getAvailableSlots(
       query.professionalId,
       query.excludeBookingId
     );
-    return filterAvailableSlots(allSlots, booked);
+    return filterAvailableSlots(allSlots, booked, query.serviceDurationMin);
   }
 
   if (query.qualifiedProfessionalIds && query.qualifiedProfessionalIds.length > 0) {
@@ -57,7 +57,7 @@ export async function getAvailableSlots(
       query.date,
       query.qualifiedProfessionalIds
     );
-    return unionAvailableSlots(allSlots, byProfessional);
+    return unionAvailableSlots(allSlots, byProfessional, query.serviceDurationMin);
   }
 
   // Negocio sin profesionales configurados — mismo código de siempre.
@@ -68,5 +68,5 @@ export async function getAvailableSlots(
     undefined,
     query.excludeBookingId
   );
-  return filterAvailableSlots(allSlots, booked);
+  return filterAvailableSlots(allSlots, booked, query.serviceDurationMin);
 }

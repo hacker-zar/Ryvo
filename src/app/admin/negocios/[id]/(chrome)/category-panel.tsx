@@ -1,6 +1,6 @@
 "use client";
 
-import { Business, Location, ProfessionalWithServices, Service } from "@/types/business";
+import { Business, Location, ProfessionalWithServices, Service, Template } from "@/types/business";
 import {
   EditorCategory,
   useEditorSelection,
@@ -12,6 +12,7 @@ import ServicesManager from "./services-manager";
 import ProfessionalsManager from "./professionals-manager";
 import LocationsManager from "./locations-manager";
 import AppearanceForm from "./appearance-form";
+import TemplatePanel from "./template-panel";
 import ComingSoonRow from "@/components/ui/ComingSoonRow";
 
 interface CategoryPanelProps {
@@ -19,8 +20,12 @@ interface CategoryPanelProps {
   services: Service[];
   professionals: ProfessionalWithServices[];
   locations: Location[];
+  officialTemplates: Template[];
+  businessTemplates: Template[];
 }
 
+// "plantilla" deliberadamente al final — el pedido es que la sección
+// quede debajo de TODO lo demás, sin mover ni tocar el resto del editor.
 const CATEGORIES: { key: EditorCategory; label: string }[] = [
   { key: "apariencia", label: "Apariencia" },
   { key: "pagina", label: "Página" },
@@ -29,6 +34,7 @@ const CATEGORIES: { key: EditorCategory; label: string }[] = [
   { key: "productos", label: "Productos" },
   { key: "reservas", label: "Reservas" },
   { key: "automatizaciones", label: "Automatizaciones" },
+  { key: "plantilla", label: "Plantilla" },
 ];
 
 /** Acordeón de categorías — solo una abierta a la vez. Qué categoría está
@@ -47,6 +53,8 @@ export default function CategoryPanel({
   services,
   professionals,
   locations,
+  officialTemplates,
+  businessTemplates,
 }: CategoryPanelProps) {
   const { target, select, clear } = useEditorSelection();
   const openCategory = target?.category ?? null;

@@ -9,13 +9,19 @@ import {
   LocationInput,
   ProfessionalInput,
   ServiceInput,
+  TemplateInput,
+  countBusinessesUsingTemplate,
   createBusiness,
   createLocation,
   createProfessional,
   createService,
+  createTemplate,
   deleteLocation,
   deleteProfessional,
   deleteService,
+  deleteTemplate,
+  getBusinessById,
+  getTemplateById,
   reorderProfessional,
   updateBookingStatus,
   updateBusiness,
@@ -694,4 +700,161 @@ export async function adminPublishBusiness(businessId: string) {
     revalidatePath(`/admin/negocios/${businessId}`);
   }
   return result;
+}
+
+// ---------------------------------------------------------------------
+// Sistema de plantillas — gestión desde el editor ("Plantilla" al final
+// de CATEGORIES) y desde el picker de creación de página. Ver Template en
+// types/business.ts para el principio rector: la plantilla es una CAPA DE
+// DISEÑO, nunca contenido — ninguna de estas acciones toca nombre,
+// servicios, profesionales, fotos, horarios, contacto ni reservas.
+// ---------------------------------------------------------------------
+
+/**
+ * Aplica una plantilla (oficial o propia) al negocio: copia su diseño
+ * completo (layout, paleta, estilo de botón, preset de animación, orden
+ * por defecto de secciones) a `businesses`. Es una copia, no una
+ * referencia viva — si la plantilla de origen se borra después, la
+ * página del negocio sigue renderizando exactamente igual (ver
+ * `template_id` con `on delete set null` en la migración).
+ */
+export async function adminApplyTemplate(businessId: string, templateId: string) {
+  await requireAdminFor(businessId);
+
+  const template = await getTemplateById(templateId);
+  if (!template) return { success: false, error: "Plantilla no encontrada." };
+
+  const result = await updateBusiness(businessId, {
+    template_id: template.id,
+    template_layout: template.layout,
+    palette_id: template.palette_id,
+    button_style: template.button_style,
+    animation_preset: template.animation_preset,
+    section_order: sanitizeSectionOrder(template.section_order),
+  });
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+/**
+ * Guarda el diseño ACTUAL del negocio como una plantilla propia nueva
+ * ("Guardar como nueva" en el editor). Si el negocio nunca eligió
+ * plantilla todavía, usa "studio"/"obsidian" como punto de partida
+ * razonable — son solo los valores iniciales de la plantilla nueva, no
+ * afectan al negocio en sí.
+ */
+export async function adminCreateTemplate(businessId: string, formData: FormData) {
+  await requireAdminFor(businessId);
+
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return { success: false, error: "El nombre es obligatorio." };
+  const description = String(formData.get("description") || "");
+
+  const business = await getBusinessById(businessId);
+  if (!business) return { success: false, error: "Negocio no encontrado." };
+
+  const input: TemplateInput = {
+    business_id: businessId,
+    slug: null,
+    name,
+    description,
+    is_official: false,
+    layout: business.template_layout ?? "studio",
+    palette_id: business.palette_id ?? "obsidian",
+    button_style: business.button_style ?? "recto",
+    animation_preset: business.animation_preset ?? "sutil",
+    section_order: sanitizeSectionOrder(business.section_order),
+  };
+
+  const result = await createTemplate(input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+/**
+ * Duplica cualquier plantilla (oficial o propia de otro momento) en una
+ * copia propia del negocio — fila nueva, sin ninguna referencia a la de
+ * origen, así que modificarla después nunca toca la original.
+ */
+export async function adminDuplicateTemplate(
+  businessId: string,
+  sourceTemplateId: string
+) {
+  await requireAdminFor(businessId);
+
+  const source = await getTemplateById(sourceTemplateId);
+  if (!source) return { success: false, error: "Plantilla no encontrada." };
+
+  const input: TemplateInput = {
+    business_id: businessId,
+    slug: null,
+    name: `${source.name} — Mi versión`,
+    description: source.description,
+    is_official: false,
+    layout: source.layout,
+    palette_id: source.palette_id,
+    button_style: source.button_style,
+    animation_preset: source.animation_preset,
+    section_order: source.section_order,
+  };
+
+  const result = await createTemplate(input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+/**
+ * Borra una plantilla PROPIA del negocio. Nunca una oficial de RYVO —
+ * validado acá server-side (no solo ocultando el botón en la UI). Si
+ * algún negocio la tiene aplicada ahora mismo, el `on delete set null` de
+ * la FK deja su `template_id` en null sin tocar `template_layout`/
+ * `palette_id`/etc. (ya copiados en su momento) — la página sigue
+ * funcionando con su diseño actual, no se rompe.
+ */
+export async function adminDeleteTemplate(businessId: string, templateId: string) {
+  await requireAdminFor(businessId);
+
+  const template = await getTemplateById(templateId);
+  if (!template) return { success: false, error: "Plantilla no encontrada." };
+  if (template.is_official) {
+    return {
+      success: false,
+      error: "Las plantillas oficiales de RYVO no se pueden eliminar.",
+    };
+  }
+  if (template.business_id !== businessId) {
+    return { success: false, error: "Esta plantilla no pertenece a este negocio." };
+  }
+
+  const result = await deleteTemplate(templateId);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+/** Vuelve a "Página en blanco" — no es aplicar una plantilla, es quitar
+ *  la que estuviera puesta. Deja intactos button_style/animation_preset/
+ *  section_order tal como estén: sin plantilla, esos campos vuelven a
+ *  ser simplemente la configuración propia del negocio (mismo
+ *  comportamiento que un negocio que nunca eligió plantilla). */
+export async function adminClearTemplate(businessId: string) {
+  await requireAdminFor(businessId);
+  const result = await updateBusiness(businessId, {
+    template_id: null,
+    template_layout: null,
+    palette_id: null,
+  });
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+/** Cuántos negocios tienen esta plantilla aplicada ahora mismo — la UI lo
+ *  pide antes de confirmar un borrado, para avisar el impacto (ver
+ *  adminDeleteTemplate: el borrado en sí nunca rompe esas páginas, esto
+ *  es solo informativo). */
+export async function adminGetTemplateUsageCount(
+  businessId: string,
+  templateId: string
+) {
+  await requireAdminFor(businessId);
+  return countBusinessesUsingTemplate(templateId);
 }

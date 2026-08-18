@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Business } from "@/types/business";
+import { Business, TemplateLayoutId } from "@/types/business";
 import Reveal from "@/components/Reveal";
 
 interface AboutProps {
@@ -7,6 +7,7 @@ interface AboutProps {
     Business,
     "name" | "description" | "city" | "gallery" | "primary_color"
   >;
+  layout?: TemplateLayoutId;
 }
 
 /**
@@ -14,14 +15,15 @@ interface AboutProps {
  * (description, city, y la primera foto de gallery como imagen editorial).
  * No agrega ningún campo ni tabla nueva al modelo de datos.
  */
-export default function About({ business }: AboutProps) {
+export default function About({ business, layout }: AboutProps) {
   if (!business.description) return null;
 
   const image = business.gallery?.[0];
+  const isAtelier = layout === "atelier";
 
   return (
-    <section className="bg-ink-elevated">
-      <div className="mx-auto max-w-5xl px-4 py-16 md:py-24">
+    <section className={isAtelier ? "bg-ink" : "bg-ink-elevated"}>
+      <div className={`mx-auto max-w-5xl px-4 ${isAtelier ? "py-20 md:py-32" : "py-16 md:py-24"}`}>
         <div
           className={`grid items-center gap-10 ${
             image ? "md:grid-cols-2 md:gap-16" : "max-w-2xl"

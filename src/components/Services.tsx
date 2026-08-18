@@ -1,6 +1,6 @@
 "use client";
 
-import { Business, Service } from "@/types/business";
+import { Business, Service, TemplateLayoutId } from "@/types/business";
 import { formatDuration, formatPrice, readableTextColor } from "@/lib/format";
 import { useBookingModal } from "@/lib/booking-modal-context";
 import Reveal from "@/components/Reveal";
@@ -8,25 +8,135 @@ import Reveal from "@/components/Reveal";
 interface ServicesProps {
   services: Service[];
   primaryColor: Business["primary_color"];
+  layout?: TemplateLayoutId;
 }
 
-export default function Services({ services, primaryColor }: ServicesProps) {
+export default function Services({ services, primaryColor, layout }: ServicesProps) {
   const { open } = useBookingModal();
 
   if (services.length === 0) return null;
 
-  // El primer servicio de la carta recibe un tratamiento tipográfico mayor
-  // (jerarquía visual) sin inventar un campo "destacado" que no existe en
-  // el modelo de datos: es el mismo orden que el dueño ya define al cargar
-  // servicios, con más protagonismo para el primero.
-  const [featured, ...rest] = services;
-
-  // Stagger leve por ítem (antes: un solo Reveal envolviendo toda la
-  // lista) — tope a los primeros ítems para que una carta con muchos
-  // servicios no deje los últimos apareciendo demasiado tarde. La
-  // duración/curva real las define el preset de animación vía CSS
-  // ([data-animation] en globals.css); acá solo se calcula el delay.
   const staggerDelay = (index: number) => 100 + Math.min(index, 5) * 60;
+
+  const reserveButton = (
+    <button
+      type="button"
+      onClick={open}
+      className="section-eyebrow text-xs px-7 py-3.5 btn-radius font-semibold hover:opacity-90 transition-opacity"
+      style={{ backgroundColor: primaryColor, color: readableTextColor(primaryColor) }}
+    >
+      Reservar turno
+    </button>
+  );
+
+  // === NOIR / STUDIO — grilla de cards (oscuras de alto contraste en
+  // Noir, limpias y claras en Studio) en vez de la lista editorial de
+  // siempre — es la diferencia estructural real pedida para ambas. ===
+  if (layout === "noir" || layout === "studio") {
+    const dark = layout === "noir";
+    return (
+      <section id="servicios" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
+        <Reveal>
+          <p className="section-eyebrow" style={{ color: primaryColor }}>
+            Carta de servicios
+          </p>
+          <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">Servicios</h2>
+        </Reveal>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+          {services.map((service, i) => (
+            <Reveal key={service.id} delay={staggerDelay(i)}>
+              <div
+                data-editable-category="servicios"
+                data-editable-item={service.id}
+                className={
+                  dark
+                    ? "bg-ink-elevated border border-ink-line p-6 h-full"
+                    : "border border-ink-line p-6 h-full rounded-sm"
+                }
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <h3 className="display-title text-xl text-bone">{service.name}</h3>
+                  <span className="ticket-number text-lg shrink-0" style={{ color: primaryColor }}>
+                    {formatPrice(service.price)}
+                  </span>
+                </div>
+                {service.description ? (
+                  <p className="mt-2 text-sm text-bone-muted leading-relaxed">{service.description}</p>
+                ) : null}
+                <span className="mt-4 block text-xs text-bone-muted/70">
+                  {formatDuration(service.duration)}
+                </span>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+
+        <Reveal delay={staggerDelay(services.length)}>
+          <div className="mt-10 flex justify-center md:justify-start">{reserveButton}</div>
+        </Reveal>
+      </section>
+    );
+  }
+
+  // === BOLD — lista numerada enorme, tipo "01 CORTE / 02 BARBA...". ===
+  if (layout === "bold") {
+    return (
+      <section id="servicios" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
+        <Reveal>
+          <p className="section-eyebrow" style={{ color: primaryColor }}>
+            Carta de servicios
+          </p>
+        </Reveal>
+
+        <div className="mt-6 border-t border-ink-line">
+          {services.map((service, i) => (
+            <Reveal key={service.id} delay={staggerDelay(i)}>
+              <div
+                data-editable-category="servicios"
+                data-editable-item={service.id}
+                className="border-b border-ink-line py-6 flex items-center gap-6"
+              >
+                <span
+                  className="display-title text-4xl md:text-6xl shrink-0"
+                  style={{ color: primaryColor }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="display-title text-2xl md:text-4xl text-bone uppercase truncate">
+                    {service.name}
+                  </h3>
+                  {service.description ? (
+                    <p className="mt-1 text-sm text-bone-muted leading-relaxed line-clamp-1">
+                      {service.description}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="ticket-number text-xl md:text-2xl text-bone block">
+                    {formatPrice(service.price)}
+                  </span>
+                  <span className="text-xs text-bone-muted/70">{formatDuration(service.duration)}</span>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+
+        <Reveal delay={staggerDelay(services.length)}>
+          <div className="mt-10 flex justify-center md:justify-start">{reserveButton}</div>
+        </Reveal>
+      </section>
+    );
+  }
+
+  // === Atelier / Editorial / default — la lista editorial de siempre
+  // (numeración tipo ticket, primer servicio destacado). Editorial suma
+  // más aire y tipografía más grande; Atelier queda prácticamente igual
+  // al default (ya era el tratamiento "editorial" pedido para ella). ===
+  const isEditorial = layout === "editorial";
+  const [featured, ...rest] = services;
 
   return (
     <section id="servicios" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
@@ -34,7 +144,11 @@ export default function Services({ services, primaryColor }: ServicesProps) {
         <p className="section-eyebrow" style={{ color: primaryColor }}>
           Carta de servicios
         </p>
-        <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">
+        <h2
+          className={`display-title mt-2 text-bone ${
+            isEditorial ? "text-4xl md:text-6xl" : "text-3xl md:text-5xl"
+          }`}
+        >
           Servicios
         </h2>
       </Reveal>
@@ -50,7 +164,11 @@ export default function Services({ services, primaryColor }: ServicesProps) {
               <span className="ticket-number text-sm" style={{ color: primaryColor }}>
                 01
               </span>
-              <h3 className="display-title mt-2 text-2xl md:text-3xl text-bone">
+              <h3
+                className={`display-title mt-2 text-bone ${
+                  isEditorial ? "text-3xl md:text-4xl" : "text-2xl md:text-3xl"
+                }`}
+              >
                 {featured.name}
               </h3>
               {featured.description ? (
@@ -62,10 +180,7 @@ export default function Services({ services, primaryColor }: ServicesProps) {
                 {formatDuration(featured.duration)}
               </span>
             </div>
-            <span
-              className="ticket-number text-2xl md:text-3xl shrink-0"
-              style={{ color: primaryColor }}
-            >
+            <span className="ticket-number text-2xl md:text-3xl shrink-0" style={{ color: primaryColor }}>
               {formatPrice(featured.price)}
             </span>
           </div>
@@ -89,17 +204,12 @@ export default function Services({ services, primaryColor }: ServicesProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-4 flex-wrap">
                       <h3 className="text-bone font-medium">{service.name}</h3>
-                      <span
-                        className="ticket-number text-sm shrink-0"
-                        style={{ color: primaryColor }}
-                      >
+                      <span className="ticket-number text-sm shrink-0" style={{ color: primaryColor }}>
                         {formatPrice(service.price)}
                       </span>
                     </div>
                     {service.description ? (
-                      <p className="mt-1 text-sm text-bone-muted">
-                        {service.description}
-                      </p>
+                      <p className="mt-1 text-sm text-bone-muted">{service.description}</p>
                     ) : null}
                     <span className="mt-1 block text-xs text-bone-muted/70">
                       {formatDuration(service.duration)}
@@ -112,19 +222,7 @@ export default function Services({ services, primaryColor }: ServicesProps) {
         ) : null}
 
         <Reveal delay={staggerDelay(rest.length + 1)}>
-          <div className="mt-8 flex justify-center md:justify-start">
-            <button
-              type="button"
-              onClick={open}
-              className="section-eyebrow text-xs px-7 py-3.5 btn-radius font-semibold hover:opacity-90 transition-opacity"
-              style={{
-                backgroundColor: primaryColor,
-                color: readableTextColor(primaryColor),
-              }}
-            >
-              Reservar turno
-            </button>
-          </div>
+          <div className="mt-8 flex justify-center md:justify-start">{reserveButton}</div>
         </Reveal>
       </div>
     </section>

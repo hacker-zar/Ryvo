@@ -24,6 +24,28 @@ export interface SectionConfig {
   enabled: boolean;
 }
 
+// Sistema de plantillas. Una plantilla es una CAPA DE DISEÑO (layout +
+// paleta + estilo de botón + preset de animación + orden por defecto de
+// secciones) — nunca contenido del negocio. Ver src/lib/palette-presets.ts
+// y src/lib/templates/blueprints.ts.
+export type TemplateLayoutId = "atelier" | "noir" | "studio" | "editorial" | "bold";
+
+export interface Template {
+  id: string;
+  business_id: string | null; // null = oficial de RYVO
+  slug: string | null; // solo las oficiales tienen slug
+  name: string;
+  description: string;
+  is_official: boolean;
+  layout: TemplateLayoutId;
+  palette_id: string;
+  button_style: ButtonStyle;
+  animation_preset: AnimationPreset;
+  section_order: SectionConfig[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -82,6 +104,17 @@ export interface Business {
   // duración/curva vía CSS ([data-animation] en globals.css) — Reveal.tsx
   // / useScrollReveal.ts no cambian de comportamiento por esto.
   animation_preset?: AnimationPreset;
+  // Plantilla aplicada actualmente. `template_id` es solo un puntero de
+  // referencia (para saber qué fila de `templates` originó este diseño,
+  // y mostrar "Plantilla actual" con datos frescos si sigue existiendo)
+  // — se vuelve null solo si esa plantilla se borra, SIN afectar el
+  // resto. `template_layout`/`palette_id` son la copia real que decide
+  // cómo se renderiza la página: sobreviven a que la plantilla de origen
+  // se borre o cambie. `template_layout` null = renderiza exactamente
+  // como un negocio sin plantilla (comportamiento histórico, sin cambios).
+  template_id?: string | null;
+  template_layout?: TemplateLayoutId | null;
+  palette_id?: string | null;
   created_at: string;
 }
 
@@ -136,6 +169,12 @@ export interface Booking {
   customer_email?: string | null;
   date: string; // "YYYY-MM-DD"
   time: string; // "HH:mm"
+  // Duración real en minutos, persistida al crear la reserva — inmutable
+  // aunque después cambie `services.duration`. Junto con `time` define el
+  // intervalo [time, time+duration_min) que protege el constraint de
+  // exclusión `bookings_no_overlap` contra solapamientos (ver
+  // src/lib/availability.ts::intervalsOverlap).
+  duration_min: number;
   status: BookingStatus;
   created_at: string;
   updated_at: string;

@@ -1,9 +1,10 @@
-import { Business, Review } from "@/types/business";
+import { Business, Review, TemplateLayoutId } from "@/types/business";
 import Reveal from "@/components/Reveal";
 
 interface ReviewsProps {
   reviews: Review[];
   primaryColor: Business["primary_color"];
+  layout?: TemplateLayoutId;
 }
 
 function Stars({ rating, color }: { rating: number; color: string }) {
@@ -20,11 +21,16 @@ function Stars({ rating, color }: { rating: number; color: string }) {
   );
 }
 
-export default function Reviews({ reviews, primaryColor }: ReviewsProps) {
+export default function Reviews({ reviews, primaryColor, layout }: ReviewsProps) {
   if (reviews.length === 0) return null;
 
   const average =
     reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+
+  // Editorial/Bold piden títulos más grandes y de mayor impacto en todas
+  // las secciones — acá es lo único que cambia, la lista de reseñas en sí
+  // no tiene un tratamiento distinto especificado por plantilla.
+  const bigTitle = layout === "editorial" || layout === "bold";
 
   return (
     <section id="resenas" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
@@ -32,7 +38,11 @@ export default function Reviews({ reviews, primaryColor }: ReviewsProps) {
         <p className="section-eyebrow" style={{ color: primaryColor }}>
           Clientes
         </p>
-        <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">
+        <h2
+          className={`display-title mt-2 text-bone ${
+            bigTitle ? "text-4xl md:text-6xl" : "text-3xl md:text-5xl"
+          }`}
+        >
           Reseñas
         </h2>
 

@@ -1,7 +1,8 @@
-import { Fragment } from "react";
+import { Fragment, ReactNode } from "react";
 import { BusinessProfile, SectionId } from "@/types/business";
 import { BookingModalProvider } from "@/lib/booking-modal-context";
 import { sanitizeSectionOrder } from "@/lib/section-order";
+import { LAYOUT_BLUEPRINTS, BlueprintSlot } from "@/lib/templates/blueprints";
 import AppearanceScope from "@/components/AppearanceScope";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
@@ -15,6 +16,10 @@ import About from "@/components/About";
 import Reviews from "@/components/Reviews";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
+import Marquee from "@/components/Marquee";
+import Statement from "@/components/Statement";
+import BeforeAfter from "@/components/BeforeAfter";
+import SocialGrid from "@/components/SocialGrid";
 
 interface BusinessSiteProps {
   profile: BusinessProfile;
@@ -26,9 +31,19 @@ interface BusinessSiteProps {
  * `/[slug]/page.tsx` para poder reutilizarlo tal cual (mismos componentes,
  * mismos datos) en la preview del editor — ver
  * `/admin/negocios/[id]/preview`. Cualquier cambio acá afecta a ambos.
+ *
+ * Sistema de plantillas: sin `template_layout` (negocio sin plantilla
+ * elegida, o "Página en blanco"), la composición es EXACTAMENTE la de
+ * siempre — secciones reordenables en su orden configurado, sin nada
+ * extra. Con `template_layout`, se resuelve el blueprint de esa plantilla
+ * (LAYOUT_BLUEPRINTS) y se intercalan sus secciones exclusivas (Marquee/
+ * Statement/BeforeAfter/SocialGrid) alrededor de las mismas secciones
+ * reordenables de siempre — el sistema de orden/activación
+ * (sanitizeSectionOrder/SectionsManager) no cambia en absoluto.
  */
 export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
   const { business, services, reviews, locations, professionals } = profile;
+  const layout = business.template_layout ?? undefined;
 
   // URL a la que apunta el QR: la página principal con un parámetro que
   // abre el modal de reserva automáticamente al cargar.
@@ -38,9 +53,9 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
   // "hero" queda fuera de este registro a propósito — es estructural
   // (siempre primera, siempre visible, igual que Header/Footer), no
   // forma parte del orden configurable. Ver SectionId en types/business.ts.
-  const SECTION_COMPONENTS: Record<SectionId, () => React.ReactNode> = {
+  const SECTION_COMPONENTS: Record<SectionId, () => ReactNode> = {
     services: () => (
-      <Services services={services} primaryColor={business.primary_color} />
+      <Services services={services} primaryColor={business.primary_color} layout={layout} />
     ),
     professionals: () => (
       <Professionals
@@ -48,6 +63,7 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         primaryColor={business.primary_color}
         slug={slug}
         singleSpecialistMode={business.single_specialist_mode ?? false}
+        layout={layout}
       />
     ),
     gallery: () => (
@@ -55,6 +71,7 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         images={business.gallery ?? []}
         businessName={business.name}
         primaryColor={business.primary_color}
+        layout={layout}
       />
     ),
     about: () => (
@@ -66,10 +83,11 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
           gallery: business.gallery,
           primary_color: business.primary_color,
         }}
+        layout={layout}
       />
     ),
     reviews: () => (
-      <Reviews reviews={reviews} primaryColor={business.primary_color} />
+      <Reviews reviews={reviews} primaryColor={business.primary_color} layout={layout} />
     ),
     contact: () => (
       <Contact
@@ -94,6 +112,51 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
     .filter((s) => s.enabled)
     .map((s) => s.id);
 
+  // Renderiza las secciones reordenables de siempre — opcionalmente
+  // restringidas a un subconjunto (`ids`), para blueprints que las
+  // reparten en más de un bloque (p. ej. Editorial: servicios/galería/
+  // equipo antes del Antes-Después, reseñas/contacto después). Sin `ids`,
+  // es EXACTAMENTE el `.map()` que este archivo ya tenía.
+  function renderCoreSections(ids?: SectionId[]) {
+    const list = sectionOrder.filter(
+      (s) => s.enabled && (!ids || ids.includes(s.id))
+    );
+    return list.map((s) => (
+      <Fragment key={s.id}>{SECTION_COMPONENTS[s.id]()}</Fragment>
+    ));
+  }
+
+  function renderSlot(slot: BlueprintSlot, index: number): ReactNode {
+    switch (slot.type) {
+      case "core":
+        return <Fragment key={index}>{renderCoreSections(slot.ids)}</Fragment>;
+      case "marquee":
+        return (
+          <Marquee key={index} businessName={business.name} accentColor={business.primary_color} />
+        );
+      case "statement":
+        return (
+          <Statement key={index} description={business.description} accentColor={business.primary_color} />
+        );
+      case "beforeafter":
+        return (
+          <BeforeAfter key={index} images={business.gallery ?? []} accentColor={business.primary_color} />
+        );
+      case "social":
+        return (
+          <SocialGrid
+            key={index}
+            images={business.gallery ?? []}
+            instagram={business.instagram}
+            accentColor={business.primary_color}
+            businessName={business.name}
+          />
+        );
+    }
+  }
+
+  const blueprint = layout ? LAYOUT_BLUEPRINTS[layout] : null;
+
   return (
     <AppearanceScope
       business={{
@@ -103,6 +166,8 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         text_color: business.text_color,
         primary_color: business.primary_color,
         animation_preset: business.animation_preset,
+        template_layout: business.template_layout,
+        palette_id: business.palette_id,
       }}
     >
       <BookingModalProvider>
@@ -114,6 +179,7 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
             slug: business.slug,
           }}
           enabledSectionIds={enabledSectionIds}
+          layout={layout}
         />
         <Hero
           business={{
@@ -125,13 +191,12 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
             hero_video_enabled: business.hero_video_enabled,
             hero_video_position: business.hero_video_position,
           }}
+          layout={layout}
         />
-        {sectionOrder
-          .filter((s) => s.enabled)
-          .map((s) => (
-            <Fragment key={s.id}>{SECTION_COMPONENTS[s.id]()}</Fragment>
-          ))}
-        <Footer business={{ name: business.name, slug: business.slug }} />
+        {blueprint
+          ? blueprint.slots.map((slot, i) => renderSlot(slot, i))
+          : renderCoreSections()}
+        <Footer business={{ name: business.name, slug: business.slug }} layout={layout} />
 
         <BookingModal
           business={{

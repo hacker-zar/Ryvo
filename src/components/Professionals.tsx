@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Business, Professional } from "@/types/business";
+import { Business, Professional, TemplateLayoutId } from "@/types/business";
 import Reveal from "@/components/Reveal";
 
 interface ProfessionalsProps {
@@ -13,6 +13,7 @@ interface ProfessionalsProps {
   // BookingModal.tsx). Default false: cero cambio para negocios
   // existentes.
   singleSpecialistMode?: boolean;
+  layout?: TemplateLayoutId;
 }
 
 function initials(name: string): string {
@@ -29,8 +30,15 @@ export default function Professionals({
   primaryColor,
   slug,
   singleSpecialistMode = false,
+  layout,
 }: ProfessionalsProps) {
   if (professionals.length === 0) return null;
+
+  // Noir: fotos con borde marcado y esquinas rectas de más contraste,
+  // coherente con el resto de la plantilla (cards oscuras, alto
+  // contraste) — el resto de la composición (grilla/foto-grande) no
+  // cambia, ya la cubre singleSpecialistMode arriba.
+  const cardFrame = layout === "noir" ? "ring-1 ring-ink-line" : "";
 
   if (singleSpecialistMode) {
     const specialist = professionals[0];
@@ -42,7 +50,7 @@ export default function Professionals({
           <div
             data-editable-category="profesionales"
             data-editable-item={specialist.id}
-            className="relative aspect-square overflow-hidden bg-ink-elevated max-w-xs md:max-w-none mx-auto md:mx-0 w-full"
+            className={`relative aspect-square overflow-hidden bg-ink-elevated max-w-xs md:max-w-none mx-auto md:mx-0 w-full ${cardFrame}`}
           >
             {specialist.photo ? (
               <Image
@@ -119,7 +127,7 @@ export default function Professionals({
               data-editable-category="profesionales"
               data-editable-item={professional.id}
             >
-              <div className="relative aspect-square overflow-hidden bg-ink-elevated">
+              <div className={`relative aspect-square overflow-hidden bg-ink-elevated ${cardFrame}`}>
                 {professional.photo ? (
                   <Image
                     src={professional.photo}

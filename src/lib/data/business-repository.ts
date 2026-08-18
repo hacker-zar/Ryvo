@@ -18,6 +18,7 @@ import {
   Professional,
   ProfessionalWithServices,
   Service,
+  Template,
 } from "@/types/business";
 import {
   demoBookings,
@@ -29,7 +30,11 @@ import {
   demoReviews,
   demoServices,
 } from "@/lib/data/demo-business";
-import { virtualLocationFromBusiness } from "@/lib/availability";
+import {
+  intervalsOverlap,
+  timeToMinutes,
+  virtualLocationFromBusiness,
+} from "@/lib/availability";
 import { computeBusinessStats } from "@/lib/stats";
 import { detectOpportunities } from "@/lib/opportunities";
 
@@ -40,7 +45,7 @@ import { detectOpportunities } from "@/lib/opportunities";
 // funciones de autenticación de más abajo, porque el hash terminaría
 // serializado en el HTML/RSC payload aunque ningún componente lo muestre.
 const BUSINESS_PUBLIC_COLUMNS =
-  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, opening_hours, background_color, text_color, typography_preset, button_style, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, created_at";
+  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, opening_hours, background_color, text_color, typography_preset, button_style, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, template_id, template_layout, palette_id, created_at";
 
 /**
  * Punto único de acceso a datos de negocio.
@@ -164,11 +169,11 @@ export async function getBookedSlots(
   date: string,
   professionalId?: string,
   excludeBookingId?: string
-): Promise<Pick<Booking, "time" | "status">[]> {
+): Promise<Pick<Booking, "time" | "status" | "duration_min">[]> {
   if (isSupabaseConfigured && supabase) {
     let query = supabase
       .from("bookings")
-      .select("time, status")
+      .select("time, status, duration_min")
       .eq("business_id", businessId)
       .eq("date", date)
       .neq("status", "cancelled");
@@ -206,14 +211,14 @@ export async function getBookedSlotsForProfessionals(
   locationId: string | null,
   date: string,
   professionalIds: string[]
-): Promise<Map<string, Pick<Booking, "time" | "status">[]>> {
-  const result = new Map<string, Pick<Booking, "time" | "status">[]>();
+): Promise<Map<string, Pick<Booking, "time" | "status" | "duration_min">[]>> {
+  const result = new Map<string, Pick<Booking, "time" | "status" | "duration_min">[]>();
   if (professionalIds.length === 0) return result;
 
   if (isSupabaseConfigured && supabase) {
     let query = supabase
       .from("bookings")
-      .select("time, status, professional_id")
+      .select("time, status, duration_min, professional_id")
       .eq("business_id", businessId)
       .eq("date", date)
       .neq("status", "cancelled");
@@ -282,12 +287,27 @@ export async function listQualifiedProfessionals(
   return businessId === demoBusiness.id ? demoQualified : [];
 }
 
+/** Duración real de un servicio (minutos), con fallback conservador si no
+ *  se encuentra — usada al persistir/chequear reservas server-side, nunca
+ *  confiando en un valor que pudiera mandar el cliente. */
+async function getServiceDuration(serviceId: string): Promise<number> {
+  if (!isSupabaseConfigured || !supabase) return 30;
+  const { data } = await supabase
+    .from("services")
+    .select("duration")
+    .eq("id", serviceId)
+    .maybeSingle();
+  return data?.duration ?? 30;
+}
+
 /** Resuelve "cualquiera disponible" a UN profesional real, server-side, en
  *  el momento de confirmar — nunca se inserta una reserva con un
- *  profesional ambiguo. Primer calificado libre en ese horario exacto, por
+ *  profesional ambiguo. Primer calificado libre en ese horario exacto (sin
+ *  que su intervalo real se solape con ninguna reserva existente), por
  *  display_order. Si dos clientes compiten por el mismo horario/último
- *  profesional libre, el segundo insert choca contra el índice único de la
- *  base y usa el mismo manejo de conflicto que ya existe en createBooking. */
+ *  profesional libre, el segundo insert choca contra el constraint de
+ *  exclusión de la base y usa el mismo manejo de conflicto que ya existe
+ *  en createBooking. */
 export async function resolveAnyProfessional(
   businessId: string,
   serviceId: string,
@@ -295,7 +315,11 @@ export async function resolveAnyProfessional(
   date: string,
   time: string
 ): Promise<string | null> {
-  const qualified = await listQualifiedProfessionals(businessId, serviceId);
+  const [qualified, durationMin] = await Promise.all([
+    listQualifiedProfessionals(businessId, serviceId),
+    getServiceDuration(serviceId),
+  ]);
+  const startMin = timeToMinutes(time);
   for (const professional of qualified) {
     const booked = await getBookedSlots(
       businessId,
@@ -303,7 +327,14 @@ export async function resolveAnyProfessional(
       date,
       professional.id
     );
-    const taken = booked.some((b) => b.time.slice(0, 5) === time);
+    const taken = booked.some((b) =>
+      intervalsOverlap(
+        startMin,
+        durationMin,
+        timeToMinutes(b.time.slice(0, 5)),
+        b.duration_min
+      )
+    );
     if (!taken) return professional.id;
   }
   return null;
@@ -366,7 +397,7 @@ async function upsertClientForBooking(input: {
 export async function createBooking(
   booking: Omit<
     Booking,
-    "id" | "created_at" | "updated_at" | "status" | "client_id"
+    "id" | "created_at" | "updated_at" | "status" | "client_id" | "duration_min"
   >
 ): Promise<{
   success: boolean;
@@ -375,21 +406,35 @@ export async function createBooking(
   id?: string;
 }> {
   if (isSupabaseConfigured && supabase) {
-    // Chequeo de disponibilidad antes de insertar. No es 100% atómico
+    // La duración se busca server-side por service_id — nunca se confía
+    // en un valor de duración que pudiera mandar el cliente (un valor
+    // falso podría colar una reserva que en los hechos ocupa más tiempo
+    // del que declara, rompiendo la garantía de no-solapamiento para
+    // TODOS los demás).
+    const durationMin = await getServiceDuration(booking.service_id);
+    const startMin = timeToMinutes(booking.time);
+
+    // Chequeo de disponibilidad antes de insertar, ahora por intervalo
+    // real [inicio, fin) y no solo por hora exacta. No es 100% atómico
     // (podría haber una carrera entre el check y el insert), por eso el
-    // schema también tiene un índice único que rechaza el duplicado a
-    // nivel de base de datos como defensa final. `conflict: true`
-    // distingue este caso puntual de cualquier otro error — el wizard de
-    // reserva lo usa para volver a elegir horario en vez de solo mostrar
-    // un mensaje genérico.
+    // schema también tiene un constraint de exclusión (bookings_no_overlap)
+    // que rechaza el solapamiento a nivel de base de datos como defensa
+    // final. `conflict: true` distingue este caso puntual de cualquier
+    // otro error — el wizard de reserva lo usa para volver a elegir
+    // horario en vez de solo mostrar un mensaje genérico.
     const existing = await getBookedSlots(
       booking.business_id,
       booking.location_id,
       booking.date,
       booking.professional_id ?? undefined
     );
-    const alreadyTaken = existing.some(
-      (b) => b.time.slice(0, 5) === booking.time
+    const alreadyTaken = existing.some((b) =>
+      intervalsOverlap(
+        startMin,
+        durationMin,
+        timeToMinutes(b.time.slice(0, 5)),
+        b.duration_min
+      )
     );
     if (alreadyTaken) {
       return {
@@ -408,14 +453,20 @@ export async function createBooking(
 
     const { data, error } = await supabase
       .from("bookings")
-      .insert({ ...booking, status: "pending", client_id: clientId })
+      .insert({
+        ...booking,
+        duration_min: durationMin,
+        status: "pending",
+        client_id: clientId,
+      })
       .select("id")
       .single();
 
     if (error) {
-      // El índice único de la base de datos devuelve este código si,
-      // pese al chequeo previo, otra reserva ganó la carrera.
-      if (error.code === "23505") {
+      // 23505 = unique_violation (legado), 23P01 = exclusion_violation
+      // (bookings_no_overlap) — cualquiera de los dos significa que, pese
+      // al chequeo previo, otra reserva ganó la carrera.
+      if (error.code === "23505" || error.code === "23P01") {
         return {
           success: false,
           conflict: true,
@@ -1040,6 +1091,10 @@ export async function rescheduleBookingById(
   const booking = await getBookingById(id);
   if (!booking) return { success: false, error: "Turno no encontrado." };
 
+  // Usa la duración YA PERSISTIDA de la propia reserva (no la duración
+  // actual del servicio) — reprogramar conserva la duración original con
+  // la que se reservó, coherente con que duration_min es inmutable desde
+  // la creación.
   const existing = await getBookedSlots(
     booking.business_id,
     booking.location_id,
@@ -1047,7 +1102,15 @@ export async function rescheduleBookingById(
     booking.professional_id ?? undefined,
     id
   );
-  const alreadyTaken = existing.some((b) => b.time.slice(0, 5) === time);
+  const startMin = timeToMinutes(time);
+  const alreadyTaken = existing.some((b) =>
+    intervalsOverlap(
+      startMin,
+      booking.duration_min,
+      timeToMinutes(b.time.slice(0, 5)),
+      b.duration_min
+    )
+  );
   if (alreadyTaken) {
     return {
       success: false,
@@ -1061,7 +1124,9 @@ export async function rescheduleBookingById(
     .update({ date, time })
     .eq("id", id);
   if (error) {
-    if (error.code === "23505") {
+    // 23505 = unique_violation (legado), 23P01 = exclusion_violation
+    // (bookings_no_overlap).
+    if (error.code === "23505" || error.code === "23P01") {
       return {
         success: false,
         conflict: true,
@@ -1232,4 +1297,127 @@ export async function getOpportunities(
     servicesById: Object.fromEntries(services.map((s) => [s.id, s])),
     locations,
   });
+}
+
+// ---------------------------------------------------------------------
+// Plantillas — capa de DISEÑO (layout + paleta + estilo de botón + preset
+// de animación + orden por defecto de secciones), nunca contenido del
+// negocio. Las oficiales (is_official=true) son públicamente legibles
+// (RLS `is_official = true`, ver migración) porque el picker de /registro
+// las necesita antes de que exista sesión. Las propias de un negocio NO
+// tienen policy pública — se leen/escriben siempre con supabaseAdmin
+// desde /admin, mismo criterio que `clients`.
+// ---------------------------------------------------------------------
+
+const TEMPLATE_COLUMNS =
+  "id, business_id, slug, name, description, is_official, layout, palette_id, button_style, animation_preset, section_order, created_at, updated_at";
+
+export async function listOfficialTemplates(): Promise<Template[]> {
+  if (isSupabaseConfigured && supabase) {
+    const { data } = await supabase
+      .from("templates")
+      .select(TEMPLATE_COLUMNS)
+      .eq("is_official", true)
+      .order("name", { ascending: true });
+    return data ?? [];
+  }
+  return [];
+}
+
+/** Resuelve una plantilla OFICIAL por id con el cliente anon (RLS
+ *  `is_official = true` ya lo permite) — usada por las acciones de
+ *  creación de negocio (registerBusiness, adminCreateBusiness), que
+ *  corren antes de que exista cualquier sesión admin. Nunca resuelve una
+ *  plantilla propia de otro negocio: el filtro `is_official` lo impide
+ *  estructuralmente, no hace falta chequear ownership acá. */
+export async function getOfficialTemplateById(
+  id: string
+): Promise<Template | null> {
+  if (isSupabaseConfigured && supabase) {
+    const { data } = await supabase
+      .from("templates")
+      .select(TEMPLATE_COLUMNS)
+      .eq("id", id)
+      .eq("is_official", true)
+      .maybeSingle();
+    return data ?? null;
+  }
+  return null;
+}
+
+export async function listBusinessTemplates(
+  businessId: string
+): Promise<Template[]> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return [];
+  const { data } = await supabaseAdmin
+    .from("templates")
+    .select(TEMPLATE_COLUMNS)
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+/** Llamada siempre desde contexto admin ya autorizado — usa supabaseAdmin
+ *  para poder resolver tanto una plantilla oficial como una propia con
+ *  una sola función. */
+export async function getTemplateById(id: string): Promise<Template | null> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
+  const { data } = await supabaseAdmin
+    .from("templates")
+    .select(TEMPLATE_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  return data ?? null;
+}
+
+export type TemplateInput = Omit<
+  Template,
+  "id" | "created_at" | "updated_at"
+>;
+
+export async function createTemplate(
+  input: TemplateInput
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder crear plantillas.",
+    };
+  }
+  const { data, error } = await supabaseAdmin
+    .from("templates")
+    .insert(input)
+    .select("id")
+    .single();
+  if (error) return { success: false, error: error.message };
+  return { success: true, id: data.id };
+}
+
+export async function deleteTemplate(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder borrar plantillas.",
+    };
+  }
+  const { error } = await supabaseAdmin.from("templates").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+/** Cuántos negocios tienen esta plantilla aplicada ahora mismo — para el
+ *  aviso antes de confirmar el borrado (punto 8 del pedido: "no romper la
+ *  página" se garantiza igual por el `on delete set null` de la FK, esto
+ *  es solo para que el dueño sepa el impacto antes de confirmar). */
+export async function countBusinessesUsingTemplate(
+  templateId: string
+): Promise<number> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return 0;
+  const { count } = await supabaseAdmin
+    .from("businesses")
+    .select("id", { count: "exact", head: true })
+    .eq("template_id", templateId);
+  return count ?? 0;
 }

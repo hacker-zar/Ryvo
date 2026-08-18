@@ -27,7 +27,8 @@ export type EditorCategory =
   | "profesionales"
   | "productos"
   | "reservas"
-  | "automatizaciones";
+  | "automatizaciones"
+  | "plantilla";
 
 export interface EditorTarget {
   category: EditorCategory;

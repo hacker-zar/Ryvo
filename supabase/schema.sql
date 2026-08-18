@@ -272,3 +272,42 @@ alter table businesses add column if not exists section_order jsonb not null def
 
 alter table businesses add column if not exists animation_preset text not null default 'sutil'
   check (animation_preset in ('ninguna','sutil','dinamica'));
+
+-- === Eliminar solapamientos de reservas por duración real (aplicado
+-- directo contra Supabase vía apply_migration; documentación posterior,
+-- no fuente de verdad). Reemplaza bookings_no_duplicate_slot de arriba
+-- (que en producción real SÍ incluye professional_id, a diferencia de
+-- lo que muestra la definición de arriba en este archivo — quedó
+-- desactualizada en una fase anterior) por un constraint de exclusión
+-- que compara el INTERVALO real [inicio, fin) en vez de la hora exacta,
+-- atómico a nivel de base de datos (sin condición de carrera posible
+-- entre dos inserts concurrentes). ===
+alter table bookings add column if not exists duration_min integer;
+
+update bookings b
+set duration_min = coalesce(
+  (select s.duration from services s where s.id = b.service_id), 30
+)
+where duration_min is null;
+
+alter table bookings alter column duration_min set default 30;
+alter table bookings alter column duration_min set not null;
+
+-- Requerido para combinar columnas de igualdad (uuid/date) con un rango
+-- de enteros en el mismo índice GiST.
+create extension if not exists btree_gist;
+
+alter table bookings add constraint bookings_no_overlap
+  exclude using gist (
+    business_id with =,
+    coalesce(location_id, '00000000-0000-0000-0000-000000000000'::uuid) with =,
+    coalesce(professional_id, '00000000-0000-0000-0000-000000000000'::uuid) with =,
+    date with =,
+    int4range(
+      (extract(epoch from time) / 60)::int,
+      (extract(epoch from time) / 60)::int + duration_min
+    ) with &&
+  ) where (status <> 'cancelled');
+
+-- Subsumido íntegramente por el constraint de arriba.
+drop index if exists bookings_no_duplicate_slot;

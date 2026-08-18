@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Business, SectionId } from "@/types/business";
+import { Business, SectionId, TemplateLayoutId } from "@/types/business";
 import { useBookingModal } from "@/lib/booking-modal-context";
 import { readableTextColor } from "@/lib/format";
 
@@ -12,6 +12,7 @@ interface HeaderProps {
    *  agregan links nuevos para secciones que hoy no tienen uno
    *  (Profesionales, Sobre nosotros) — decisión explícita, ver plan. */
   enabledSectionIds: SectionId[];
+  layout?: TemplateLayoutId;
 }
 
 const NAV_LINKS: { href: string; label: string; section: SectionId }[] = [
@@ -21,14 +22,24 @@ const NAV_LINKS: { href: string; label: string; section: SectionId }[] = [
   { href: "#contacto", label: "Contacto", section: "contact" },
 ];
 
-export default function Header({ business, enabledSectionIds }: HeaderProps) {
+export default function Header({ business, enabledSectionIds, layout }: HeaderProps) {
   const { open } = useBookingModal();
   const visibleNavLinks = NAV_LINKS.filter((link) =>
     enabledSectionIds.includes(link.section)
   );
 
+  // Noir/Bold: nav de mayor contraste — tracking más ancho, borde inferior
+  // en el color de acento en vez del filete neutro de siempre. El resto
+  // (tipografía del nombre, tamaño) ya varía solo por AppearanceScope
+  // (--font-display-stack cambia por plantilla), así que acá solo se
+  // ajusta lo que ese mecanismo no cubre: el borde y el tracking del nav.
+  const boldBorder = layout === "noir" || layout === "bold";
+
   return (
-    <header className="sticky top-0 z-50 bg-ink/95 backdrop-blur border-b border-ink-line">
+    <header
+      className="sticky top-0 z-50 bg-ink/95 backdrop-blur border-b"
+      style={{ borderColor: boldBorder ? business.primary_color : "var(--ink-line)" }}
+    >
       <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
         <a href="#inicio" className="flex items-center gap-3 min-w-0">
           {business.logo ? (
@@ -51,7 +62,7 @@ export default function Header({ business, enabledSectionIds }: HeaderProps) {
           </span>
         </a>
 
-        <nav className="hidden md:flex items-center gap-7 text-xs">
+        <nav className={`hidden md:flex items-center gap-7 text-xs ${boldBorder ? "tracking-widest" : ""}`}>
           {visibleNavLinks.map((link) => (
             <a
               key={link.href}

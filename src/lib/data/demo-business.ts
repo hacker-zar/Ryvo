@@ -262,6 +262,9 @@ export const demoClients: Client[] = DEMO_CLIENT_SEEDS.map((c) => ({
 }));
 
 const clientsById = new Map(DEMO_CLIENT_SEEDS.map((c) => [c.id, c]));
+const demoServiceDurationById = new Map(
+  demoServices.map((s) => [s.id, s.duration])
+);
 
 function booking(
   id: string,
@@ -286,6 +289,7 @@ function booking(
     customer_email: client.email,
     date: offsetDate(dayOffset),
     time,
+    duration_min: demoServiceDurationById.get(serviceId) ?? 30,
     status,
     created_at: offsetDateTime(Math.min(dayOffset, updatedAtOffset)),
     updated_at: offsetDateTime(updatedAtOffset),
