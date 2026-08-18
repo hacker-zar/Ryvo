@@ -1,10 +1,8 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import { getBusinessById } from "@/lib/data/business-repository";
 import { listAccountsByBusiness } from "@/lib/data/accounts-repository";
 import { logoutAdmin } from "@/lib/admin/auth-actions";
-import AdminChrome from "@/components/admin/AdminChrome";
 import AccountManager from "../account-manager";
 import BusinessNav from "../business-nav";
 
@@ -19,19 +17,16 @@ interface PageProps {
  * Información/Servicios/etc.
  */
 export default async function AccountPage({ params }: PageProps) {
-  const session = await getAdminSession();
-  if (!session) redirect("/admin/login");
-
   const { id } = await params;
-  if (!canManageBusiness(session, id)) redirect("/admin");
 
-  const business = await getBusinessById(id);
+  const [business, accounts] = await Promise.all([
+    getBusinessById(id),
+    listAccountsByBusiness(id),
+  ]);
   if (!business) notFound();
 
-  const accounts = await listAccountsByBusiness(id);
-
   return (
-    <AdminChrome>
+    <>
       <Link
         href={`/admin/negocios/${id}`}
         className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors"
@@ -73,6 +68,6 @@ export default async function AccountPage({ params }: PageProps) {
           </button>
         </form>
       </div>
-    </AdminChrome>
+    </>
   );
 }

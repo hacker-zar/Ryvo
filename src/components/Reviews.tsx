@@ -49,23 +49,25 @@ export default function Reviews({ reviews, primaryColor }: ReviewsProps) {
       </Reveal>
 
       {/* Lista editorial, sin cards ni bordes: la separación es solo un
-          filete fino entre reseñas, como el resto del sitio. */}
-      <Reveal
-        delay={100}
-        className="mt-8 divide-y divide-ink-line border-t border-ink-line"
-      >
-        {reviews.map((review) => (
-          <div key={review.id} className="py-6">
-            <Stars rating={review.rating} color={primaryColor} />
-            <p className="mt-3 text-sm md:text-base text-bone leading-relaxed max-w-2xl">
-              {review.comment}
-            </p>
-            <p className="mt-3 text-xs text-bone-muted">
-              {review.customer_name}
-            </p>
-          </div>
+          filete fino entre reseñas, como el resto del sitio. Cada reseña
+          en su propio Reveal (antes: una sola envolviendo la lista
+          completa) para el stagger leve — divide-y sigue funcionando
+          igual, el filete aparece entre los divs de Reveal. */}
+      <div className="mt-8 divide-y divide-ink-line border-t border-ink-line">
+        {reviews.map((review, i) => (
+          <Reveal key={review.id} delay={100 + Math.min(i, 5) * 60}>
+            <div className="py-6">
+              <Stars rating={review.rating} color={primaryColor} />
+              <p className="mt-3 text-sm md:text-base text-bone leading-relaxed max-w-2xl">
+                {review.comment}
+              </p>
+              <p className="mt-3 text-xs text-bone-muted">
+                {review.customer_name}
+              </p>
+            </div>
+          </Reveal>
         ))}
-      </Reveal>
+      </div>
     </section>
   );
 }

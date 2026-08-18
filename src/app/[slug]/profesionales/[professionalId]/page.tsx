@@ -2,10 +2,11 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getBusinessProfile } from "@/lib/data/business-repository";
 import { BookingModalProvider } from "@/lib/booking-modal-context";
+import { sanitizeSectionOrder } from "@/lib/section-order";
 import AppearanceScope from "@/components/AppearanceScope";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import BookingModal from "@/components/booking/BookingModal";
+import BookingModal from "@/components/booking/BookingModalLazy";
 import ProfessionalProfile from "@/components/ProfessionalProfile";
 
 interface PageProps {
@@ -44,6 +45,9 @@ export default async function ProfessionalProfilePage({ params }: PageProps) {
       professional.service_ids.length === 0 ||
       professional.service_ids.includes(s.id)
   );
+  const enabledSectionIds = sanitizeSectionOrder(business.section_order)
+    .filter((s) => s.enabled)
+    .map((s) => s.id);
 
   return (
     <AppearanceScope
@@ -53,6 +57,7 @@ export default async function ProfessionalProfilePage({ params }: PageProps) {
         background_color: business.background_color,
         text_color: business.text_color,
         primary_color: business.primary_color,
+        animation_preset: business.animation_preset,
       }}
     >
       <BookingModalProvider>
@@ -63,6 +68,7 @@ export default async function ProfessionalProfilePage({ params }: PageProps) {
             primary_color: business.primary_color,
             slug: business.slug,
           }}
+          enabledSectionIds={enabledSectionIds}
         />
         <ProfessionalProfile
           professional={professional}

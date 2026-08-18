@@ -4,10 +4,11 @@ import {
   getBusinessProfile,
 } from "@/lib/data/business-repository";
 import { BookingModalProvider } from "@/lib/booking-modal-context";
+import { sanitizeSectionOrder } from "@/lib/section-order";
 import AppearanceScope from "@/components/AppearanceScope";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import BookingModal from "@/components/booking/BookingModal";
+import BookingModal from "@/components/booking/BookingModalLazy";
 import ManageBookingView from "./manage-booking-view";
 
 interface PageProps {
@@ -31,6 +32,9 @@ export default async function ManageBookingPage({ params }: PageProps) {
   if (!profile) notFound();
 
   const { business, services, locations, professionals } = profile;
+  const enabledSectionIds = sanitizeSectionOrder(business.section_order)
+    .filter((s) => s.enabled)
+    .map((s) => s.id);
 
   return (
     <AppearanceScope
@@ -40,6 +44,7 @@ export default async function ManageBookingPage({ params }: PageProps) {
         background_color: business.background_color,
         text_color: business.text_color,
         primary_color: business.primary_color,
+        animation_preset: business.animation_preset,
       }}
     >
       <BookingModalProvider>
@@ -50,6 +55,7 @@ export default async function ManageBookingPage({ params }: PageProps) {
             primary_color: business.primary_color,
             slug: business.slug,
           }}
+          enabledSectionIds={enabledSectionIds}
         />
         <ManageBookingView
           booking={booking}

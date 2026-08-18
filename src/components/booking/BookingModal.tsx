@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Business, Location, ProfessionalWithServices, Service } from "@/types/business";
-import { useBookingModal } from "@/lib/booking-modal-context";
+import { BookingSeed, useBookingModal } from "@/lib/booking-modal-context";
 import { submitBooking } from "@/lib/actions/booking-actions";
 import { isLikelyPhone, readableTextColor } from "@/lib/format";
 import { qualifiedProfessionalIds } from "@/lib/availability";
@@ -21,14 +21,26 @@ interface BookingModalProps {
   professionals: ProfessionalWithServices[];
 }
 
-export default function BookingModal(props: BookingModalProps) {
-  const { isOpen, openCount, seed } = useBookingModal();
-
-  if (!isOpen) return null;
-
+// El gate de `isOpen` vive en BookingModalLazy (afuera de este módulo, que
+// se carga con next/dynamic): si estuviera acá adentro, React igual
+// tendría que cargar y ejecutar todo este archivo (con los 5 pasos del
+// wizard importados arriba) solo para descubrir que devuelve null — el
+// code-splitting no serviría de nada. Este componente asume que ya está
+// abierto cuando se monta.
+export default function BookingModal(
+  props: BookingModalProps & { openCount: number; seed: BookingSeed | null }
+) {
+  const { openCount, seed, ...rest } = props;
+  // Chequeo ANTES de montar BookingModalContent, no adentro: si estuviera
+  // después de sus hooks (como estaba antes), un negocio sin servicios
+  // igual dispara el efecto que bloquea el scroll del body (y el listener
+  // de Escape) para después renderizar null — deja la página trabada sin
+  // ningún botón visible para cerrar. Acá evita que esos efectos lleguen
+  // a registrarse siquiera.
+  if (rest.services.length === 0) return null;
   // La key fuerza a remontar el contenido cada vez que se abre, así el
   // wizard arranca limpio sin necesidad de resetear estado en un efecto.
-  return <BookingModalContent key={openCount} {...props} seed={seed} />;
+  return <BookingModalContent key={openCount} {...rest} seed={seed} />;
 }
 
 type Step = WizardStepId | "success";
@@ -132,8 +144,6 @@ function BookingModalContent({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [close]);
-
-  if (services.length === 0) return null;
 
   const activeLocation =
     locations.find((l) => l.id === locationId) ?? locations[0];

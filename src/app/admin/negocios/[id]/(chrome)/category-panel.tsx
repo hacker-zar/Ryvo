@@ -6,6 +6,7 @@ import {
   useEditorSelection,
 } from "@/lib/admin/editor-selection-context";
 import InformacionPanel from "./informacion-panel";
+import SectionsManager from "./sections-manager";
 import FotosPanel from "./fotos-panel";
 import ServicesManager from "./services-manager";
 import ProfessionalsManager from "./professionals-manager";
@@ -81,6 +82,9 @@ export default function CategoryPanel({
                         heroImage={business.hero_image ?? ""}
                         gallery={business.gallery ?? []}
                         favicon={business.favicon ?? ""}
+                        heroVideo={business.hero_video ?? ""}
+                        heroVideoEnabled={business.hero_video_enabled ?? false}
+                        heroVideoPosition={business.hero_video_position ?? "center"}
                       />
                     </div>
                     <div>
@@ -92,7 +96,13 @@ export default function CategoryPanel({
                   </div>
                 ) : null}
                 {key === "pagina" ? (
-                  <InformacionPanel business={business} />
+                  <>
+                    <InformacionPanel business={business} />
+                    <SectionsManager
+                      businessId={business.id}
+                      sectionOrder={business.section_order}
+                    />
+                  </>
                 ) : null}
                 {key === "servicios" ? (
                   <ServicesManager businessId={business.id} services={services} />
@@ -102,6 +112,7 @@ export default function CategoryPanel({
                     businessId={business.id}
                     professionals={professionals}
                     services={services}
+                    singleSpecialistMode={business.single_specialist_mode ?? false}
                   />
                 ) : null}
                 {key === "productos" ? (

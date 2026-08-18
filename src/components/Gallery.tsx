@@ -43,58 +43,66 @@ export default function Gallery({
       </div>
 
       {/* Mobile: filmstrip horizontal con peek — se mantiene tal cual
-          funcionaba, ya es el patrón correcto para esta pantalla. */}
-      <Reveal
-        delay={100}
-        className="mt-10 flex gap-2 overflow-x-auto pb-2 px-4 snap-x snap-mandatory hide-scrollbar md:hidden"
-      >
+          funcionaba, ya es el patrón correcto para esta pantalla. Cada
+          foto en su propio Reveal (antes: uno solo envolviendo el
+          filmstrip completo) para el stagger leve del preset dinámico —
+          las clases de layout (ancho/shrink/snap) se mueven al wrapper
+          de Reveal, que pasa a ser el ítem flex real. */}
+      <div className="mt-10 flex gap-2 overflow-x-auto pb-2 px-4 snap-x snap-mandatory hide-scrollbar md:hidden">
         {images.map((src, i) => (
-          <button
+          <Reveal
             key={src + i}
-            type="button"
-            onClick={() => setOpenIndex(i)}
-            aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-            className="relative aspect-[4/5] w-[78vw] shrink-0 overflow-hidden bg-ink-elevated snap-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset"
+            delay={100 + Math.min(i, 5) * 60}
+            className="shrink-0 w-[78vw] snap-start"
           >
-            <Image
-              src={src}
-              alt={`${businessName} - foto ${i + 1}`}
-              fill
-              sizes="78vw"
-              className="object-cover"
-            />
-          </button>
-        ))}
-      </Reveal>
-
-      {/* Desktop: mosaico editorial con tamaños variables, borde a borde. */}
-      <Reveal
-        delay={100}
-        className="mt-10 hidden md:grid md:grid-cols-4 md:auto-rows-[180px] md:gap-2 md:grid-flow-dense md:px-8"
-      >
-        {images.map((src, i) => {
-          const featured = FEATURE_PATTERN[i % FEATURE_PATTERN.length];
-          return (
             <button
-              key={src + i}
               type="button"
               onClick={() => setOpenIndex(i)}
               aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-              className={`relative overflow-hidden bg-ink-elevated group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset ${
-                featured ? "md:col-span-2 md:row-span-2" : ""
-              }`}
+              className="relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset"
             >
               <Image
                 src={src}
                 alt={`${businessName} - foto ${i + 1}`}
                 fill
-                sizes="(min-width: 768px) 40vw, 78vw"
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                sizes="78vw"
+                className="object-cover"
               />
             </button>
+          </Reveal>
+        ))}
+      </div>
+
+      {/* Desktop: mosaico editorial con tamaños variables, borde a borde.
+          Mismo criterio: el col-span/row-span del patrón de mosaico se
+          mueve al wrapper de Reveal, que es el ítem de grid real. */}
+      <div className="mt-10 hidden md:grid md:grid-cols-4 md:auto-rows-[180px] md:gap-2 md:grid-flow-dense md:px-8">
+        {images.map((src, i) => {
+          const featured = FEATURE_PATTERN[i % FEATURE_PATTERN.length];
+          return (
+            <Reveal
+              key={src + i}
+              delay={100 + Math.min(i, 5) * 60}
+              className={featured ? "md:col-span-2 md:row-span-2" : ""}
+            >
+              <button
+                type="button"
+                onClick={() => setOpenIndex(i)}
+                aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
+                className="relative w-full h-full overflow-hidden bg-ink-elevated group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset"
+              >
+                <Image
+                  src={src}
+                  alt={`${businessName} - foto ${i + 1}`}
+                  fill
+                  sizes="(min-width: 768px) 40vw, 78vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </button>
+            </Reveal>
           );
         })}
-      </Reveal>
+      </div>
 
       {openIndex !== null ? (
         <Lightbox

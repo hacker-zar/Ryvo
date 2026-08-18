@@ -1,11 +1,9 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import {
   getBusinessById,
   getOpportunities,
 } from "@/lib/data/business-repository";
-import AdminChrome from "@/components/admin/AdminChrome";
 import OpportunityCard from "./opportunity-card";
 import BusinessNav from "../business-nav";
 
@@ -14,19 +12,16 @@ interface PageProps {
 }
 
 export default async function OportunidadesPage({ params }: PageProps) {
-  const session = await getAdminSession();
-  if (!session) redirect("/admin/login");
-
   const { id } = await params;
-  if (!canManageBusiness(session, id)) redirect("/admin");
 
-  const business = await getBusinessById(id);
+  const [business, opportunities] = await Promise.all([
+    getBusinessById(id),
+    getOpportunities(id),
+  ]);
   if (!business) notFound();
 
-  const opportunities = await getOpportunities(id);
-
   return (
-    <AdminChrome>
+    <>
       <Link
         href={`/admin/negocios/${id}`}
         className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors"
@@ -53,6 +48,6 @@ export default async function OportunidadesPage({ params }: PageProps) {
           <OpportunityCard key={opportunity.type} opportunity={opportunity} />
         ))}
       </div>
-    </AdminChrome>
+    </>
   );
 }

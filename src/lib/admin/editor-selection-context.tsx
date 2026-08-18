@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   ReactNode,
@@ -176,20 +177,39 @@ export function EditorSelectionProvider({
     setDialogStatus("idle");
   }
 
+  const refreshPreview = useCallback(() => setPreviewVersion((v) => v + 1), []);
+
+  // Memoizado para que un cambio de estado que a un consumidor no le
+  // importa (ej. dialogStatus mientras se guarda) no le fuerce un
+  // re-render por una referencia de `value` nueva — solo importa cuando
+  // alguno de estos campos realmente cambia.
+  const value = useMemo(
+    () => ({
+      target,
+      select,
+      clear,
+      previewVersion,
+      refreshPreview,
+      isDirty,
+      setDirty,
+      setSaveHandler,
+      guardNavigation,
+    }),
+    [
+      target,
+      select,
+      clear,
+      previewVersion,
+      refreshPreview,
+      isDirty,
+      setDirty,
+      setSaveHandler,
+      guardNavigation,
+    ]
+  );
+
   return (
-    <EditorSelectionContext.Provider
-      value={{
-        target,
-        select,
-        clear,
-        previewVersion,
-        refreshPreview: () => setPreviewVersion((v) => v + 1),
-        isDirty,
-        setDirty,
-        setSaveHandler,
-        guardNavigation,
-      }}
-    >
+    <EditorSelectionContext.Provider value={value}>
       {children}
       <UnsavedChangesDialog
         open={pendingApply !== null}

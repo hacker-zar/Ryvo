@@ -1,11 +1,9 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import {
   getBusinessById,
   listClientsByBusiness,
 } from "@/lib/data/business-repository";
-import AdminChrome from "@/components/admin/AdminChrome";
 import ClientsList from "./clients-list";
 import BusinessNav from "../business-nav";
 
@@ -14,19 +12,16 @@ interface PageProps {
 }
 
 export default async function ClientesPage({ params }: PageProps) {
-  const session = await getAdminSession();
-  if (!session) redirect("/admin/login");
-
   const { id } = await params;
-  if (!canManageBusiness(session, id)) redirect("/admin");
 
-  const business = await getBusinessById(id);
+  const [business, clients] = await Promise.all([
+    getBusinessById(id),
+    listClientsByBusiness(id),
+  ]);
   if (!business) notFound();
 
-  const clients = await listClientsByBusiness(id);
-
   return (
-    <AdminChrome>
+    <>
       <Link
         href={`/admin/negocios/${id}`}
         className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors"
@@ -49,6 +44,6 @@ export default async function ClientesPage({ params }: PageProps) {
       </p>
 
       <ClientsList businessId={id} clients={clients} />
-    </AdminChrome>
+    </>
   );
 }

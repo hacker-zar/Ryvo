@@ -1,6 +1,5 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import {
   getBusinessById,
   listBookingsByBusiness,
@@ -9,7 +8,6 @@ import {
   listServicesByBusiness,
 } from "@/lib/data/business-repository";
 import { nowTimeString, todayDateString } from "@/lib/format";
-import AdminChrome from "@/components/admin/AdminChrome";
 import BusinessNav from "./business-nav";
 import EditorShell from "./editor-shell";
 import OnboardingChrome from "./onboarding-chrome";
@@ -20,22 +18,21 @@ interface PageProps {
 }
 
 export default async function AdminBusinessDetailPage({ params }: PageProps) {
-  const session = await getAdminSession();
-  if (!session) redirect("/admin/login");
-
   const { id } = await params;
 
-  // Un dueño solo puede ver/editar SU negocio — si el id no es el suyo, lo
-  // mandamos a /admin (que a un dueño lo rebota directo a su propia
-  // página), en vez de mostrar un error que confirme si ese id existe.
-  if (!canManageBusiness(session, id)) redirect("/admin");
-
-  const business = await getBusinessById(id);
+  // Las 3 listas no dependen entre sí (solo de `id`, ya conocido) ni de
+  // `business` — antes se pedían una tras otra (~1.2s de espera
+  // acumulada, medido); en paralelo el tiempo total queda acotado por la
+  // más lenta, no por la suma. getBusinessById está cacheado por request
+  // (ver business-repository.ts), así que aunque el layout ya lo haya
+  // pedido, esta llamada no dispara una segunda consulta real.
+  const [business, services, locations, professionals] = await Promise.all([
+    getBusinessById(id),
+    listServicesByBusiness(id),
+    listLocationsByBusiness(id),
+    listProfessionalsByBusiness(id),
+  ]);
   if (!business) notFound();
-
-  const services = await listServicesByBusiness(id);
-  const locations = await listLocationsByBusiness(id);
-  const professionals = await listProfessionalsByBusiness(id);
 
   // Un negocio creado por registro self-service arranca sin publicar
   // (ver src/lib/actions/register-business.ts) — hasta que el dueño
@@ -44,7 +41,7 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
   // (adminCreateBusiness) nacen publicados y nunca pasan por acá.
   if (business.published === false) {
     return (
-      <AdminChrome>
+      <>
         <p className="section-eyebrow text-brass">Creando tu web</p>
         <h1 className="section-title mt-2 text-2xl text-bone">
           {business.name}
@@ -57,14 +54,14 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
             locations={locations}
           />
         </div>
-      </AdminChrome>
+      </>
     );
   }
 
   const todayBookings = await listBookingsByBusiness(id, todayDateString());
 
   return (
-    <AdminChrome>
+    <>
       <Link
         href="/admin"
         className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors"
@@ -111,6 +108,6 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
           locations={locations}
         />
       </div>
-    </AdminChrome>
+    </>
   );
 }

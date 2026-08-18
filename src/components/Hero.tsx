@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Business } from "@/types/business";
 import { useBookingModal } from "@/lib/booking-modal-context";
@@ -8,12 +9,51 @@ import { readableTextColor } from "@/lib/format";
 interface HeroProps {
   business: Pick<
     Business,
-    "name" | "description" | "hero_image" | "primary_color"
+    | "name"
+    | "description"
+    | "hero_image"
+    | "primary_color"
+    | "hero_video"
+    | "hero_video_enabled"
+    | "hero_video_position"
   >;
 }
 
 export default function Hero({ business }: HeroProps) {
   const { open } = useBookingModal();
+  // El <video> se monta recién después del primer render en el cliente
+  // (no en el HTML inicial/hidratación) para que el preload scanner del
+  // navegador no compita por ancho de banda con la <Image> de acá abajo
+  // en el primer pase — la imagen sigue siendo el elemento de LCP exacto
+  // de siempre, el video es una mejora progresiva que llega un instante
+  // después, nunca antes.
+  const [mounted, setMounted] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
+
+  useEffect(() => {
+    // Patrón estándar de "recién montado en el cliente" para excluir el
+    // <video> del HTML de hidratación a propósito (ver comentario de
+    // `mounted` arriba) — no deriva estado de otro estado, es la
+    // excepción reconocida de esta regla.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  const prefersReducedMotion =
+    mounted &&
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // hero_image es la imagen de respaldo — sin campo separado. Si falla el
+  // video (onError) o el usuario prefiere menos movimiento, esta misma
+  // <Image>, que ya está debajo, queda como único contenido: no hace
+  // falta un request extra ni hay flash de contenido.
+  const showVideo =
+    mounted &&
+    Boolean(business.hero_video_enabled) &&
+    Boolean(business.hero_video) &&
+    !videoFailed &&
+    !prefersReducedMotion;
 
   return (
     <section
@@ -24,7 +64,7 @@ export default function Hero({ business }: HeroProps) {
         <div
           className="absolute inset-0"
           data-editable-category="apariencia"
-          data-editable-field="hero_image"
+          data-editable-field="hero_video"
         >
           <Image
             src={business.hero_image}
@@ -34,6 +74,26 @@ export default function Hero({ business }: HeroProps) {
             sizes="100vw"
             className="object-cover"
           />
+          {showVideo ? (
+            // src directo (no <source> anidado): el archivo subido es
+            // siempre uno solo (mp4 o webm, ver adminUploadVideo), y el
+            // navegador ya recibe el Content-Type real desde Supabase
+            // Storage — declarar un type="video/mp4" fijo acá sería
+            // incorrecto para los archivos webm.
+            <video
+              src={business.hero_video}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              disablePictureInPicture
+              disableRemotePlayback
+              onError={() => setVideoFailed(true)}
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ objectPosition: business.hero_video_position ?? "center" }}
+            />
+          ) : null}
           {/* Capa base pareja: garantiza un piso de contraste en TODO el
               hero (clave en mobile, donde el texto ocupa casi el ancho
               completo) sin importar si la foto es clara u oscura. */}

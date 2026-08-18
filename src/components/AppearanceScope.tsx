@@ -9,6 +9,7 @@ interface AppearanceScopeProps {
     | "background_color"
     | "text_color"
     | "primary_color"
+    | "animation_preset"
   >;
   children: React.ReactNode;
 }
@@ -41,6 +42,7 @@ export default function AppearanceScope({
     <div
       data-typography={business.typography_preset ?? "elegante"}
       data-button-style={business.button_style ?? "recto"}
+      data-animation={business.animation_preset ?? "sutil"}
       // Pinta el fondo acá explícitamente: <body> usa --background/
       // --foreground definidos en :root (siempre el default oscuro), y
       // las variables de acá abajo solo alcanzan a los descendientes de

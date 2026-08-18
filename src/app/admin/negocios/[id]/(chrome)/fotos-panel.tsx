@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { HeroVideoPosition } from "@/types/business";
 import { adminUpdateBusiness } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 import { useAsyncStatus } from "@/lib/useAsyncStatus";
 import SaveStatus from "@/components/ui/SaveStatus";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import GalleryUploadField from "@/components/admin/GalleryUploadField";
+import VideoUploadField from "@/components/admin/VideoUploadField";
 
 interface FotosPanelProps {
   businessId: string;
@@ -14,7 +16,16 @@ interface FotosPanelProps {
   heroImage: string;
   gallery: string[];
   favicon: string;
+  heroVideo: string;
+  heroVideoEnabled: boolean;
+  heroVideoPosition: HeroVideoPosition;
 }
+
+const VIDEO_POSITION_OPTIONS: { value: HeroVideoPosition; label: string }[] = [
+  { value: "center", label: "Centro" },
+  { value: "top", label: "Arriba" },
+  { value: "bottom", label: "Abajo" },
+];
 
 export default function FotosPanel({
   businessId,
@@ -22,6 +33,9 @@ export default function FotosPanel({
   heroImage,
   gallery,
   favicon,
+  heroVideo,
+  heroVideoEnabled,
+  heroVideoPosition,
 }: FotosPanelProps) {
   const { refreshPreview, setDirty, setSaveHandler } = useEditorSelection();
   const { status, error, run, isPending, dirty, markDirty } = useAsyncStatus();
@@ -69,6 +83,57 @@ export default function FotosPanel({
           defaultValue={heroImage}
           onChange={markDirty}
         />
+
+        {/* Video en bucle: usa la portada de arriba como imagen de
+            respaldo — no hay un campo de fallback separado. Por eso
+            queda deshabilitado hasta que haya una portada cargada. */}
+        <div
+          className="grid gap-3 rounded-sm border border-ink-line p-4"
+          data-editable-category="apariencia"
+          data-editable-field="hero_video"
+        >
+          <label className="flex items-center gap-2 text-xs text-bone-muted">
+            <input
+              name="hero_video_enabled"
+              type="checkbox"
+              defaultChecked={heroVideoEnabled}
+              disabled={!heroImage}
+            />
+            Usar video en bucle en el hero
+          </label>
+          {!heroImage ? (
+            <p className="text-[11px] text-amber-400/90">
+              Subí una imagen de portada primero — se usa como respaldo si
+              el video no llega a cargar.
+            </p>
+          ) : null}
+
+          <VideoUploadField
+            folder={businessId}
+            label="Video"
+            name="hero_video"
+            defaultValue={heroVideo}
+            onChange={markDirty}
+          />
+
+          <div className="grid gap-1.5">
+            <label htmlFor="hero_video_position" className="text-xs text-bone-muted">
+              Posición
+            </label>
+            <select
+              id="hero_video_position"
+              name="hero_video_position"
+              defaultValue={heroVideoPosition}
+              className="h-9 rounded-sm border border-ink-line bg-ink-elevated px-2 text-sm text-bone"
+            >
+              {VIDEO_POSITION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         <div className="grid gap-1.5">
           <ImageUploadField

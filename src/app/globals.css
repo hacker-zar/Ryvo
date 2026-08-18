@@ -264,6 +264,27 @@ body {
   transform: translateY(0);
 }
 
+/* Preset global de animaciones (Ninguna/Sutil/Dinámica), controlado
+   desde el editor — mismo mecanismo de data-attribute que
+   data-typography/data-button-style arriba, ver AppearanceScope.
+   "sutil" son los valores por default de .reveal de arriba (sin
+   necesidad de repetirlos acá). Reveal.tsx/useScrollReveal.ts no
+   cambian: el IntersectionObserver sigue disparando igual, esto solo
+   hace que el resultado visual sea distinto según el preset. */
+[data-animation="ninguna"] .reveal {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+[data-animation="dinamica"] .reveal {
+  transform: translateY(24px) scale(0.98);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-animation="dinamica"] .reveal-visible {
+  transform: translateY(0) scale(1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-\[fadeIn_0\.2s_ease-out\],
   .animate-\[slideUp_0\.25s_ease-out\],
@@ -272,7 +293,12 @@ body {
   .select-pulse {
     animation: none !important;
   }
-  .reveal {
+  /* [data-animation] (presencia, cualquier valor) empata en especificidad
+     con las reglas de preset de arriba — al venir después en el archivo,
+     gana igual: la preferencia del sistema operativo siempre puede
+     apagar el movimiento, sea cual sea el preset que eligió el negocio. */
+  .reveal,
+  [data-animation] .reveal {
     opacity: 1;
     transform: none;
     transition: none;

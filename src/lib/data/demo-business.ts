@@ -48,6 +48,19 @@ export const demoBusiness: Business = {
   ],
   onboarding_step: 5,
   published: true,
+  hero_video: "",
+  hero_video_enabled: false,
+  hero_video_position: "center",
+  single_specialist_mode: false,
+  section_order: [
+    { id: "services", enabled: true },
+    { id: "professionals", enabled: true },
+    { id: "gallery", enabled: true },
+    { id: "about", enabled: true },
+    { id: "reviews", enabled: true },
+    { id: "contact", enabled: true },
+  ],
+  animation_preset: "sutil",
   created_at: "2024-01-15T00:00:00.000Z",
 };
 

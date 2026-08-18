@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Business, ButtonStyle, TypographyPreset } from "@/types/business";
+import { AnimationPreset, Business, ButtonStyle, TypographyPreset } from "@/types/business";
 import { adminUpdateAppearance } from "@/lib/admin/actions";
 import { contrastRatio } from "@/lib/format";
 import {
@@ -23,6 +23,7 @@ interface AppearanceFormProps {
     | "text_color"
     | "typography_preset"
     | "button_style"
+    | "animation_preset"
   >;
 }
 
@@ -36,6 +37,12 @@ const BUTTON_STYLE_OPTIONS: { value: ButtonStyle; label: string }[] = [
   { value: "redondeado", label: "Redondeado" },
   { value: "suave", label: "Suave" },
   { value: "recto", label: "Recto" },
+];
+
+const ANIMATION_OPTIONS: { value: AnimationPreset; label: string; hint: string }[] = [
+  { value: "ninguna", label: "Ninguna", hint: "Todo visible de entrada, sin movimiento" },
+  { value: "sutil", label: "Sutil", hint: "Aparición suave al hacer scroll (recomendado)" },
+  { value: "dinamica", label: "Dinámica", hint: "Un poco más de movimiento y escala" },
 ];
 
 const BACKGROUND_OPTIONS = Object.entries(BACKGROUND_VARIANTS) as [
@@ -61,6 +68,9 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   );
   const [buttonStyle, setButtonStyle] = useState<ButtonStyle>(
     business.button_style || "recto"
+  );
+  const [animationPreset, setAnimationPreset] = useState<AnimationPreset>(
+    business.animation_preset || "sutil"
   );
   const { status, error, run, isPending, dirty, markDirty } = useAsyncStatus();
 
@@ -229,6 +239,37 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
                 onChange={() => setButtonStyle(opt.value)}
               />
               {opt.label}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Animaciones: preset único global, sin parámetros por elemento —
+          RYVO controla la calidad visual, no hay un panel de animaciones
+          "a la Webflow". */}
+      <div>
+        <p className="section-eyebrow text-bone-muted mb-3">Animaciones</p>
+        <div className="grid gap-2">
+          {ANIMATION_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex items-center gap-3 rounded-sm border border-ink-line px-3 py-2.5 cursor-pointer"
+              style={{
+                borderColor:
+                  animationPreset === opt.value ? primaryColor : "var(--ink-line)",
+              }}
+            >
+              <input
+                type="radio"
+                name="animation_preset"
+                value={opt.value}
+                checked={animationPreset === opt.value}
+                onChange={() => setAnimationPreset(opt.value)}
+              />
+              <div>
+                <p className="text-sm text-bone">{opt.label}</p>
+                <p className="text-xs text-bone-muted">{opt.hint}</p>
+              </div>
             </label>
           ))}
         </div>

@@ -7,6 +7,7 @@ import {
   adminCreateProfessional,
   adminDeleteProfessional,
   adminReorderProfessional,
+  adminSetSingleSpecialistMode,
   adminUpdateProfessional,
 } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
@@ -20,23 +21,46 @@ interface ProfessionalsManagerProps {
   businessId: string;
   professionals: ProfessionalWithServices[];
   services: Service[];
+  singleSpecialistMode: boolean;
 }
 
 export default function ProfessionalsManager({
   businessId,
   professionals,
   services,
+  singleSpecialistMode,
 }: ProfessionalsManagerProps) {
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
   const [items, setItems] = useState(professionals);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
+  const [singleMode, setSingleMode] = useState(singleSpecialistMode);
+  const [savingSingleMode, setSavingSingleMode] = useState(false);
+  const [singleModeError, setSingleModeError] = useState("");
   const editingId =
     target?.category === "profesionales" ? target.itemId ?? null : null;
 
   const createStatus = useAsyncStatus();
   const updateStatus = useAsyncStatus();
+
+  const activeCount = items.filter((p) => p.active).length;
+
+  async function handleToggleSingleMode() {
+    const next = !singleMode;
+    setSingleMode(next);
+    setSingleModeError("");
+    setSavingSingleMode(true);
+    const result = await adminSetSingleSpecialistMode(businessId, next);
+    setSavingSingleMode(false);
+    if (result.success) {
+      router.refresh();
+      refreshPreview();
+    } else {
+      setSingleMode(!next);
+      setSingleModeError(result.error ?? "No se pudo guardar el cambio.");
+    }
+  }
 
   async function handleCreate(formData: FormData) {
     const result = await createStatus.run(() =>
@@ -82,6 +106,43 @@ export default function ProfessionalsManager({
 
   return (
     <div className="mt-6">
+      <label className="flex items-start gap-3 mb-6 max-w-md cursor-pointer">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={singleMode}
+          disabled={savingSingleMode}
+          onClick={handleToggleSingleMode}
+          className={`relative w-9 h-5 rounded-full transition-colors shrink-0 mt-0.5 disabled:opacity-50 ${
+            singleMode ? "bg-brass" : "bg-ink-line"
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-4 w-4 rounded-full bg-ink transition-transform ${
+              singleMode ? "translate-x-[18px]" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+        <span className="text-sm text-bone-muted">
+          Este negocio tiene un solo especialista — cambia cómo se muestra
+          la sección Profesionales en la web (foto grande y presentación
+          personal en vez de grilla de equipo). No afecta a quién puede
+          elegir el cliente al reservar.
+        </span>
+      </label>
+
+      {singleModeError ? (
+        <p className="text-xs text-red-400 mb-4 max-w-md">{singleModeError}</p>
+      ) : null}
+
+      {singleMode && activeCount >= 2 ? (
+        <p className="text-xs text-amber-400/90 mb-6 max-w-md">
+          La web muestra solo a {items.find((p) => p.active)?.name} pero el
+          turno sigue dejando elegir entre los {activeCount} profesionales
+          activos.
+        </p>
+      ) : null}
+
       <div className="divide-y divide-ink-line border-t border-b border-ink-line">
         {items.length === 0 ? (
           <EmptyState

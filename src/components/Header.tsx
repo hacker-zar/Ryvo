@@ -1,23 +1,31 @@
 "use client";
 
 import Image from "next/image";
-import { Business } from "@/types/business";
+import { Business, SectionId } from "@/types/business";
 import { useBookingModal } from "@/lib/booking-modal-context";
 import { readableTextColor } from "@/lib/format";
 
 interface HeaderProps {
   business: Pick<Business, "name" | "logo" | "primary_color" | "slug">;
+  /** Secciones activas (ver section_order) — un link cuya sección fue
+   *  desactivada se oculta acá para no dejar un ancla muerta. No se
+   *  agregan links nuevos para secciones que hoy no tienen uno
+   *  (Profesionales, Sobre nosotros) — decisión explícita, ver plan. */
+  enabledSectionIds: SectionId[];
 }
 
-const NAV_LINKS = [
-  { href: "#servicios", label: "Servicios" },
-  { href: "#galeria", label: "Galería" },
-  { href: "#resenas", label: "Reseñas" },
-  { href: "#contacto", label: "Contacto" },
+const NAV_LINKS: { href: string; label: string; section: SectionId }[] = [
+  { href: "#servicios", label: "Servicios", section: "services" },
+  { href: "#galeria", label: "Galería", section: "gallery" },
+  { href: "#resenas", label: "Reseñas", section: "reviews" },
+  { href: "#contacto", label: "Contacto", section: "contact" },
 ];
 
-export default function Header({ business }: HeaderProps) {
+export default function Header({ business, enabledSectionIds }: HeaderProps) {
   const { open } = useBookingModal();
+  const visibleNavLinks = NAV_LINKS.filter((link) =>
+    enabledSectionIds.includes(link.section)
+  );
 
   return (
     <header className="sticky top-0 z-50 bg-ink/95 backdrop-blur border-b border-ink-line">
@@ -44,7 +52,7 @@ export default function Header({ business }: HeaderProps) {
         </a>
 
         <nav className="hidden md:flex items-center gap-7 text-xs">
-          {NAV_LINKS.map((link) => (
+          {visibleNavLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}

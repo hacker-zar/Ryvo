@@ -251,3 +251,24 @@ create policy "public read business images"
 -- La subida/edición/borrado de archivos se hace únicamente desde el panel
 -- de administración, usando la service_role key (que se salta estas
 -- políticas), igual que el resto de las escrituras de /admin.
+
+-- === Editor: video en bucle, un solo especialista, orden de secciones,
+-- animaciones. Aplicado directo contra Supabase vía apply_migration —
+-- este bloque es documentación posterior, no la fuente de verdad (varias
+-- columnas/tablas de fases anteriores, como display_order/experience en
+-- professionals o la tabla clients, ya están en producción sin haber
+-- vuelto a este archivo). ===
+alter table businesses add column if not exists hero_video text not null default '';
+alter table businesses add column if not exists hero_video_enabled boolean not null default false;
+alter table businesses add column if not exists hero_video_position text not null default 'center'
+  check (hero_video_position in ('center','top','bottom'));
+
+alter table businesses add column if not exists single_specialist_mode boolean not null default false;
+
+-- Hero no está en la lista: queda siempre fijo primero, fuera del orden
+-- configurable (ver SectionId en types/business.ts).
+alter table businesses add column if not exists section_order jsonb not null default
+  '[{"id":"services","enabled":true},{"id":"professionals","enabled":true},{"id":"gallery","enabled":true},{"id":"about","enabled":true},{"id":"reviews","enabled":true},{"id":"contact","enabled":true}]'::jsonb;
+
+alter table businesses add column if not exists animation_preset text not null default 'sutil'
+  check (animation_preset in ('ninguna','sutil','dinamica'));

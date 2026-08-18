@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
   isSupabaseAdminConfigured,
   isSupabaseConfigured,
@@ -39,7 +40,7 @@ import { detectOpportunities } from "@/lib/opportunities";
 // funciones de autenticación de más abajo, porque el hash terminaría
 // serializado en el HTML/RSC payload aunque ningún componente lo muestre.
 const BUSINESS_PUBLIC_COLUMNS =
-  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, opening_hours, background_color, text_color, typography_preset, button_style, business_type, onboarding_step, published, favicon, created_at";
+  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, opening_hours, background_color, text_color, typography_preset, button_style, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, created_at";
 
 /**
  * Punto único de acceso a datos de negocio.
@@ -82,16 +83,18 @@ export async function getBusinessProfile(
         .select("*")
         .eq("business_id", business.id)
         .order("is_primary", { ascending: false }),
+      // Trae professional_services embebido en la misma consulta (en vez
+      // de una segunda query aparte, ver mapProfessionalsWithServices) —
+      // evita un round-trip extra a Supabase que antes se pagaba en cada
+      // carga del sitio público de cada negocio.
       supabase
         .from("professionals")
-        .select("*")
+        .select("*, professional_services(service_id)")
         .eq("business_id", business.id)
         .eq("active", true)
         .order("display_order", { ascending: true })
         .order("created_at", { ascending: true }),
     ]);
-
-    const professionalsWithServices = await attachServiceIds(professionals ?? []);
 
     return {
       business,
@@ -104,7 +107,7 @@ export async function getBusinessProfile(
         locations && locations.length > 0
           ? locations
           : [virtualLocationFromBusiness(business)],
-      professionals: professionalsWithServices,
+      professionals: mapProfessionalsWithServices(professionals ?? []),
     };
   }
 
@@ -125,32 +128,21 @@ export async function getBusinessProfile(
   return null;
 }
 
-/** Suma `service_ids` a cada profesional consultando `professional_services`
- *  en una sola query (no N+1). Vacío = califica para todos los servicios —
- *  ver la regla de compatibilidad documentada en la migración. */
-async function attachServiceIds(
-  professionals: Professional[]
-): Promise<ProfessionalWithServices[]> {
-  if (professionals.length === 0 || !supabase) {
-    return professionals.map((p) => ({ ...p, service_ids: [] }));
-  }
-  const { data: links } = await supabase
-    .from("professional_services")
-    .select("professional_id, service_id")
-    .in(
-      "professional_id",
-      professionals.map((p) => p.id)
-    );
-  const byProfessional = new Map<string, string[]>();
-  for (const link of links ?? []) {
-    const list = byProfessional.get(link.professional_id) ?? [];
-    list.push(link.service_id);
-    byProfessional.set(link.professional_id, list);
-  }
-  return professionals.map((p) => ({
-    ...p,
-    service_ids: byProfessional.get(p.id) ?? [],
-  }));
+/** Reordena la fila que devuelve Supabase con `professional_services`
+ *  embebido (`select("*, professional_services(service_id)")`) a la forma
+ *  `ProfessionalWithServices` que usa el resto de la app — sin ningún
+ *  round-trip propio, ya viene todo en la misma consulta. Vacío = califica
+ *  para todos los servicios (ver regla de compatibilidad en la migración). */
+function mapProfessionalsWithServices(
+  rows: (Professional & { professional_services?: { service_id: string }[] | null })[]
+): ProfessionalWithServices[] {
+  return rows.map((row) => {
+    const { professional_services, ...professional } = row;
+    return {
+      ...professional,
+      service_ids: (professional_services ?? []).map((link) => link.service_id),
+    };
+  });
 }
 
 /**
@@ -253,33 +245,32 @@ export async function listQualifiedProfessionals(
   serviceId: string
 ): Promise<Professional[]> {
   if (isSupabaseConfigured && supabase) {
+    // Mismo embed que listProfessionalsByBusiness/getBusinessProfile — una
+    // sola consulta en vez de profesionales + professional_services por
+    // separado. Esta función está en el camino crítico de la reserva
+    // pública (paso "profesional" y resolveAnyProfessional), así que el
+    // round-trip extra se sentía en cada click, no solo en el admin.
     const { data: professionals } = await supabase
       .from("professionals")
-      .select("*")
+      .select("*, professional_services(service_id)")
       .eq("business_id", businessId)
       .eq("active", true)
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true });
     if (!professionals || professionals.length === 0) return [];
 
-    const { data: links } = await supabase
-      .from("professional_services")
-      .select("professional_id, service_id")
-      .in(
-        "professional_id",
-        professionals.map((p) => p.id)
-      );
-    const withAnyAssociation = new Set(
-      (links ?? []).map((l) => l.professional_id)
-    );
-    const qualifiedIds = new Set(
-      (links ?? [])
-        .filter((l) => l.service_id === serviceId)
-        .map((l) => l.professional_id)
-    );
-    return professionals.filter(
-      (p) => !withAnyAssociation.has(p.id) || qualifiedIds.has(p.id)
-    );
+    return professionals
+      .filter((p) => {
+        const ids = (p.professional_services ?? []).map(
+          (link: { service_id: string }) => link.service_id
+        );
+        return ids.length === 0 || ids.includes(serviceId);
+      })
+      .map((p) => {
+        const { professional_services, ...rest } = p;
+        void professional_services;
+        return rest;
+      });
   }
 
   const demoQualified = demoProfessionals
@@ -460,17 +451,23 @@ export async function listBusinesses(): Promise<Business[]> {
   return [demoBusiness];
 }
 
-export async function getBusinessById(id: string): Promise<Business | null> {
-  if (isSupabaseConfigured && supabase) {
-    const { data } = await supabase
-      .from("businesses")
-      .select(BUSINESS_PUBLIC_COLUMNS)
-      .eq("id", id)
-      .single();
-    return data ?? null;
+// cache() dedupea llamadas con el mismo id dentro de un mismo request —
+// el layout de /admin/negocios/[id] y cada page.tsx debajo llaman a esta
+// misma función; sin el wrapper, cada navegación pagaba esta consulta
+// (una de las más lentas medidas: ~250-850ms) dos veces.
+export const getBusinessById = cache(
+  async (id: string): Promise<Business | null> => {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase
+        .from("businesses")
+        .select(BUSINESS_PUBLIC_COLUMNS)
+        .eq("id", id)
+        .single();
+      return data ?? null;
+    }
+    return id === demoBusiness.id ? demoBusiness : null;
   }
-  return id === demoBusiness.id ? demoBusiness : null;
-}
+);
 
 /** Lookup mínimo (id + name), público, usado para el flujo de login
  *  escopeado a un negocio ("¿Trabajás aquí?" → /admin/entrar?from=slug). */
@@ -612,11 +609,11 @@ export async function listProfessionalsByBusiness(
   if (isSupabaseConfigured && supabase) {
     const { data } = await supabase
       .from("professionals")
-      .select("*")
+      .select("*, professional_services(service_id)")
       .eq("business_id", businessId)
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true });
-    return attachServiceIds(data ?? []);
+    return mapProfessionalsWithServices(data ?? []);
   }
   return businessId === demoBusiness.id
     ? demoProfessionals.map((p) => ({

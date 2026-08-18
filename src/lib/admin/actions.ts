@@ -30,8 +30,9 @@ import {
   updateAccount,
   updateAccountPassword,
 } from "@/lib/data/accounts-repository";
-import { OpeningHours } from "@/types/business";
+import { OpeningHours, SectionConfig } from "@/types/business";
 import { slugify } from "@/lib/slug";
+import { sanitizeSectionOrder } from "@/lib/section-order";
 
 /**
  * Crear negocios nuevos es exclusivo de RYVO (superadmin) — un dueño no
@@ -130,7 +131,10 @@ const UPDATABLE_BUSINESS_FIELDS = [
   "city",
   "hero_image",
   "favicon",
+  "hero_video",
 ] as const;
+
+const HERO_VIDEO_POSITIONS = new Set(["center", "top", "bottom"]);
 
 /**
  * El editor ahora manda cada categoría (Información, Fotos, ...) como un
@@ -148,6 +152,21 @@ export async function adminUpdateBusiness(id: string, formData: FormData) {
     if (formData.has(field)) {
       input[field] = String(formData.get(field) || "");
     }
+  }
+
+  // hero_video_enabled es un checkbox: si no está marcado, FormData
+  // directamente lo omite — no hay forma de distinguir "este form no se
+  // envió" de "se envió con el checkbox destildado" solo mirando
+  // formData.has("hero_video_enabled"). Se usa hero_video_position (un
+  // <select>, siempre presente cuando el form de fotos-panel.tsx se
+  // envía) como gate en su lugar — mismo criterio que ya usa
+  // adminUpdateAppearance para validar presets contra un allow-list.
+  if (formData.has("hero_video_position")) {
+    const position = String(formData.get("hero_video_position") || "center");
+    input.hero_video_position = HERO_VIDEO_POSITIONS.has(position)
+      ? (position as BusinessInput["hero_video_position"])
+      : "center";
+    input.hero_video_enabled = formData.get("hero_video_enabled") === "on";
   }
 
   if ("name" in input && !input.name?.trim()) {
@@ -281,6 +300,36 @@ export async function adminReorderProfessional(
   return result;
 }
 
+// Argumento tipado directo, sin FormData — no vive dentro de ningún
+// <form> compartido, se persiste al instante en cada drag/click de
+// flecha/toggle, igual que adminReorderProfessional.
+export async function adminUpdateSectionOrder(
+  businessId: string,
+  order: SectionConfig[]
+) {
+  await requireAdminFor(businessId);
+  const result = await updateBusiness(businessId, {
+    section_order: sanitizeSectionOrder(order),
+  });
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+// Argumento tipado directo, sin FormData — mismo criterio que
+// adminUpdateSectionOrder: no vive dentro de ningún <form> compartido,
+// se persiste al instante en cada click del toggle.
+export async function adminSetSingleSpecialistMode(
+  businessId: string,
+  enabled: boolean
+) {
+  await requireAdminFor(businessId);
+  const result = await updateBusiness(businessId, {
+    single_specialist_mode: enabled,
+  });
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
 export async function adminUpdateBookingStatus(
   businessId: string,
   bookingId: string,
@@ -375,6 +424,7 @@ export async function adminDeleteLocation(
 
 const TYPOGRAPHY_PRESETS = new Set(["clasica", "moderna", "elegante"]);
 const BUTTON_STYLES = new Set(["redondeado", "suave", "recto"]);
+const ANIMATION_PRESETS = new Set(["ninguna", "sutil", "dinamica"]);
 
 export async function adminUpdateAppearance(
   businessId: string,
@@ -384,6 +434,7 @@ export async function adminUpdateAppearance(
 
   const typography = String(formData.get("typography_preset") || "elegante");
   const buttonStyle = String(formData.get("button_style") || "recto");
+  const animation = String(formData.get("animation_preset") || "sutil");
 
   const input: Partial<BusinessInput> = {
     primary_color: String(formData.get("primary_color") || "#c9a15a"),
@@ -396,6 +447,9 @@ export async function adminUpdateAppearance(
     button_style: BUTTON_STYLES.has(buttonStyle)
       ? (buttonStyle as BusinessInput["button_style"])
       : "recto",
+    animation_preset: ANIMATION_PRESETS.has(animation)
+      ? (animation as BusinessInput["animation_preset"])
+      : "sutil",
   };
 
   const result = await updateBusiness(businessId, input);
@@ -541,6 +595,61 @@ export async function adminUploadImage(
   }
 
   const extension = file.name.split(".").pop() || "jpg";
+  const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "") || "new";
+  const path = `${safeFolder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+
+  const { error } = await supabaseAdmin.storage
+    .from("business-images")
+    .upload(path, file, { contentType: file.type, upsert: false });
+
+  if (error) return { success: false, error: error.message };
+
+  const { data } = supabaseAdmin.storage
+    .from("business-images")
+    .getPublicUrl(path);
+
+  return { success: true, url: data.publicUrl };
+}
+
+const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
+const MAX_VIDEO_BYTES = 15 * 1024 * 1024; // 15 MB — clip corto sin audio, no un video largo
+
+/**
+ * Sube el video de fondo del hero a Supabase Storage. Mismo bucket que
+ * las imágenes (business-images, sin restricción de MIME a nivel bucket)
+ * y misma convención de path — no hace falta un bucket nuevo.
+ */
+export async function adminUploadVideo(
+  folder: string,
+  formData: FormData
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  await requireAdminFor(folder);
+
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder subir videos.",
+    };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { success: false, error: "No se recibió ningún archivo." };
+  }
+
+  if (!ALLOWED_VIDEO_TYPES.has(file.type)) {
+    return {
+      success: false,
+      error: "Formato no soportado. Usá MP4 o WEBM.",
+    };
+  }
+
+  if (file.size > MAX_VIDEO_BYTES) {
+    return { success: false, error: "El video no puede pesar más de 15 MB." };
+  }
+
+  const extension = file.name.split(".").pop() || "mp4";
   const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "") || "new";
   const path = `${safeFolder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
 

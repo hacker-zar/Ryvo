@@ -1,13 +1,8 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
-import {
-  getBusinessById,
-  getClientProfile,
-} from "@/lib/data/business-repository";
+import { getClientProfile } from "@/lib/data/business-repository";
 import { formatPrice, whatsappLink } from "@/lib/format";
 import { BookingStatus } from "@/types/business";
-import AdminChrome from "@/components/admin/AdminChrome";
 import ClientNotesForm from "./client-notes-form";
 
 interface PageProps {
@@ -23,14 +18,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
 };
 
 export default async function ClientProfilePage({ params }: PageProps) {
-  const session = await getAdminSession();
-  if (!session) redirect("/admin/login");
-
   const { id, clientId } = await params;
-  if (!canManageBusiness(session, id)) redirect("/admin");
-
-  const business = await getBusinessById(id);
-  if (!business) notFound();
 
   const profile = await getClientProfile(id, clientId);
   if (!profile) notFound();
@@ -38,7 +26,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
   const { client, history } = profile;
 
   return (
-    <AdminChrome>
+    <>
       <Link
         href={`/admin/negocios/${id}/clientes`}
         className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors"
@@ -142,7 +130,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
           </div>
         )}
       </div>
-    </AdminChrome>
+    </>
   );
 }
 

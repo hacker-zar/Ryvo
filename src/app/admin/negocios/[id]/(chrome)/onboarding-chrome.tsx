@@ -139,6 +139,7 @@ function OnboardingSteps({
                     businessId={business.id}
                     professionals={professionals}
                     services={services}
+                    singleSpecialistMode={business.single_specialist_mode ?? false}
                   />
                 ) : null}
                 {step === 3 ? (
@@ -155,6 +156,9 @@ function OnboardingSteps({
                       heroImage={business.hero_image ?? ""}
                       gallery={business.gallery ?? []}
                       favicon={business.favicon ?? ""}
+                      heroVideo={business.hero_video ?? ""}
+                      heroVideoEnabled={business.hero_video_enabled ?? false}
+                      heroVideoPosition={business.hero_video_position ?? "center"}
                     />
                     <AppearanceForm business={business} />
                   </div>

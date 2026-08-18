@@ -4,6 +4,25 @@
 
 export type TypographyPreset = "clasica" | "moderna" | "elegante";
 export type ButtonStyle = "redondeado" | "suave" | "recto";
+export type HeroVideoPosition = "center" | "top" | "bottom";
+export type AnimationPreset = "ninguna" | "sutil" | "dinamica";
+
+// Secciones reordenables/activables del sitio público. "hero" queda
+// deliberadamente fuera de este union — es estructural (siempre primera,
+// siempre visible), igual que Header/Footer, no forma parte del orden
+// configurable. Ver src/lib/section-order.ts y BusinessSite.tsx.
+export type SectionId =
+  | "services"
+  | "professionals"
+  | "gallery"
+  | "about"
+  | "reviews"
+  | "contact";
+
+export interface SectionConfig {
+  id: SectionId;
+  enabled: boolean;
+}
 
 export interface Business {
   id: string;
@@ -42,6 +61,27 @@ export interface Business {
   // propio (generateMetadata cae a logo, y si tampoco hay, al ícono
   // global de RYVO — ver [slug]/page.tsx).
   favicon?: string;
+  // Video de fondo del hero. hero_video_enabled es independiente de si
+  // hay una URL cargada (permite subir una vez y activar/desactivar sin
+  // resubir). hero_image sigue siendo la imagen de respaldo — no hay un
+  // campo de fallback separado (ver Hero.tsx).
+  hero_video?: string;
+  hero_video_enabled?: boolean;
+  hero_video_position?: HeroVideoPosition;
+  // Un solo especialista: cambia la presentación de la sección
+  // Profesionales (ver Professionals.tsx), NUNCA la lógica de pasos del
+  // wizard de reserva (que ya se adapta sola por cantidad real de
+  // profesionales calificados — ver BookingModal.tsx).
+  single_specialist_mode?: boolean;
+  // Orden y visibilidad de las secciones reordenables del sitio público
+  // (no incluye "hero", que es fijo). Default = orden actual, todo
+  // activo — ver la migración y sanitizeSectionOrder en
+  // src/lib/section-order.ts.
+  section_order?: SectionConfig[];
+  // Preset global de animaciones de scroll-reveal. Controla solo
+  // duración/curva vía CSS ([data-animation] en globals.css) — Reveal.tsx
+  // / useScrollReveal.ts no cambian de comportamiento por esto.
+  animation_preset?: AnimationPreset;
   created_at: string;
 }
 

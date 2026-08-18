@@ -1,10 +1,12 @@
-import { BusinessProfile } from "@/types/business";
+import { Fragment } from "react";
+import { BusinessProfile, SectionId } from "@/types/business";
 import { BookingModalProvider } from "@/lib/booking-modal-context";
+import { sanitizeSectionOrder } from "@/lib/section-order";
 import AppearanceScope from "@/components/AppearanceScope";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Services from "@/components/Services";
-import BookingModal from "@/components/booking/BookingModal";
+import BookingModal from "@/components/booking/BookingModalLazy";
 import BookingQueryParamTrigger from "@/components/booking/BookingQueryParamTrigger";
 import MobileBookingBar from "@/components/booking/MobileBookingBar";
 import Gallery from "@/components/Gallery";
@@ -33,6 +35,65 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const bookingUrl = `${siteUrl}/${slug}?reservar=1`;
 
+  // "hero" queda fuera de este registro a propósito — es estructural
+  // (siempre primera, siempre visible, igual que Header/Footer), no
+  // forma parte del orden configurable. Ver SectionId en types/business.ts.
+  const SECTION_COMPONENTS: Record<SectionId, () => React.ReactNode> = {
+    services: () => (
+      <Services services={services} primaryColor={business.primary_color} />
+    ),
+    professionals: () => (
+      <Professionals
+        professionals={professionals}
+        primaryColor={business.primary_color}
+        slug={slug}
+        singleSpecialistMode={business.single_specialist_mode ?? false}
+      />
+    ),
+    gallery: () => (
+      <Gallery
+        images={business.gallery ?? []}
+        businessName={business.name}
+        primaryColor={business.primary_color}
+      />
+    ),
+    about: () => (
+      <About
+        business={{
+          name: business.name,
+          description: business.description,
+          city: business.city,
+          gallery: business.gallery,
+          primary_color: business.primary_color,
+        }}
+      />
+    ),
+    reviews: () => (
+      <Reviews reviews={reviews} primaryColor={business.primary_color} />
+    ),
+    contact: () => (
+      <Contact
+        business={{
+          name: business.name,
+          whatsapp: business.whatsapp,
+          instagram: business.instagram,
+          address: business.address,
+          phone: business.phone,
+          email: business.email,
+          opening_hours: business.opening_hours,
+          primary_color: business.primary_color,
+          slug: business.slug,
+        }}
+        bookingUrl={bookingUrl}
+      />
+    ),
+  };
+
+  const sectionOrder = sanitizeSectionOrder(business.section_order);
+  const enabledSectionIds = sectionOrder
+    .filter((s) => s.enabled)
+    .map((s) => s.id);
+
   return (
     <AppearanceScope
       business={{
@@ -41,6 +102,7 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         background_color: business.background_color,
         text_color: business.text_color,
         primary_color: business.primary_color,
+        animation_preset: business.animation_preset,
       }}
     >
       <BookingModalProvider>
@@ -51,6 +113,7 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
             primary_color: business.primary_color,
             slug: business.slug,
           }}
+          enabledSectionIds={enabledSectionIds}
         />
         <Hero
           business={{
@@ -58,43 +121,16 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
             description: business.description,
             hero_image: business.hero_image,
             primary_color: business.primary_color,
+            hero_video: business.hero_video,
+            hero_video_enabled: business.hero_video_enabled,
+            hero_video_position: business.hero_video_position,
           }}
         />
-        <Services services={services} primaryColor={business.primary_color} />
-        <Professionals
-          professionals={professionals}
-          primaryColor={business.primary_color}
-          slug={slug}
-        />
-        <Gallery
-          images={business.gallery ?? []}
-          businessName={business.name}
-          primaryColor={business.primary_color}
-        />
-        <About
-          business={{
-            name: business.name,
-            description: business.description,
-            city: business.city,
-            gallery: business.gallery,
-            primary_color: business.primary_color,
-          }}
-        />
-        <Reviews reviews={reviews} primaryColor={business.primary_color} />
-        <Contact
-          business={{
-            name: business.name,
-            whatsapp: business.whatsapp,
-            instagram: business.instagram,
-            address: business.address,
-            phone: business.phone,
-            email: business.email,
-            opening_hours: business.opening_hours,
-            primary_color: business.primary_color,
-            slug: business.slug,
-          }}
-          bookingUrl={bookingUrl}
-        />
+        {sectionOrder
+          .filter((s) => s.enabled)
+          .map((s) => (
+            <Fragment key={s.id}>{SECTION_COMPONENTS[s.id]()}</Fragment>
+          ))}
         <Footer business={{ name: business.name, slug: business.slug }} />
 
         <BookingModal

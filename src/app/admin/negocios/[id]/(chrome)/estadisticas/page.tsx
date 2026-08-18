@@ -1,12 +1,10 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import {
   getBusinessById,
   getBusinessStats,
 } from "@/lib/data/business-repository";
 import { formatPrice } from "@/lib/format";
-import AdminChrome from "@/components/admin/AdminChrome";
 import StatTile from "@/components/ui/StatTile";
 import BarChart from "@/components/ui/BarChart";
 import BusinessNav from "../business-nav";
@@ -22,24 +20,19 @@ export default async function EstadisticasPage({
   params,
   searchParams,
 }: PageProps) {
-  const session = await getAdminSession();
-  if (!session) redirect("/admin/login");
-
-  const { id } = await params;
-  if (!canManageBusiness(session, id)) redirect("/admin");
-
-  const { range } = await searchParams;
+  const [{ id }, { range }] = await Promise.all([params, searchParams]);
   const rangeDays = RANGE_OPTIONS.includes(Number(range) as (typeof RANGE_OPTIONS)[number])
     ? Number(range)
     : 30;
 
-  const business = await getBusinessById(id);
+  const [business, stats] = await Promise.all([
+    getBusinessById(id),
+    getBusinessStats(id, rangeDays),
+  ]);
   if (!business) notFound();
 
-  const stats = await getBusinessStats(id, rangeDays);
-
   return (
-    <AdminChrome>
+    <>
       <Link
         href={`/admin/negocios/${id}`}
         className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors"
@@ -130,6 +123,6 @@ export default async function EstadisticasPage({
           </p>
         </div>
       </div>
-    </AdminChrome>
+    </>
   );
 }
