@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getAdminSession } from "@/lib/admin/session";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { listBusinesses } from "@/lib/data/business-repository";
+import { listBusinesses, listOfficialTemplates } from "@/lib/data/business-repository";
 import AdminChrome from "@/components/admin/AdminChrome";
 import NewBusinessForm from "./new-business-form";
 
@@ -14,7 +14,10 @@ export default async function AdminHomePage() {
   if (!session) redirect("/admin/login");
   if (session.role === "owner") redirect(`/admin/negocios/${session.businessId}`);
 
-  const businesses = await listBusinesses();
+  const [businesses, officialTemplates] = await Promise.all([
+    listBusinesses(),
+    listOfficialTemplates(),
+  ]);
 
   return (
     <AdminChrome>
@@ -64,7 +67,10 @@ export default async function AdminHomePage() {
         <h2 className="section-title mt-2 text-xl text-bone">
           Crear negocio
         </h2>
-        <NewBusinessForm disabled={!isSupabaseConfigured} />
+        <NewBusinessForm
+          disabled={!isSupabaseConfigured}
+          officialTemplates={officialTemplates}
+        />
       </div>
     </AdminChrome>
   );

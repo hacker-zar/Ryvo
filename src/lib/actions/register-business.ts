@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { hashPassword, createOwnerSession } from "@/lib/admin/session";
 import { createAccount, isUsernameTaken } from "@/lib/data/accounts-repository";
-import { createBusiness, BusinessInput } from "@/lib/data/business-repository";
+import {
+  createBusiness,
+  BusinessInput,
+  getOfficialTemplateById,
+} from "@/lib/data/business-repository";
+import { sanitizeSectionOrder } from "@/lib/section-order";
 import { slugify, dedupeSlug } from "@/lib/slug";
 
 const BUSINESS_TYPES = new Set([
@@ -68,6 +73,14 @@ export async function registerBusiness(formData: FormData) {
     : "otro";
   const slug = await dedupeSlug(slugify(businessName));
 
+  // Plantilla elegida en el paso 1 del wizard — "" o cualquier id que no
+  // resuelva a una oficial (nunca debería pasar desde la UI, pero un
+  // FormData es manipulable) cae en "Página en blanco": el negocio nace
+  // sin template_id/template_layout/palette_id, exactamente como
+  // cualquier negocio sin plantilla (ver Template en types/business.ts).
+  const templateId = String(formData.get("template_id") || "").trim();
+  const template = templateId ? await getOfficialTemplateById(templateId) : null;
+
   const input: BusinessInput = {
     name: businessName,
     slug,
@@ -87,6 +100,16 @@ export async function registerBusiness(formData: FormData) {
     business_type: businessType,
     onboarding_step: 0,
     published: false,
+    ...(template
+      ? {
+          template_id: template.id,
+          template_layout: template.layout,
+          palette_id: template.palette_id,
+          button_style: template.button_style,
+          animation_preset: template.animation_preset,
+          section_order: sanitizeSectionOrder(template.section_order),
+        }
+      : {}),
   };
 
   const businessResult = await createBusiness(input);

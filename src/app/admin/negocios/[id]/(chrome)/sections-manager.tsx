@@ -14,6 +14,7 @@ interface SectionsManagerProps {
 
 const SECTION_LABELS: Record<SectionId, string> = {
   services: "Servicios",
+  products: "Catálogo",
   professionals: "Profesionales",
   gallery: "Galería",
   about: "Sobre nosotros",

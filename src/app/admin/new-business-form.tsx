@@ -4,16 +4,27 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminCreateBusiness } from "@/lib/admin/actions";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import TemplatePicker from "@/components/admin/TemplatePicker";
 import { adminInputClasses } from "@/lib/ui-classes";
+import { Template } from "@/types/business";
 
 const inputClasses = `${adminInputClasses} disabled:opacity-50`;
 
-export default function NewBusinessForm({ disabled }: { disabled?: boolean }) {
+interface NewBusinessFormProps {
+  disabled?: boolean;
+  officialTemplates: Template[];
+}
+
+export default function NewBusinessForm({
+  disabled,
+  officialTemplates,
+}: NewBusinessFormProps) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "submitting" | "error">(
     "idle"
   );
   const [error, setError] = useState("");
+  const [templateId, setTemplateId] = useState<string | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setStatus("submitting");
@@ -29,7 +40,22 @@ export default function NewBusinessForm({ disabled }: { disabled?: boolean }) {
 
   return (
     <form action={handleSubmit} className="mt-6 grid gap-4 max-w-lg">
-      <div className="grid gap-1.5">
+      <input type="hidden" name="template_id" value={templateId ?? ""} />
+
+      <div>
+        <p className="section-eyebrow text-brass mb-1">Plantilla</p>
+        <p className="text-xs text-bone-muted mb-3">
+          Elegí el diseño inicial de la página — se puede cambiar después
+          desde el editor.
+        </p>
+        <TemplatePicker
+          officialTemplates={officialTemplates}
+          currentTemplateId={templateId}
+          onSelect={setTemplateId}
+        />
+      </div>
+
+      <div className="grid gap-1.5 mt-4 pt-4 border-t border-ink-line">
         <label htmlFor="name" className="text-xs text-bone-muted">
           Nombre del negocio
         </label>

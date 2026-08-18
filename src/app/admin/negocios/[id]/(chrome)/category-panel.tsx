@@ -1,6 +1,6 @@
 "use client";
 
-import { Business, Location, ProfessionalWithServices, Service, Template } from "@/types/business";
+import { Business, Location, Product, ProfessionalWithServices, Service, Template } from "@/types/business";
 import {
   EditorCategory,
   useEditorSelection,
@@ -10,6 +10,7 @@ import SectionsManager from "./sections-manager";
 import FotosPanel from "./fotos-panel";
 import ServicesManager from "./services-manager";
 import ProfessionalsManager from "./professionals-manager";
+import ProductsManager from "./products-manager";
 import LocationsManager from "./locations-manager";
 import AppearanceForm from "./appearance-form";
 import TemplatePanel from "./template-panel";
@@ -20,6 +21,7 @@ interface CategoryPanelProps {
   services: Service[];
   professionals: ProfessionalWithServices[];
   locations: Location[];
+  products: Product[];
   officialTemplates: Template[];
   businessTemplates: Template[];
 }
@@ -53,6 +55,7 @@ export default function CategoryPanel({
   services,
   professionals,
   locations,
+  products,
   officialTemplates,
   businessTemplates,
 }: CategoryPanelProps) {
@@ -124,16 +127,7 @@ export default function CategoryPanel({
                   />
                 ) : null}
                 {key === "productos" ? (
-                  <div className="mt-2">
-                    <p className="text-xs text-bone-muted mb-4 max-w-sm">
-                      Catálogo de productos para vender desde tu web — todavía
-                      no disponible.
-                    </p>
-                    <ComingSoonRow label="Activar catálogo" />
-                    <ComingSoonRow label="Productos" />
-                    <ComingSoonRow label="Precios y stock" />
-                    <ComingSoonRow label="Orden" />
-                  </div>
+                  <ProductsManager businessId={business.id} products={products} />
                 ) : null}
                 {key === "reservas" ? (
                   <div className="grid gap-6">
@@ -163,6 +157,15 @@ export default function CategoryPanel({
                     <ComingSoonRow label="Solicitud de reseñas" />
                     <ComingSoonRow label="Recuperación de clientes" />
                   </div>
+                ) : null}
+                {key === "plantilla" ? (
+                  <TemplatePanel
+                    businessId={business.id}
+                    templateId={business.template_id ?? null}
+                    templateLayout={business.template_layout ?? null}
+                    officialTemplates={officialTemplates}
+                    businessTemplates={businessTemplates}
+                  />
                 ) : null}
               </div>
             ) : null}

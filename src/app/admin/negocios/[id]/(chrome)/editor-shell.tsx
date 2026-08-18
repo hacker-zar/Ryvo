@@ -1,6 +1,6 @@
 "use client";
 
-import { Business, Location, ProfessionalWithServices, Service } from "@/types/business";
+import { Business, Location, Product, ProfessionalWithServices, Service, Template } from "@/types/business";
 import { EditorSelectionProvider } from "@/lib/admin/editor-selection-context";
 import CategoryPanel from "./category-panel";
 import PreviewPane from "./preview-pane";
@@ -11,6 +11,9 @@ interface EditorShellProps {
   services: Service[];
   professionals: ProfessionalWithServices[];
   locations: Location[];
+  products: Product[];
+  officialTemplates: Template[];
+  businessTemplates: Template[];
 }
 
 /**
@@ -22,6 +25,9 @@ export default function EditorShell({
   services,
   professionals,
   locations,
+  products,
+  officialTemplates,
+  businessTemplates,
 }: EditorShellProps) {
   return (
     <EditorSelectionProvider>
@@ -32,6 +38,9 @@ export default function EditorShell({
             services={services}
             professionals={professionals}
             locations={locations}
+            products={products}
+            officialTemplates={officialTemplates}
+            businessTemplates={businessTemplates}
           />
         }
         right={<PreviewPane businessId={business.id} />}

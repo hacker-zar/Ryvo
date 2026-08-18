@@ -158,7 +158,7 @@ export default function TemplatePanel({
             onClick={() => templateId && handleDuplicate(templateId)}
             className={buttonSecondary}
           >
-            {duplicatingId === templateId ? "Duplicando..." : "Duplicar plantilla"}
+            {templateId && duplicatingId === templateId ? "Duplicando..." : "Duplicar plantilla"}
           </button>
         </div>
       ) : null}

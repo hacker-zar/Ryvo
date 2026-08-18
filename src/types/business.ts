@@ -17,7 +17,8 @@ export type SectionId =
   | "gallery"
   | "about"
   | "reviews"
-  | "contact";
+  | "contact"
+  | "products";
 
 export interface SectionConfig {
   id: SectionId;
@@ -145,6 +146,23 @@ export interface Service {
   active: boolean;
 }
 
+// Catálogo de productos — capa de contenido mínima (foto + nombre +
+// precio + descripción opcional), deliberadamente desacoplada de
+// `bookings`/`services`: sin carrito, checkout ni stock todavía, pero
+// `price` ya es numérico (no texto libre) para que un futuro sistema de
+// pagos se enganche sin rehacer el modelo. Ver Products.tsx y
+// products-manager.tsx.
+export interface Product {
+  id: string;
+  business_id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type BookingStatus =
   | "pending"
   | "confirmed"
@@ -249,6 +267,7 @@ export interface BusinessProfile {
   reviews: Review[];
   locations: Location[];
   professionals: ProfessionalWithServices[];
+  products: Product[];
 }
 
 // === CRM de clientes ===

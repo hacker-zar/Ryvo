@@ -6,6 +6,7 @@ import { SectionConfig, SectionId } from "@/types/business";
 // datos corruptos/incompletos) se ve exactamente igual que siempre.
 export const DEFAULT_SECTION_ORDER: SectionConfig[] = [
   { id: "services", enabled: true },
+  { id: "products", enabled: true },
   { id: "professionals", enabled: true },
   { id: "gallery", enabled: true },
   { id: "about", enabled: true },

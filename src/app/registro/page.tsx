@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin/session";
+import { listOfficialTemplates } from "@/lib/data/business-repository";
 import RegistrationWizard from "./registration-wizard";
 
 /**
@@ -24,9 +25,11 @@ export default async function RegistroPage() {
     redirect("/admin");
   }
 
+  const officialTemplates = await listOfficialTemplates();
+
   return (
     <main className="min-h-screen bg-graphite flex items-center justify-center px-4 py-12">
-      <RegistrationWizard />
+      <RegistrationWizard officialTemplates={officialTemplates} />
     </main>
   );
 }

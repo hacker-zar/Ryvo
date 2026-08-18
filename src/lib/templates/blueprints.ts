@@ -1,18 +1,24 @@
 import { SectionId, TemplateLayoutId } from "@/types/business";
 
 // "Blueprint" = cómo compone cada plantilla las secciones exclusivas
-// (Marquee/Statement/BeforeAfter/Social) alrededor de las 6 secciones
-// reordenables de siempre (services/professionals/gallery/about/reviews/
-// contact), sin tocar en absoluto section_order/sanitizeSectionOrder/
-// SectionsManager — esas 6 siguen siendo 100% reordenables/activables
-// por el negocio exactamente como hoy, dentro de cada bloque "core" que
-// el blueprint le asigne.
+// (Marquee/Statement/BeforeAfter/Social) alrededor de las secciones
+// reordenables de siempre (services/products/professionals/gallery/
+// about/reviews/contact), sin tocar en absoluto section_order/
+// sanitizeSectionOrder/SectionsManager — esas siguen siendo 100%
+// reordenables/activables por el negocio exactamente como hoy, dentro de
+// cada bloque "core" que el blueprint le asigne.
 //
 // slot {type:"core"} sin `ids` = todas las secciones reordenables
 // habilitadas, en el orden que tenga section_order. Con `ids`, solo esas
 // (respetando su orden relativo dentro de section_order) — usado cuando
 // una plantilla intercala una sección exclusiva EN MEDIO del bloque
 // central (ej. Editorial pide Antes/Después entre Equipo y Testimonios).
+//
+// ⚠️ Trampa a evitar: un slot "core" CON `ids` es una lista cerrada — un
+// SectionId nuevo (como "products" al sumarse el catálogo) no aparece
+// solo ahí, hay que agregarlo a mano a cada `ids` que corresponda (ver
+// editorial/bold abajo). Los slots SIN `ids` (atelier/studio/el de noir)
+// no tienen este problema: incluyen cualquier sección nueva automático.
 export type BlueprintSlot =
   | { type: "core"; ids?: SectionId[] }
   | { type: "marquee" }
@@ -47,7 +53,7 @@ export const LAYOUT_BLUEPRINTS: Record<TemplateLayoutId, LayoutBlueprint> = {
   editorial: {
     slots: [
       { type: "statement" },
-      { type: "core", ids: ["services", "gallery", "professionals"] },
+      { type: "core", ids: ["services", "products", "gallery", "professionals"] },
       { type: "beforeafter" },
       { type: "core", ids: ["reviews", "contact"] },
     ],
@@ -56,7 +62,7 @@ export const LAYOUT_BLUEPRINTS: Record<TemplateLayoutId, LayoutBlueprint> = {
   },
   bold: {
     slots: [
-      { type: "core", ids: ["services"] },
+      { type: "core", ids: ["services", "products"] },
       { type: "marquee" },
       { type: "core", ids: ["professionals", "gallery", "reviews"] },
       { type: "social" },

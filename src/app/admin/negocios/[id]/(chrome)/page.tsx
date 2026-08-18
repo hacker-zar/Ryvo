@@ -3,7 +3,10 @@ import Link from "next/link";
 import {
   getBusinessById,
   listBookingsByBusiness,
+  listBusinessTemplates,
   listLocationsByBusiness,
+  listOfficialTemplates,
+  listProductsByBusiness,
   listProfessionalsByBusiness,
   listServicesByBusiness,
 } from "@/lib/data/business-repository";
@@ -26,11 +29,22 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
   // más lenta, no por la suma. getBusinessById está cacheado por request
   // (ver business-repository.ts), así que aunque el layout ya lo haya
   // pedido, esta llamada no dispara una segunda consulta real.
-  const [business, services, locations, professionals] = await Promise.all([
+  const [
+    business,
+    services,
+    locations,
+    professionals,
+    products,
+    officialTemplates,
+    businessTemplates,
+  ] = await Promise.all([
     getBusinessById(id),
     listServicesByBusiness(id),
     listLocationsByBusiness(id),
     listProfessionalsByBusiness(id),
+    listProductsByBusiness(id),
+    listOfficialTemplates(),
+    listBusinessTemplates(id),
   ]);
   if (!business) notFound();
 
@@ -106,6 +120,9 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
           services={services}
           professionals={professionals}
           locations={locations}
+          products={products}
+          officialTemplates={officialTemplates}
+          businessTemplates={businessTemplates}
         />
       </div>
     </>

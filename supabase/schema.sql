@@ -311,3 +311,52 @@ alter table bookings add constraint bookings_no_overlap
 
 -- Subsumido íntegramente por el constraint de arriba.
 drop index if exists bookings_no_duplicate_slot;
+
+-- === Sistema de plantillas (aplicado directo contra Supabase vía
+-- apply_migration; documentación posterior, no fuente de verdad — las 5
+-- filas oficiales sembradas en `templates` ya están en producción y no
+-- se repiten acá, ver Template/TemplateLayoutId en types/business.ts y
+-- src/lib/palette-presets.ts / src/lib/templates/blueprints.ts). ===
+create table if not exists templates (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid references businesses(id) on delete cascade,
+  slug text unique,
+  name text not null,
+  description text not null default '',
+  is_official boolean not null default false,
+  layout text not null check (layout in ('atelier','noir','studio','editorial','bold')),
+  palette_id text not null,
+  button_style text not null default 'recto' check (button_style in ('redondeado','suave','recto')),
+  animation_preset text not null default 'sutil' check (animation_preset in ('ninguna','sutil','dinamica')),
+  section_order jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists templates_business_id_idx on templates(business_id);
+alter table templates enable row level security;
+create policy "public read official templates" on templates for select using (is_official = true);
+
+alter table businesses add column if not exists template_id uuid references templates(id) on delete set null;
+alter table businesses add column if not exists template_layout text;
+alter table businesses add column if not exists palette_id text;
+
+-- === Catálogo de productos (aplicado directo contra Supabase vía
+-- apply_migration; documentación posterior, no fuente de verdad). Capa
+-- de contenido mínima — foto + nombre + precio + descripción opcional,
+-- sin stock/variantes/carrito todavía (ver Product en
+-- types/business.ts). Se integra con el sistema de secciones ya
+-- existente (SectionId incluye "products") en vez de un mecanismo de
+-- activación propio. ===
+create table if not exists products (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  name text not null,
+  description text not null default '',
+  price numeric(10,2) not null default 0,
+  image text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists products_business_id_idx on products(business_id);
+alter table products enable row level security;
+create policy "public read products" on products for select using (true);

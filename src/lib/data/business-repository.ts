@@ -15,6 +15,7 @@ import {
   ClientProfile,
   Location,
   Opportunity,
+  Product,
   Professional,
   ProfessionalWithServices,
   Service,
@@ -25,6 +26,7 @@ import {
   demoBusiness,
   demoClients,
   demoLocations,
+  demoProducts,
   demoProfessionalServiceIds,
   demoProfessionals,
   demoReviews,
@@ -72,6 +74,7 @@ export async function getBusinessProfile(
       { data: reviews },
       { data: locations },
       { data: professionals },
+      { data: products },
     ] = await Promise.all([
       supabase
         .from("services")
@@ -99,6 +102,14 @@ export async function getBusinessProfile(
         .eq("active", true)
         .order("display_order", { ascending: true })
         .order("created_at", { ascending: true }),
+      // Sin filtro de estado — a diferencia de servicios/profesionales,
+      // el catálogo no tiene un campo "active" (fuera de alcance del MVP,
+      // ver Product en types/business.ts).
+      supabase
+        .from("products")
+        .select("*")
+        .eq("business_id", business.id)
+        .order("created_at", { ascending: true }),
     ]);
 
     return {
@@ -113,6 +124,7 @@ export async function getBusinessProfile(
           ? locations
           : [virtualLocationFromBusiness(business)],
       professionals: mapProfessionalsWithServices(professionals ?? []),
+      products: products ?? [],
     };
   }
 
@@ -127,6 +139,7 @@ export async function getBusinessProfile(
         ...p,
         service_ids: demoProfessionalServiceIds[p.id] ?? [],
       })),
+      products: demoProducts,
     };
   }
 
@@ -644,6 +657,82 @@ export async function deleteService(
     };
   }
   const { error } = await supabaseAdmin.from("services").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------
+// Catálogo de productos — gestionado desde /admin, mismo criterio que
+// Servicios (RLS de solo lectura pública, toda escritura vía
+// supabaseAdmin). Usado tanto por el panel del editor (lista completa,
+// sin filtro) como, indirectamente, por getBusinessProfile de arriba
+// (que trae los mismos datos pero como parte de una sola consulta
+// paralela — ver comentario ahí).
+// ---------------------------------------------------------------------
+
+export async function listProductsByBusiness(
+  businessId: string
+): Promise<Product[]> {
+  if (isSupabaseConfigured && supabase) {
+    const { data } = await supabase
+      .from("products")
+      .select("*")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: true });
+    return data ?? [];
+  }
+  return businessId === demoBusiness.id ? demoProducts : [];
+}
+
+export type ProductInput = Omit<Product, "id" | "created_at" | "updated_at">;
+
+export async function createProduct(
+  input: ProductInput
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder crear productos.",
+    };
+  }
+  const { error } = await supabaseAdmin.from("products").insert(input);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function updateProduct(
+  id: string,
+  input: Partial<ProductInput>
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder editar productos.",
+    };
+  }
+  // No hay trigger de `updated_at` en este esquema (ver convención del
+  // resto de las tablas) — se setea acá a mano, en cada escritura real.
+  const { error } = await supabaseAdmin
+    .from("products")
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function deleteProduct(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder borrar productos.",
+    };
+  }
+  const { error } = await supabaseAdmin.from("products").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }

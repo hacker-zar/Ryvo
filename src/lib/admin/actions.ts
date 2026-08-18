@@ -7,26 +7,31 @@ import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 import {
   BusinessInput,
   LocationInput,
+  ProductInput,
   ProfessionalInput,
   ServiceInput,
   TemplateInput,
   countBusinessesUsingTemplate,
   createBusiness,
   createLocation,
+  createProduct,
   createProfessional,
   createService,
   createTemplate,
   deleteLocation,
+  deleteProduct,
   deleteProfessional,
   deleteService,
   deleteTemplate,
   getBusinessById,
+  getOfficialTemplateById,
   getTemplateById,
   reorderProfessional,
   updateBookingStatus,
   updateBusiness,
   updateClientNotes,
   updateLocation,
+  updateProduct,
   updateProfessional,
   updateService,
 } from "@/lib/data/business-repository";
@@ -60,6 +65,13 @@ export async function adminCreateBusiness(formData: FormData) {
   const username = String(formData.get("username") || "").trim();
   const password = String(formData.get("password") || "");
 
+  // Plantilla elegida en el formulario (sección "Plantilla", vía
+  // TemplatePicker) — mismo criterio que registerBusiness: solo
+  // oficiales resuelven acá (el negocio todavía no existe, así que no
+  // puede tener "Mis plantillas" propias todavía), "" cae en blanco.
+  const templateId = String(formData.get("template_id") || "").trim();
+  const template = templateId ? await getOfficialTemplateById(templateId) : null;
+
   const input: BusinessInput = {
     name,
     slug: slugRaw ? slugify(slugRaw) : slugify(name),
@@ -76,6 +88,16 @@ export async function adminCreateBusiness(formData: FormData) {
     hero_image: String(formData.get("hero_image") || ""),
     gallery: [],
     opening_hours: [],
+    ...(template
+      ? {
+          template_id: template.id,
+          template_layout: template.layout,
+          palette_id: template.palette_id,
+          button_style: template.button_style,
+          animation_preset: template.animation_preset,
+          section_order: sanitizeSectionOrder(template.section_order),
+        }
+      : {}),
   };
 
   if (!input.name || !input.slug) {
@@ -235,6 +257,56 @@ export async function adminDeleteService(
 ) {
   await requireAdminFor(businessId);
   const result = await deleteService(serviceId);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminCreateProduct(
+  businessId: string,
+  formData: FormData
+) {
+  await requireAdminFor(businessId);
+
+  const input: ProductInput = {
+    business_id: businessId,
+    name: String(formData.get("name") || "").trim(),
+    description: String(formData.get("description") || ""),
+    price: Number(formData.get("price") || 0),
+    image: String(formData.get("image") || ""),
+  };
+
+  if (!input.name) return { success: false, error: "El nombre es obligatorio." };
+
+  const result = await createProduct(input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminUpdateProduct(
+  businessId: string,
+  productId: string,
+  formData: FormData
+) {
+  await requireAdminFor(businessId);
+
+  const input: Partial<ProductInput> = {
+    name: String(formData.get("name") || "").trim(),
+    description: String(formData.get("description") || ""),
+    price: Number(formData.get("price") || 0),
+    image: String(formData.get("image") || ""),
+  };
+
+  const result = await updateProduct(productId, input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminDeleteProduct(
+  businessId: string,
+  productId: string
+) {
+  await requireAdminFor(businessId);
+  const result = await deleteProduct(productId);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
 }

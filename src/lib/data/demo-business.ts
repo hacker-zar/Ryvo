@@ -4,6 +4,7 @@ import {
   Business,
   Client,
   Location,
+  Product,
   Professional,
   Review,
   Service,
@@ -132,6 +133,41 @@ export const demoServices: Service[] = [
     price: 9000,
     duration: 50,
     active: true,
+  },
+];
+
+// Sin foto (igual que los profesionales demo) para no depender de
+// assets nuevos — Products.tsx ya maneja bien un producto sin imagen.
+export const demoProducts: Product[] = [
+  {
+    id: "pr1",
+    business_id: "demo-business-id",
+    name: "Pomada Matte",
+    description: "Pomada de fijación media con acabado mate.",
+    price: 8500,
+    image: "",
+    created_at: "2026-01-10T00:00:00.000Z",
+    updated_at: "2026-01-10T00:00:00.000Z",
+  },
+  {
+    id: "pr2",
+    business_id: "demo-business-id",
+    name: "Shampoo Profesional",
+    description: "Limpieza suave para uso frecuente, todo tipo de cabello.",
+    price: 12000,
+    image: "",
+    created_at: "2026-01-12T00:00:00.000Z",
+    updated_at: "2026-01-12T00:00:00.000Z",
+  },
+  {
+    id: "pr3",
+    business_id: "demo-business-id",
+    name: "Aceite para Barba",
+    description: "",
+    price: 9500,
+    image: "",
+    created_at: "2026-01-15T00:00:00.000Z",
+    updated_at: "2026-01-15T00:00:00.000Z",
   },
 ];
 

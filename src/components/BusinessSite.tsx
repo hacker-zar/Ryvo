@@ -11,6 +11,7 @@ import BookingModal from "@/components/booking/BookingModalLazy";
 import BookingQueryParamTrigger from "@/components/booking/BookingQueryParamTrigger";
 import MobileBookingBar from "@/components/booking/MobileBookingBar";
 import Gallery from "@/components/Gallery";
+import Products from "@/components/Products";
 import Professionals from "@/components/Professionals";
 import About from "@/components/About";
 import Reviews from "@/components/Reviews";
@@ -42,7 +43,7 @@ interface BusinessSiteProps {
  * (sanitizeSectionOrder/SectionsManager) no cambia en absoluto.
  */
 export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
-  const { business, services, reviews, locations, professionals } = profile;
+  const { business, services, reviews, locations, professionals, products } = profile;
   const layout = business.template_layout ?? undefined;
 
   // URL a la que apunta el QR: la página principal con un parámetro que
@@ -73,6 +74,9 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         primaryColor={business.primary_color}
         layout={layout}
       />
+    ),
+    products: () => (
+      <Products products={products} primaryColor={business.primary_color} layout={layout} />
     ),
     about: () => (
       <About
