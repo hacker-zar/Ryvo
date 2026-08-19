@@ -2,7 +2,8 @@
 
 interface UnsavedChangesDialogProps {
   open: boolean;
-  /** Si el panel activo no registró un `setSaveHandler`, no ofrecemos
+  /** Si ningún formulario registrado (ver EditorSelectionContext.
+   *  setFormSaveHandler) está sucio con un handler activo, no ofrecemos
    *  "Guardar y continuar" — no hay nada que ejecutar y quedaría un botón
    *  que no responde. Solo pasa en pantallas que aún no adoptaron el
    *  patrón dirty; ahí igual se puede descartar o cancelar. */

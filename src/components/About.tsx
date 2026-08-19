@@ -5,20 +5,23 @@ import Reveal from "@/components/Reveal";
 interface AboutProps {
   business: Pick<
     Business,
-    "name" | "description" | "city" | "gallery" | "primary_color"
+    "name" | "description" | "city" | "gallery" | "about_image" | "primary_color"
   >;
   layout?: TemplateLayoutId;
 }
 
 /**
- * Sección "Sobre nosotros": usa exclusivamente datos que ya existen
- * (description, city, y la primera foto de gallery como imagen editorial).
- * No agrega ningún campo ni tabla nueva al modelo de datos.
+ * Sección "Sobre nosotros": usa `about_image` (elegida explícitamente
+ * por el negocio, ver AboutImagePicker en el editor) si está seteada, y
+ * si no cae en `gallery[0]` como fallback — ese fallback es lo único que
+ * mantiene el comportamiento histórico para negocios que nunca eligieron
+ * una imagen propia. Elegir explícitamente desacopla esta sección del
+ * orden de la galería: reordenar `gallery` ya no puede cambiar esta foto.
  */
 export default function About({ business, layout }: AboutProps) {
   if (!business.description) return null;
 
-  const image = business.gallery?.[0];
+  const image = business.about_image || business.gallery?.[0];
   const isAtelier = layout === "atelier";
 
   return (

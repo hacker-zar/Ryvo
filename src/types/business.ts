@@ -65,6 +65,12 @@ export interface Business {
   city?: string;
   hero_image?: string;
   gallery?: string[];
+  // Imagen de la sección "Quiénes somos", elegida explícitamente por el
+  // negocio — independiente del orden de `gallery`. Vacío/no seteado =
+  // usa `gallery[0]` como fallback (comportamiento histórico, ver
+  // About.tsx), así que cambiar el orden de la galería nunca mueve esta
+  // imagen una vez elegida.
+  about_image?: string;
   opening_hours?: OpeningHours[];
   // Apariencia: colores adicionales de fondo/texto, y presets controlados
   // (no libertad total) de tipografía y estilo de botones.

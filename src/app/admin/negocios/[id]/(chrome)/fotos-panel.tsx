@@ -1,20 +1,27 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HeroVideoPosition } from "@/types/business";
 import { adminUpdateBusiness } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 import { useAsyncStatus } from "@/lib/useAsyncStatus";
-import SaveStatus from "@/components/ui/SaveStatus";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import GalleryUploadField from "@/components/admin/GalleryUploadField";
+import AboutImagePicker from "@/components/admin/AboutImagePicker";
 import VideoUploadField from "@/components/admin/VideoUploadField";
+
+// Clave estable de este panel en el registro de guardado global (ver
+// EditorSelectionContext.setFormDirty/setFormSaveHandler) — comparte la
+// categoría "Apariencia" con AppearanceForm, que se registra bajo su
+// propia clave distinta, así ninguno de los dos pisa al otro.
+const FORM_KEY = "fotos";
 
 interface FotosPanelProps {
   businessId: string;
   logo: string;
   heroImage: string;
   gallery: string[];
+  aboutImage: string;
   favicon: string;
   heroVideo: string;
   heroVideoEnabled: boolean;
@@ -32,14 +39,20 @@ export default function FotosPanel({
   logo,
   heroImage,
   gallery,
+  aboutImage,
   favicon,
   heroVideo,
   heroVideoEnabled,
   heroVideoPosition,
 }: FotosPanelProps) {
-  const { refreshPreview, setDirty, setSaveHandler } = useEditorSelection();
-  const { status, error, run, isPending, dirty, markDirty } = useAsyncStatus();
+  const { refreshPreview, setFormDirty, setFormSaveHandler } = useEditorSelection();
+  const { run, dirty, markDirty } = useAsyncStatus();
   const formRef = useRef<HTMLFormElement>(null);
+  // GalleryUploadField maneja su propia lista internamente (se guarda al
+  // instante, sin pasar por el form de arriba) — este estado la sigue en
+  // vivo para que AboutImagePicker, más abajo, siempre pueda elegir entre
+  // las fotos actuales, no las que había al abrir el panel.
+  const [galleryImages, setGalleryImages] = useState(gallery);
 
   async function save(formData: FormData) {
     const result = await run(() => adminUpdateBusiness(businessId, formData));
@@ -48,15 +61,15 @@ export default function FotosPanel({
   }
 
   useEffect(() => {
-    setDirty(dirty);
-  }, [dirty, setDirty]);
+    setFormDirty(FORM_KEY, dirty);
+  }, [dirty, setFormDirty]);
 
   useEffect(() => {
-    setSaveHandler(async () => {
+    setFormSaveHandler(FORM_KEY, async () => {
       if (!formRef.current) return false;
       return save(new FormData(formRef.current));
     });
-    return () => setSaveHandler(null);
+    return () => setFormSaveHandler(FORM_KEY, null);
   });
 
   return (
@@ -149,15 +162,6 @@ export default function FotosPanel({
           </p>
         </div>
 
-        <SaveStatus status={status} error={error} />
-
-        <button
-          type="submit"
-          disabled={isPending}
-          className="section-eyebrow rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity disabled:opacity-50 w-fit"
-        >
-          {isPending ? "Guardando..." : "Guardar fotos"}
-        </button>
       </form>
 
       <div>
@@ -166,8 +170,16 @@ export default function FotosPanel({
           businessId={businessId}
           initialImages={gallery}
           onSaved={refreshPreview}
+          onImagesChange={setGalleryImages}
         />
       </div>
+
+      <AboutImagePicker
+        businessId={businessId}
+        gallery={galleryImages}
+        initialValue={aboutImage}
+        onSaved={refreshPreview}
+      />
     </div>
   );
 }

@@ -85,6 +85,7 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
           description: business.description,
           city: business.city,
           gallery: business.gallery,
+          about_image: business.about_image,
           primary_color: business.primary_color,
         }}
         layout={layout}

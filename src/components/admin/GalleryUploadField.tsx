@@ -11,12 +11,19 @@ interface GalleryUploadFieldProps {
   /** Se llama después de cada guardado exitoso (agregar o quitar una
    *  foto) — el editor lo usa para refrescar la preview en vivo. */
   onSaved?: () => void;
+  /** Se llama en cada cambio local de la lista (agregar/quitar), con la
+   *  lista completa — permite que un componente hermano (AboutImagePicker)
+   *  siga la galería en vivo sin esperar a un refresh de página, ya que
+   *  este componente maneja su propio estado en vez de depender del prop
+   *  `initialImages` del padre después del primer render. */
+  onImagesChange?: (images: string[]) => void;
 }
 
 export default function GalleryUploadField({
   businessId,
   initialImages,
   onSaved,
+  onImagesChange,
 }: GalleryUploadFieldProps) {
   const [images, setImages] = useState(initialImages);
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">(
@@ -58,6 +65,7 @@ export default function GalleryUploadField({
     if (uploadedUrls.length > 0) {
       const next = [...images, ...uploadedUrls];
       setImages(next);
+      onImagesChange?.(next);
       await persist(next);
     }
 
@@ -75,6 +83,7 @@ export default function GalleryUploadField({
   async function handleRemove(url: string) {
     const next = images.filter((img) => img !== url);
     setImages(next);
+    onImagesChange?.(next);
     await persist(next);
   }
 

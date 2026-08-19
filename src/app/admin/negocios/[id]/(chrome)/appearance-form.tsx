@@ -11,7 +11,12 @@ import {
 } from "@/lib/appearance-presets";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 import { useAsyncStatus } from "@/lib/useAsyncStatus";
-import SaveStatus from "@/components/ui/SaveStatus";
+
+// Clave estable de este panel en el registro de guardado global (ver
+// EditorSelectionContext.setFormDirty/setFormSaveHandler) — comparte la
+// categoría "Apariencia" con FotosPanel, que se registra bajo su propia
+// clave distinta, así ninguno de los dos pisa al otro.
+const FORM_KEY = "apariencia";
 
 interface AppearanceFormProps {
   business: Pick<
@@ -54,7 +59,7 @@ const colorInputClasses =
   "h-10 w-full rounded-sm border border-ink-line bg-ink-elevated";
 
 export default function AppearanceForm({ business }: AppearanceFormProps) {
-  const { refreshPreview, setDirty, setSaveHandler } = useEditorSelection();
+  const { refreshPreview, setFormDirty, setFormSaveHandler } = useEditorSelection();
   const formRef = useRef<HTMLFormElement>(null);
   const [primaryColor, setPrimaryColor] = useState(business.primary_color);
   const [secondaryColor, setSecondaryColor] = useState(
@@ -72,7 +77,7 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   const [animationPreset, setAnimationPreset] = useState<AnimationPreset>(
     business.animation_preset || "sutil"
   );
-  const { status, error, run, isPending, dirty, markDirty } = useAsyncStatus();
+  const { run, dirty, markDirty } = useAsyncStatus();
 
   const backgroundPreset = BACKGROUND_VARIANTS[backgroundVariant];
 
@@ -90,15 +95,15 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   }
 
   useEffect(() => {
-    setDirty(dirty);
-  }, [dirty, setDirty]);
+    setFormDirty(FORM_KEY, dirty);
+  }, [dirty, setFormDirty]);
 
   useEffect(() => {
-    setSaveHandler(async () => {
+    setFormSaveHandler(FORM_KEY, async () => {
       if (!formRef.current) return false;
       return save(new FormData(formRef.current));
     });
-    return () => setSaveHandler(null);
+    return () => setFormSaveHandler(FORM_KEY, null);
   });
 
   return (
@@ -275,21 +280,6 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
         </div>
       </div>
 
-      <SaveStatus
-        status={status}
-        error={error}
-        savedLabel="Guardado. Los cambios ya se ven en el sitio público."
-        successColor={primaryColor}
-      />
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="section-eyebrow rounded-sm text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity disabled:opacity-50 w-fit"
-        style={{ backgroundColor: primaryColor }}
-      >
-        {isPending ? "Guardando..." : "Guardar apariencia"}
-      </button>
     </form>
   );
 }

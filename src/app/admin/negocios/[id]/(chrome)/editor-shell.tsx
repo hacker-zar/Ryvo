@@ -3,6 +3,7 @@
 import { Business, Location, Product, ProfessionalWithServices, Service, Template } from "@/types/business";
 import { EditorSelectionProvider } from "@/lib/admin/editor-selection-context";
 import CategoryPanel from "./category-panel";
+import GlobalSaveBar from "./global-save-bar";
 import PreviewPane from "./preview-pane";
 import TwoColumnLayout from "./two-column-layout";
 
@@ -31,6 +32,7 @@ export default function EditorShell({
 }: EditorShellProps) {
   return (
     <EditorSelectionProvider>
+      <GlobalSaveBar />
       <TwoColumnLayout
         left={
           <CategoryPanel

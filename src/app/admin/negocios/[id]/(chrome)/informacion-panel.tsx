@@ -6,7 +6,11 @@ import { adminUpdateBusiness } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 import { useAsyncStatus } from "@/lib/useAsyncStatus";
 import { adminInputClasses } from "@/lib/ui-classes";
-import SaveStatus from "@/components/ui/SaveStatus";
+
+// Clave estable de este panel en el registro de guardado global (ver
+// EditorSelectionContext.setFormDirty/setFormSaveHandler) — no tiene
+// botón "Guardar" propio, se guarda desde GlobalSaveBar/Ctrl+S.
+const FORM_KEY = "pagina";
 
 interface InformacionPanelProps {
   business: Pick<
@@ -37,9 +41,9 @@ const FIELD_IDS: Record<string, string> = {
 };
 
 export default function InformacionPanel({ business }: InformacionPanelProps) {
-  const { target, refreshPreview, setDirty, setSaveHandler } =
+  const { target, refreshPreview, setFormDirty, setFormSaveHandler } =
     useEditorSelection();
-  const { status, error, run, isPending, dirty, markDirty } = useAsyncStatus();
+  const { run, dirty, markDirty } = useAsyncStatus();
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -59,23 +63,23 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
     return result.success;
   }
 
-  // Reporta el `dirty` de este panel al contexto del editor, que es quien
-  // decide si hace falta confirmar antes de cambiar de categoría — el
-  // panel no sabe (ni necesita saber) de esa lógica.
+  // Reporta el `dirty` de este panel al registro global de guardado (ver
+  // GlobalSaveBar) bajo su propia clave — el panel no sabe (ni necesita
+  // saber) que existen otros formularios sucios al mismo tiempo.
   useEffect(() => {
-    setDirty(dirty);
-  }, [dirty, setDirty]);
+    setFormDirty(FORM_KEY, dirty);
+  }, [dirty, setFormDirty]);
 
   // Sin array de deps a propósito: registra de nuevo en cada render para
   // que el handler siempre cierre sobre el `save`/`formRef` actuales — el
-  // diálogo de "cambios sin guardar" puede dispararse en cualquier
-  // momento, no solo justo después de un cambio.
+  // guardado global (botón/Ctrl+S/diálogo de cambios sin guardar) puede
+  // dispararse en cualquier momento, no solo justo después de un cambio.
   useEffect(() => {
-    setSaveHandler(async () => {
+    setFormSaveHandler(FORM_KEY, async () => {
       if (!formRef.current) return false;
       return save(new FormData(formRef.current));
     });
-    return () => setSaveHandler(null);
+    return () => setFormSaveHandler(FORM_KEY, null);
   });
 
   return (
@@ -192,15 +196,6 @@ export default function InformacionPanel({ business }: InformacionPanelProps) {
         />
       </div>
 
-      <SaveStatus status={status} error={error} />
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="section-eyebrow mt-2 rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity disabled:opacity-50 w-fit"
-      >
-        {isPending ? "Guardando..." : "Guardar cambios"}
-      </button>
     </form>
   );
 }

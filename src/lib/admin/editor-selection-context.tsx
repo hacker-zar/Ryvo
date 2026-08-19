@@ -36,6 +36,16 @@ export interface EditorTarget {
   itemId?: string;
 }
 
+// Nombre distinto de AsyncStatus (useAsyncStatus.ts) y del componente
+// SaveStatus (components/ui/SaveStatus.tsx) a propósito — GlobalSaveBar
+// importa los tres en el mismo archivo.
+export type GlobalSaveStatus = "idle" | "saving" | "success" | "error";
+
+interface RegisteredForm {
+  dirty: boolean;
+  save: (() => Promise<boolean>) | null;
+}
+
 interface EditorSelectionContextValue {
   target: EditorTarget | null;
   select: (target: EditorTarget) => void;
@@ -45,16 +55,33 @@ interface EditorSelectionContextValue {
    *  cada panel necesite saber que la preview existe. */
   previewVersion: number;
   refreshPreview: () => void;
-  /** El panel activo reporta acá su propio `dirty` de useAsyncStatus — no
-   *  es un segundo estado paralelo, es el mismo que ya usa el panel,
-   *  levantado un nivel para que la navegación (cambiar de categoría,
-   *  cerrar el editor) pueda protegerlo. */
+  /** true si CUALQUIER formulario registrado (Página/Fotos/Apariencia)
+   *  tiene cambios sin guardar — es la unión de todos, no de uno solo:
+   *  varias secciones pueden estar sucias al mismo tiempo (ver
+   *  setFormDirty). */
   isDirty: boolean;
-  setDirty: (dirty: boolean) => void;
-  /** El panel activo registra acá cómo guardarse a sí mismo, para que el
-   *  diálogo de "cambios sin guardar" pueda ofrecer "Guardar y continuar"
-   *  sin conocer los detalles de cada formulario. Devuelve si guardó bien. */
-  setSaveHandler: (handler: (() => Promise<boolean>) | null) => void;
+  /** Cada formulario de configuración (Página/Fotos/Apariencia) reporta
+   *  acá su propio `dirty` de useAsyncStatus, bajo una clave estable y
+   *  propia (ej. "pagina", "fotos", "apariencia") — NO uno global
+   *  compartido, para que dos formularios abiertos a la vez (Fotos +
+   *  Apariencia, ambos dentro de "Apariencia") no se pisen entre sí. */
+  setFormDirty: (key: string, dirty: boolean) => void;
+  /** Cada formulario registra acá cómo guardarse a sí mismo, bajo la
+   *  misma clave que usa en setFormDirty. `saveChanges()` (más abajo) es
+   *  quien de verdad los invoca — ni el botón global ni Ctrl+S llaman
+   *  directo a un `save` individual. */
+  setFormSaveHandler: (key: string, save: (() => Promise<boolean>) | null) => void;
+  /** Estado del guardado global — lo consume GlobalSaveBar. */
+  saveStatus: GlobalSaveStatus;
+  saveError: string;
+  /** LA función centralizada: guarda todos los formularios sucios (en
+   *  paralelo, uno por sección con cambios pendientes) y devuelve si
+   *  todos salieron bien. El botón "Guardar cambios", el atajo Ctrl+S/
+   *  Cmd+S y "Guardar y continuar" del diálogo de cambios sin guardar
+   *  llaman exactamente a esta misma función — no hay una segunda
+   *  implementación de guardado en ningún lado. No-op (no dispara
+   *  ninguna request) si no hay nada sucio. */
+  saveChanges: () => Promise<boolean>;
   /** Primitiva genérica: ejecuta `apply` directo si no hay cambios sin
    *  guardar; si los hay, abre el diálogo de confirmación y `apply` queda
    *  pendiente hasta que el usuario decida. `select`/`clear` ya la usan
@@ -72,12 +99,15 @@ const EditorSelectionContext =
  * conecta vía postMessage — ver PreviewPane/PreviewBridge). Mismo patrón
  * que BookingModalProvider (booking-modal-context.tsx).
  *
- * También centraliza el guardrail de "cambios sin guardar": guardarlo acá
- * (en vez de en cada panel) es lo que permite que CUALQUIER forma de
- * navegar — click en el menú de categorías, click dentro de la preview
- * (que dispara `select` vía postMessage), o los pasos del onboarding —
- * quede protegida por igual, sin que cada una tenga que acordarse de
- * preguntar.
+ * También centraliza el guardado de los formularios de configuración
+ * (Página/Fotos/Apariencia — ver GlobalSaveBar): cada uno se registra acá
+ * con una clave propia (`setFormDirty`/`setFormSaveHandler`) en vez de
+ * tener su propio botón "Guardar", y `saveChanges()` es la única función
+ * que de verdad dispara los guardados — la usan el botón global, Ctrl+S/
+ * Cmd+S y el diálogo de "cambios sin guardar" por igual. Las listas CRUD
+ * (Servicios/Profesionales/Productos/Locales) NO se registran acá — sus
+ * acciones (crear/editar/borrar un ítem) siguen siendo inmediatas, fuera
+ * del guardado global (decisión explícita, no un olvido).
  */
 export function EditorSelectionProvider({
   children,
@@ -89,30 +119,80 @@ export function EditorSelectionProvider({
   });
   const [previewVersion, setPreviewVersion] = useState(0);
 
+  const formsRef = useRef<Map<string, RegisteredForm>>(new Map());
   const [isDirty, setIsDirty] = useState(false);
   const isDirtyRef = useRef(false);
-  const saveHandlerRef = useRef<(() => Promise<boolean>) | null>(null);
-  // Espejo en estado de `saveHandlerRef.current !== null`, solo para poder
-  // decidir en el render si mostrar "Guardar y continuar" — leer un ref
-  // durante el render no es seguro (ver regla react-hooks/refs).
+  // Espejo en estado de "hay al menos un formulario sucio con save
+  // registrado", solo para poder decidir en el render si el diálogo
+  // ofrece "Guardar y continuar" — leer el ref durante el render no es
+  // seguro (ver regla react-hooks/refs).
   const [hasSaveHandler, setHasSaveHandler] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<GlobalSaveStatus>("idle");
+  const [saveError, setSaveError] = useState("");
   const [pendingApply, setPendingApply] = useState<(() => void) | null>(null);
   const [dialogStatus, setDialogStatus] = useState<"idle" | "saving" | "error">(
     "idle"
   );
 
-  const setDirty = useCallback((value: boolean) => {
-    isDirtyRef.current = value;
-    setIsDirty(value);
+  // Recalcula los dos agregados (isDirty/hasSaveHandler) a partir del
+  // registro completo — se llama después de cualquier cambio a
+  // formsRef, sea por dirty o por save handler.
+  const recomputeAggregates = useCallback(() => {
+    let anyDirty = false;
+    let anySaveable = false;
+    for (const entry of formsRef.current.values()) {
+      if (entry.dirty) {
+        anyDirty = true;
+        if (entry.save) anySaveable = true;
+      }
+    }
+    isDirtyRef.current = anyDirty;
+    setIsDirty(anyDirty);
+    setHasSaveHandler(anySaveable);
   }, []);
 
-  const setSaveHandler = useCallback(
-    (handler: (() => Promise<boolean>) | null) => {
-      saveHandlerRef.current = handler;
-      setHasSaveHandler(handler !== null);
+  const setFormDirty = useCallback(
+    (key: string, dirty: boolean) => {
+      const existing = formsRef.current.get(key) ?? { dirty: false, save: null };
+      formsRef.current.set(key, { ...existing, dirty });
+      recomputeAggregates();
     },
-    []
+    [recomputeAggregates]
   );
+
+  const setFormSaveHandler = useCallback(
+    (key: string, save: (() => Promise<boolean>) | null) => {
+      const existing = formsRef.current.get(key) ?? { dirty: false, save: null };
+      formsRef.current.set(key, { ...existing, save });
+      recomputeAggregates();
+    },
+    [recomputeAggregates]
+  );
+
+  const saveChanges = useCallback(async (): Promise<boolean> => {
+    const dirtyEntries = Array.from(formsRef.current.values()).filter(
+      (f) => f.dirty && f.save
+    );
+    if (dirtyEntries.length === 0) return true;
+
+    setSaveStatus("saving");
+    setSaveError("");
+    try {
+      const results = await Promise.all(dirtyEntries.map((f) => f.save!()));
+      const allOk = results.every(Boolean);
+      if (allOk) {
+        setSaveStatus("success");
+      } else {
+        setSaveStatus("error");
+        setSaveError("No se pudieron guardar algunos cambios. Reintentá.");
+      }
+      return allOk;
+    } catch {
+      setSaveStatus("error");
+      setSaveError("No se pudieron guardar algunos cambios. Reintentá.");
+      return false;
+    }
+  }, []);
 
   const guardNavigation = useCallback((apply: () => void) => {
     if (!isDirtyRef.current) {
@@ -148,26 +228,50 @@ export function EditorSelectionProvider({
       window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
+  // Ctrl+S (Windows/Linux) / Cmd+S (macOS) ejecuta EXACTAMENTE la misma
+  // función que el botón global (ver GlobalSaveBar) — nunca una segunda
+  // implementación de guardado. Siempre intercepta el atajo (incluso sin
+  // nada sucio) para que el navegador nunca llegue a abrir su propio
+  // diálogo de "Guardar página"; `saveChanges` en sí es un no-op si no
+  // hay cambios pendientes. Se excluye Shift/Alt para no pisar otros
+  // atajos del navegador que también usan la tecla S. Vive acá (no en
+  // GlobalSaveBar) para funcionar en cualquier pantalla que use este
+  // provider, incluido el onboarding paso a paso.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const isSaveShortcut =
+        (e.ctrlKey || e.metaKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        e.key.toLowerCase() === "s";
+      if (!isSaveShortcut) return;
+      e.preventDefault();
+      saveChanges();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [saveChanges]);
+
   async function handleSaveAndContinue() {
-    const save = saveHandlerRef.current;
-    if (!save) return;
     setDialogStatus("saving");
-    try {
-      const ok = await save();
-      if (ok) {
-        pendingApply?.();
-        setPendingApply(null);
-        setDialogStatus("idle");
-      } else {
-        setDialogStatus("error");
-      }
-    } catch {
+    const ok = await saveChanges();
+    if (ok) {
+      pendingApply?.();
+      setPendingApply(null);
+      setDialogStatus("idle");
+    } else {
       setDialogStatus("error");
     }
   }
 
   function handleDiscard() {
-    setDirty(false);
+    // Descarta el registro entero, no solo el flag global: si no,
+    // formularios individuales seguirían reportándose sucios la próxima
+    // vez que se recalculen los agregados.
+    for (const [key, entry] of formsRef.current) {
+      formsRef.current.set(key, { ...entry, dirty: false });
+    }
+    recomputeAggregates();
     pendingApply?.();
     setPendingApply(null);
     setDialogStatus("idle");
@@ -192,8 +296,11 @@ export function EditorSelectionProvider({
       previewVersion,
       refreshPreview,
       isDirty,
-      setDirty,
-      setSaveHandler,
+      setFormDirty,
+      setFormSaveHandler,
+      saveStatus,
+      saveError,
+      saveChanges,
       guardNavigation,
     }),
     [
@@ -203,8 +310,11 @@ export function EditorSelectionProvider({
       previewVersion,
       refreshPreview,
       isDirty,
-      setDirty,
-      setSaveHandler,
+      setFormDirty,
+      setFormSaveHandler,
+      saveStatus,
+      saveError,
+      saveChanges,
       guardNavigation,
     ]
   );

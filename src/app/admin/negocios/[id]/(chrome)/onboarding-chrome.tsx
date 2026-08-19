@@ -14,6 +14,7 @@ import ServicesManager from "./services-manager";
 import ProfessionalsManager from "./professionals-manager";
 import LocationsManager from "./locations-manager";
 import AppearanceForm from "./appearance-form";
+import GlobalSaveBar from "./global-save-bar";
 import PreviewPane from "./preview-pane";
 import TwoColumnLayout from "./two-column-layout";
 
@@ -116,6 +117,7 @@ function OnboardingSteps({
 
       {step < LAST_STEP ? (
         <>
+          <GlobalSaveBar />
           <TwoColumnLayout
             left={
               <div>
@@ -155,6 +157,7 @@ function OnboardingSteps({
                       logo={business.logo}
                       heroImage={business.hero_image ?? ""}
                       gallery={business.gallery ?? []}
+                      aboutImage={business.about_image ?? ""}
                       favicon={business.favicon ?? ""}
                       heroVideo={business.hero_video ?? ""}
                       heroVideoEnabled={business.hero_video_enabled ?? false}

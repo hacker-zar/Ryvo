@@ -158,6 +158,7 @@ const UPDATABLE_BUSINESS_FIELDS = [
   "email",
   "city",
   "hero_image",
+  "about_image",
   "favicon",
   "hero_video",
 ] as const;
