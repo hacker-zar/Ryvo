@@ -192,6 +192,14 @@ export default function ProfessionalsManager({
 
                 {services.length > 0 ? (
                   <fieldset className="grid gap-2">
+                    {/* Marca que este form SÍ incluye el checklist de
+                        servicios — permite a adminUpdateProfessional
+                        distinguir "no se tocaron las asignaciones" (este
+                        input ausente, ej. el form de "Mi perfil" del
+                        Editor rápido, que no muestra este bloque) de "se
+                        destildaron todas a propósito" (este input
+                        presente, service_ids vacío). */}
+                    <input type="hidden" name="service_ids_present" value="1" />
                     <legend className="text-xs text-bone-muted mb-1">
                       Servicios que realiza
                     </legend>

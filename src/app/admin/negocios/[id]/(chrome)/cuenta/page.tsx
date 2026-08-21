@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getBusinessById } from "@/lib/data/business-repository";
+import { getBusinessById, listProfessionalsByBusiness } from "@/lib/data/business-repository";
 import { listAccountsByBusiness } from "@/lib/data/accounts-repository";
 import { logoutAdmin } from "@/lib/admin/auth-actions";
 import AccountManager from "../account-manager";
@@ -19,9 +19,10 @@ interface PageProps {
 export default async function AccountPage({ params }: PageProps) {
   const { id } = await params;
 
-  const [business, accounts] = await Promise.all([
+  const [business, accounts, professionals] = await Promise.all([
     getBusinessById(id),
     listAccountsByBusiness(id),
+    listProfessionalsByBusiness(id),
   ]);
   if (!business) notFound();
 
@@ -45,12 +46,17 @@ export default async function AccountPage({ params }: PageProps) {
 
       <p className="section-eyebrow text-bone-muted">Acceso</p>
       <p className="text-xs text-bone-muted mt-2 max-w-md">
-        Con esta cuenta el dueño de {business.name} entra directo a este
-        panel — sin ver otros negocios.
+        Cuentas de acceso a {business.name} — el dueño entra directo al
+        editor completo; un profesional vinculado entra al Editor rápido,
+        limitado a su propio contenido.
       </p>
 
       <div className="mt-6">
-        <AccountManager businessId={business.id} accounts={accounts} />
+        <AccountManager
+          businessId={business.id}
+          accounts={accounts}
+          professionals={professionals}
+        />
       </div>
 
       <div className="mt-12 border-t border-ink-line pt-6">

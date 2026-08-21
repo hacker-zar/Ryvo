@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Account } from "@/types/business";
+import { Account, AccountRole, ProfessionalWithServices } from "@/types/business";
 import {
   adminChangeAccountPassword,
   adminCreateAccount,
@@ -14,33 +14,54 @@ import SaveStatus from "@/components/ui/SaveStatus";
 interface AccountManagerProps {
   businessId: string;
   accounts: Account[];
+  professionals: ProfessionalWithServices[];
 }
+
+// Nombre visible del rol — "worker" sigue siendo el valor interno
+// (AccountRole, DB), pero de cara al usuario siempre se muestra como
+// "Profesional". "admin" no tiene UI todavía (ver roles.ts) — no se
+// ofrece como opción al crear una cuenta.
+const ROLE_LABELS: Record<AccountRole, string> = {
+  owner: "Dueño",
+  admin: "Administrador",
+  worker: "Profesional",
+};
 
 /**
  * Reemplaza al viejo "Contraseña del panel" (una contraseña por negocio) —
- * ahora es una cuenta real (usuario + contraseña + estado). Hoy un negocio
- * tiene como máximo 1 cuenta en la práctica, pero el componente no asume
- * eso: si en algún momento hay más de una, las lista todas.
+ * ahora es una cuenta real (usuario + contraseña + rol + estado). Un
+ * negocio puede tener varias cuentas: una de dueño y, opcionalmente, una
+ * por cada profesional con acceso al Editor rápido.
  */
 export default function AccountManager({
   businessId,
   accounts,
+  professionals,
 }: AccountManagerProps) {
-  if (accounts.length === 0) {
-    return <CreateAccountForm businessId={businessId} />;
-  }
-
   return (
     <div className="grid gap-8">
       {accounts.map((account) => (
-        <ExistingAccount key={account.id} businessId={businessId} account={account} />
+        <ExistingAccount
+          key={account.id}
+          businessId={businessId}
+          account={account}
+          professionals={professionals}
+        />
       ))}
+      <CreateAccountForm businessId={businessId} professionals={professionals} />
     </div>
   );
 }
 
-function CreateAccountForm({ businessId }: { businessId: string }) {
+function CreateAccountForm({
+  businessId,
+  professionals,
+}: {
+  businessId: string;
+  professionals: ProfessionalWithServices[];
+}) {
   const { status, error, run, isPending } = useAsyncStatus();
+  const [role, setRole] = useState<AccountRole>("owner");
 
   async function handleSubmit(formData: FormData) {
     const result = await run(() => adminCreateAccount(businessId, formData));
@@ -49,10 +70,7 @@ function CreateAccountForm({ businessId }: { businessId: string }) {
 
   return (
     <form action={handleSubmit} className="grid gap-3 max-w-sm">
-      <p className="text-sm text-bone-muted">
-        Este negocio todavía no tiene una cuenta de acceso. Sin una, solo
-        RYVO puede gestionarlo.
-      </p>
+      <p className="section-eyebrow text-bone-muted">Nueva cuenta</p>
       <div className="grid gap-1.5">
         <label htmlFor="name" className="text-xs text-bone-muted">
           Nombre
@@ -79,10 +97,60 @@ function CreateAccountForm({ businessId }: { businessId: string }) {
           className={adminInputClasses}
         />
       </div>
+      <div className="grid gap-1.5">
+        <label htmlFor="role" className="text-xs text-bone-muted">
+          Tipo de acceso
+        </label>
+        <select
+          id="role"
+          name="role"
+          value={role}
+          onChange={(e) => setRole(e.target.value as AccountRole)}
+          className={adminInputClasses}
+        >
+          <option value="owner">{ROLE_LABELS.owner} — editor completo</option>
+          <option value="worker">{ROLE_LABELS.worker} — Editor rápido</option>
+        </select>
+      </div>
+      {role === "worker" ? (
+        professionals.length === 0 ? (
+          <p className="text-xs text-amber-400/90">
+            Todavía no hay profesionales cargados — agregá uno primero en
+            &quot;Profesionales&quot; para poder vincularle una cuenta.
+          </p>
+        ) : (
+          <div className="grid gap-1.5">
+            <label htmlFor="professional_id" className="text-xs text-bone-muted">
+              Profesional vinculado
+            </label>
+            <select
+              id="professional_id"
+              name="professional_id"
+              required
+              defaultValue=""
+              className={adminInputClasses}
+            >
+              <option value="" disabled>
+                Elegí un profesional
+              </option>
+              {professionals.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-bone-muted/70">
+              Esta cuenta solo va a poder editar el perfil, los servicios
+              asignados, la galería y el catálogo de este negocio — nunca
+              la apariencia, la plantilla ni la configuración general.
+            </p>
+          </div>
+        )
+      ) : null}
       <SaveStatus status={status} error={error} />
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || (role === "worker" && professionals.length === 0)}
         className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
       >
         {isPending ? "Creando..." : "Crear cuenta"}
@@ -94,18 +162,33 @@ function CreateAccountForm({ businessId }: { businessId: string }) {
 function ExistingAccount({
   businessId,
   account,
+  professionals,
 }: {
   businessId: string;
   account: Account;
+  professionals: ProfessionalWithServices[];
 }) {
   const { status, error, run, isPending } = useAsyncStatus();
+  const linkedProfessional = account.professional_id
+    ? professionals.find((p) => p.id === account.professional_id)
+    : null;
 
   async function handleUpdate(formData: FormData) {
     await run(() => adminUpdateAccount(businessId, account.id, formData));
   }
 
   return (
-    <div className="grid gap-4 max-w-sm">
+    <div className="grid gap-4 max-w-sm border-t border-ink-line pt-6 first:border-t-0 first:pt-0">
+      <div>
+        <span className="section-eyebrow text-[10px] px-2 py-0.5 rounded-sm border border-ink-line text-bone-muted">
+          {ROLE_LABELS[account.role]}
+        </span>
+        {linkedProfessional ? (
+          <span className="ml-2 text-xs text-bone-muted">
+            → {linkedProfessional.name}
+          </span>
+        ) : null}
+      </div>
       <form action={handleUpdate} className="grid gap-3">
         <div className="grid gap-1.5">
           <label htmlFor={`name-${account.id}`} className="text-xs text-bone-muted">

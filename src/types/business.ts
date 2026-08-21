@@ -165,6 +165,9 @@ export interface Product {
   description: string;
   price: number;
   image: string;
+  // Mismo patrón que services.active/professionals.active — Products.tsx
+  // (público) solo muestra los activos, igual que Services ya hace.
+  active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -261,6 +264,10 @@ export interface Account {
   name: string;
   username: string;
   role: AccountRole;
+  // Solo seteado cuando role === "worker" — vincula la cuenta a UN
+  // profesional puntual de este negocio (ver Editor rápido). null para
+  // cuentas owner/admin, que no están atadas a ningún profesional.
+  professional_id: string | null;
   active: boolean;
   created_at: string;
 }

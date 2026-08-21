@@ -18,11 +18,19 @@ import EmptyState from "@/components/ui/EmptyState";
 interface ServicesManagerProps {
   businessId: string;
   services: Service[];
+  /** true en el Editor rápido (profesional): puede editar precio/
+   *  duración/estado de SUS servicios asignados, pero no crear ni borrar
+   *  servicios del negocio (pedido explícito) — oculta el form de
+   *  "+ Agregar" y el botón "Borrar". El editor completo (dueño) no
+   *  cambia (default false). La restricción real vive en
+   *  adminUpdateService (ver actions.ts) — esto es solo la UI. */
+  readOnlyCreateDelete?: boolean;
 }
 
 export default function ServicesManager({
   businessId,
   services,
+  readOnlyCreateDelete = false,
 }: ServicesManagerProps) {
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
@@ -174,13 +182,15 @@ export default function ServicesManager({
                   >
                     Editar
                   </button>
-                  <button
-                    disabled={deletingId === service.id}
-                    onClick={() => handleDelete(service.id)}
-                    className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
-                  >
-                    {deletingId === service.id ? "Borrando..." : "Borrar"}
-                  </button>
+                  {readOnlyCreateDelete ? null : (
+                    <button
+                      disabled={deletingId === service.id}
+                      onClick={() => handleDelete(service.id)}
+                      className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
+                    >
+                      {deletingId === service.id ? "Borrando..." : "Borrar"}
+                    </button>
+                  )}
                 </div>
               </div>
             )
@@ -188,54 +198,56 @@ export default function ServicesManager({
         )}
       </div>
 
-      <form action={handleCreate} className="mt-6 grid gap-3 max-w-md">
-        <p className="section-eyebrow text-bone-muted">Agregar servicio</p>
-        <input
-          name="name"
-          required
-          className={adminInputClassesCompact}
-          placeholder="Nombre"
-        />
-        <textarea
-          name="description"
-          rows={2}
-          className={adminInputClassesCompact}
-          placeholder="Descripción"
-        />
-        <div className="grid grid-cols-2 gap-3">
+      {readOnlyCreateDelete ? null : (
+        <form action={handleCreate} className="mt-6 grid gap-3 max-w-md">
+          <p className="section-eyebrow text-bone-muted">Agregar servicio</p>
           <input
-            name="price"
-            type="number"
-            step="1"
-            min="0"
+            name="name"
             required
             className={adminInputClassesCompact}
-            placeholder="Precio"
+            placeholder="Nombre"
           />
-          <input
-            name="duration"
-            type="number"
-            step="5"
-            min="5"
-            defaultValue={30}
-            required
+          <textarea
+            name="description"
+            rows={2}
             className={adminInputClassesCompact}
-            placeholder="Duración (min)"
+            placeholder="Descripción"
           />
-        </div>
-        <label className="flex items-center gap-2 text-xs text-bone-muted">
-          <input name="active" type="checkbox" defaultChecked />
-          Activo
-        </label>
-        <SaveStatus status={createStatus.status} error={createStatus.error} />
-        <button
-          type="submit"
-          disabled={createStatus.isPending}
-          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit disabled:opacity-50"
-        >
-          {createStatus.isPending ? "Agregando..." : "+ Agregar"}
-        </button>
-      </form>
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              name="price"
+              type="number"
+              step="1"
+              min="0"
+              required
+              className={adminInputClassesCompact}
+              placeholder="Precio"
+            />
+            <input
+              name="duration"
+              type="number"
+              step="5"
+              min="5"
+              defaultValue={30}
+              required
+              className={adminInputClassesCompact}
+              placeholder="Duración (min)"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-xs text-bone-muted">
+            <input name="active" type="checkbox" defaultChecked />
+            Activo
+          </label>
+          <SaveStatus status={createStatus.status} error={createStatus.error} />
+          <button
+            type="submit"
+            disabled={createStatus.isPending}
+            className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit disabled:opacity-50"
+          >
+            {createStatus.isPending ? "Agregando..." : "+ Agregar"}
+          </button>
+        </form>
+      )}
     </div>
   );
 }

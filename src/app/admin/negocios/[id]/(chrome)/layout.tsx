@@ -30,6 +30,15 @@ export default async function BusinessLayout({ children, params }: LayoutProps) 
   // página), en vez de mostrar un error que confirme si ese id existe.
   if (!canManageBusiness(session, id)) redirect("/admin");
 
+  // Ninguna de las 6 pantallas de acá abajo (Editor completo, Turnos,
+  // Clientes, Estadísticas, Oportunidades, Configuración) es alcanzable
+  // por una cuenta "worker" (Editor rápido) — ni por navegación ni por
+  // URL directa, sea cual sea la pantalla. Boundary estructural, un solo
+  // lugar: no depende de que cada page.tsx se acuerde de chequearlo.
+  if (session.role === "owner" && session.accountRole === "worker") {
+    redirect(`/admin/negocios/${id}/rapido`);
+  }
+
   const business = await getBusinessById(id);
   if (!business) notFound();
 

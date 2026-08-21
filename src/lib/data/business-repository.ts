@@ -102,13 +102,15 @@ export async function getBusinessProfile(
         .eq("active", true)
         .order("display_order", { ascending: true })
         .order("created_at", { ascending: true }),
-      // Sin filtro de estado — a diferencia de servicios/profesionales,
-      // el catálogo no tiene un campo "active" (fuera de alcance del MVP,
-      // ver Product en types/business.ts).
+      // Mismo criterio que servicios/profesionales: la web pública solo
+      // muestra productos activos (ver Product.active, sumado junto con
+      // el Editor rápido) — listProductsByBusiness (admin) trae todos,
+      // activos e inactivos, para poder reactivarlos.
       supabase
         .from("products")
         .select("*")
         .eq("business_id", business.id)
+        .eq("active", true)
         .order("created_at", { ascending: true }),
     ]);
 
@@ -253,6 +255,44 @@ export async function getBookedSlotsForProfessionals(
 
   for (const id of professionalIds) result.set(id, []);
   return result;
+}
+
+/** ¿`professionalId` puede realizar `serviceId`? Mismo criterio de
+ *  compatibilidad que `listQualifiedProfessionals`: sin ninguna fila en
+ *  `professional_services`, califica para todo. Usada por
+ *  `adminUpdateService` para autorizar a una cuenta "worker" (Editor
+ *  rápido) — nunca confiar en qué servicios dice mostrar la UI, esto es
+ *  la verificación real contra la base. */
+export async function isProfessionalQualifiedForService(
+  professionalId: string,
+  serviceId: string
+): Promise<boolean> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return false;
+  const { data } = await supabaseAdmin
+    .from("professional_services")
+    .select("service_id")
+    .eq("professional_id", professionalId);
+  const ids = (data ?? []).map((row) => row.service_id);
+  return ids.length === 0 || ids.includes(serviceId);
+}
+
+/** Servicios que un profesional puntual tiene asignados — para el Editor
+ *  rápido (categoría Servicios). Mismo criterio de compatibilidad que
+ *  arriba: sin ninguna fila explícita, se le muestran TODOS los
+ *  servicios del negocio (calificado para todo). */
+export async function listServicesForProfessional(
+  businessId: string,
+  professionalId: string
+): Promise<Service[]> {
+  const services = await listServicesByBusiness(businessId);
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return services;
+  const { data } = await supabaseAdmin
+    .from("professional_services")
+    .select("service_id")
+    .eq("professional_id", professionalId);
+  const assignedIds = (data ?? []).map((row) => row.service_id);
+  if (assignedIds.length === 0) return services;
+  return services.filter((s) => assignedIds.includes(s.id));
 }
 
 /** Profesionales activos que pueden realizar `serviceId` — sin ninguna fila

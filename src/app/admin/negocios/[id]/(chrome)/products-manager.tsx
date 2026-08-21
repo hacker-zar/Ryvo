@@ -20,6 +20,11 @@ import ImageUploadField from "@/components/admin/ImageUploadField";
 interface ProductsManagerProps {
   businessId: string;
   products: Product[];
+  /** false en el Editor rápido (profesional): el catálogo es compartido
+   *  (ver actions.ts), así que un profesional puede crear/editar, pero
+   *  el pedido de Editor rápido no incluye eliminar productos — se oculta
+   *  el botón acá; el editor completo (dueño) no cambia (default true). */
+  canDelete?: boolean;
 }
 
 const buttonPrimary =
@@ -39,6 +44,7 @@ const buttonSecondary =
 export default function ProductsManager({
   businessId,
   products,
+  canDelete = true,
 }: ProductsManagerProps) {
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
@@ -129,6 +135,10 @@ export default function ProductsManager({
             className={adminInputClassesCompact}
             placeholder="Descripción (opcional)"
           />
+          <label className="flex items-center gap-2 text-xs text-bone-muted">
+            <input name="active" type="checkbox" defaultChecked />
+            Activo
+          </label>
           <SaveStatus status={createStatus.status} error={createStatus.error} />
           <button type="submit" disabled={createStatus.isPending} className={buttonPrimary}>
             {createStatus.isPending ? "Guardando..." : "Guardar producto"}
@@ -181,6 +191,10 @@ export default function ProductsManager({
                     className={adminInputClassesCompact}
                     placeholder="Descripción (opcional)"
                   />
+                  <label className="flex items-center gap-2 text-xs text-bone-muted">
+                    <input name="active" type="checkbox" defaultChecked={product.active} />
+                    Activo
+                  </label>
                   <SaveStatus status={updateStatus.status} error={updateStatus.error} />
                   <div className="flex gap-3">
                     <button
@@ -220,7 +234,12 @@ export default function ProductsManager({
                     )}
                   </div>
                   <div className="p-3 flex-1 flex flex-col">
-                    <p className="text-bone font-medium truncate">{product.name}</p>
+                    <p className="text-bone font-medium truncate">
+                      {product.name}
+                      {!product.active ? (
+                        <span className="ml-2 text-xs text-bone-muted">(inactivo)</span>
+                      ) : null}
+                    </p>
                     <p className="ticket-number text-sm text-brass mt-1">
                       {formatPrice(product.price)}
                     </p>
@@ -238,13 +257,15 @@ export default function ProductsManager({
                       >
                         Editar
                       </button>
-                      <button
-                        disabled={deletingId === product.id}
-                        onClick={() => handleDelete(product.id)}
-                        className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
-                      >
-                        {deletingId === product.id ? "Eliminando..." : "Eliminar"}
-                      </button>
+                      {canDelete ? (
+                        <button
+                          disabled={deletingId === product.id}
+                          onClick={() => handleDelete(product.id)}
+                          className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
+                        >
+                          {deletingId === product.id ? "Eliminando..." : "Eliminar"}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </div>

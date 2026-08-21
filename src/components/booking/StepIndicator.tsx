@@ -28,7 +28,13 @@ export default function StepIndicator({
 }: StepIndicatorProps) {
   const currentIndex = steps.indexOf(currentStepId);
   return (
-    <div className="flex items-center gap-1.5 text-xs">
+    // overflow-x-auto (no flex-wrap): con 4 pasos el texto "1 Servicio →
+    // 2 Profesional → 3 Fecha y hora → 4 Tus datos" ya no entra en el
+    // ancho del modal — sin esto, al ser hijo de un flex sin min-width:0,
+    // no se achica y desborda el modal (empuja la X afuera del cuadro).
+    // Scrollea horizontal en vez de desbordar, con la misma scrollbar
+    // oculta que ya usa el filmstrip de la galería.
+    <div className="flex items-center gap-1.5 text-xs min-w-0 overflow-x-auto hide-scrollbar">
       {steps.map((stepId, i) => {
         const isActive = i === currentIndex;
         const isDone = i < currentIndex;

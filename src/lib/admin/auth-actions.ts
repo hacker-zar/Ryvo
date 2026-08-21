@@ -36,8 +36,20 @@ export async function loginAdmin(formData: FormData) {
       return { success: false, error: ACCOUNT_LOGIN_ERROR };
     }
 
-    await createOwnerSession(account.id, account.business_id, account.role);
-    redirect(`/admin/negocios/${account.business_id}`);
+    await createOwnerSession(
+      account.id,
+      account.business_id,
+      account.role,
+      account.professional_id
+    );
+    // Una cuenta "worker" (Editor rápido) nunca aterriza en el editor
+    // completo — ver también el redirect inverso en (chrome)/layout.tsx,
+    // que cubre a quien intente llegar ahí más tarde por URL directa.
+    redirect(
+      account.role === "worker"
+        ? `/admin/negocios/${account.business_id}/rapido`
+        : `/admin/negocios/${account.business_id}`
+    );
   }
 
   // Sin username: login de superadmin (RYVO), independiente del sistema de

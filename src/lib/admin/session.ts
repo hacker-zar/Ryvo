@@ -30,10 +30,13 @@ const ORIGIN_COOKIE_TTL_SECONDS = 60 * 60 * 24; // 1 día
  * `accountRole` (distinto de `role` acá arriba, que es el nivel de
  * autenticación) es el rol de la cuenta DENTRO del negocio
  * (dueño/administrador/trabajador — ver `AccountRole` en types/business.ts).
- * Hoy toda cuenta nace "owner" (no hay UI para crear otro rol todavía), así
- * que esto no cambia ningún comportamiento observable — es la estructura
- * lista para cuando se construya un filtrado real por rol (ver
- * src/lib/admin/roles.ts).
+ * `accountRole === "worker"` es lo que separa al Editor rápido del editor
+ * completo — ver requireAdminFor/requireBusinessMember en authorize.ts.
+ *
+ * `professionalId` solo tiene valor cuando `accountRole === "worker"`
+ * (viene de `accounts.professional_id`, nunca de algo que mande el
+ * cliente) — es a qué profesional puntual queda atada esa cuenta. Para
+ * owner/admin es siempre `null`.
  */
 export type AdminSession =
   | { role: "super" }
@@ -42,6 +45,7 @@ export type AdminSession =
       accountId: string;
       businessId: string;
       accountRole: AccountRole;
+      professionalId: string | null;
     };
 
 function getSecret(): string {
@@ -99,7 +103,9 @@ function encodeSession(session: AdminSession, issuedAt: string): string {
   const businessId = session.role === "owner" ? session.businessId : "";
   const accountId = session.role === "owner" ? session.accountId : "";
   const accountRole = session.role === "owner" ? session.accountRole : "";
-  const payload = `${session.role}.${businessId}.${accountId}.${accountRole}.${issuedAt}`;
+  const professionalId =
+    session.role === "owner" ? session.professionalId ?? "" : "";
+  const payload = `${session.role}.${businessId}.${accountId}.${accountRole}.${professionalId}.${issuedAt}`;
   return `${payload}.${sign(payload)}`;
 }
 
@@ -122,9 +128,16 @@ export async function createSuperAdminSession() {
 export async function createOwnerSession(
   accountId: string,
   businessId: string,
-  accountRole: AccountRole = "owner"
+  accountRole: AccountRole = "owner",
+  professionalId: string | null = null
 ) {
-  await setSessionCookie({ role: "owner", accountId, businessId, accountRole });
+  await setSessionCookie({
+    role: "owner",
+    accountId,
+    businessId,
+    accountRole,
+    professionalId,
+  });
 }
 
 export async function destroyAdminSession() {
@@ -139,10 +152,11 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   if (!raw) return null;
 
   const parts = raw.split(".");
-  if (parts.length !== 6) return null;
-  const [role, businessId, accountId, accountRole, issuedAt, signature] = parts;
+  if (parts.length !== 7) return null;
+  const [role, businessId, accountId, accountRole, professionalId, issuedAt, signature] =
+    parts;
 
-  const payload = `${role}.${businessId}.${accountId}.${accountRole}.${issuedAt}`;
+  const payload = `${role}.${businessId}.${accountId}.${accountRole}.${professionalId}.${issuedAt}`;
   if (!signaturesMatch(sign(payload), signature)) return null;
 
   const age = (Date.now() - Number(issuedAt)) / 1000;
@@ -155,6 +169,7 @@ export async function getAdminSession(): Promise<AdminSession | null> {
       accountId,
       businessId,
       accountRole: (accountRole || "owner") as AccountRole,
+      professionalId: professionalId || null,
     };
   }
   return null;

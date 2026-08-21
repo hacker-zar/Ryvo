@@ -10,7 +10,11 @@ export default async function AdminChrome({
 }) {
   const session = await getAdminSession();
   const homeHref =
-    session?.role === "owner" ? `/admin/negocios/${session.businessId}` : "/admin";
+    session?.role === "owner"
+      ? session.accountRole === "worker"
+        ? `/admin/negocios/${session.businessId}/rapido`
+        : `/admin/negocios/${session.businessId}`
+      : "/admin";
 
   return (
     <div

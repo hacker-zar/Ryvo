@@ -238,7 +238,7 @@ function BookingModalContent({
       >
         {/* Header con progreso */}
         {step !== "success" ? (
-          <div className="shrink-0 border-b border-ink-line px-5 py-4 flex items-center justify-between gap-3">
+          <div className="shrink-0 border-b border-ink-line px-5 py-4 flex items-center justify-between gap-3 min-w-0">
             <StepIndicator
               steps={steps}
               currentStepId={step}

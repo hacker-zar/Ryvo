@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminFor, requireSuperAdmin } from "@/lib/admin/authorize";
+import { requireAdminFor, requireBusinessMember, requireSuperAdmin } from "@/lib/admin/authorize";
 import { hashPassword } from "@/lib/admin/session";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 import {
@@ -26,6 +26,8 @@ import {
   getBusinessById,
   getOfficialTemplateById,
   getTemplateById,
+  isProfessionalQualifiedForService,
+  listProfessionalsByBusiness,
   reorderProfessional,
   updateBookingStatus,
   updateBusiness,
@@ -41,7 +43,7 @@ import {
   updateAccount,
   updateAccountPassword,
 } from "@/lib/data/accounts-repository";
-import { OpeningHours, SectionConfig } from "@/types/business";
+import { AccountRole, OpeningHours, SectionConfig } from "@/types/business";
 import { slugify } from "@/lib/slug";
 import { sanitizeSectionOrder } from "@/lib/section-order";
 
@@ -237,7 +239,22 @@ export async function adminUpdateService(
   serviceId: string,
   formData: FormData
 ) {
-  await requireAdminFor(businessId);
+  // requireBusinessMember (no requireAdminFor): una cuenta "worker"
+  // (Editor rápido) puede editar un servicio, pero SOLO si está
+  // calificada para él — se verifica contra professional_services acá
+  // abajo, nunca confiando en qué le mostró la UI. Crear/borrar
+  // servicios sigue siendo exclusivo de dueño/admin (ver
+  // adminCreateService/adminDeleteService, que no cambiaron).
+  const access = await requireBusinessMember(businessId);
+  if (access.scope === "worker") {
+    const qualified = await isProfessionalQualifiedForService(
+      access.professionalId,
+      serviceId
+    );
+    if (!qualified) {
+      throw new Error("No autorizado para editar este servicio.");
+    }
+  }
 
   const input: Partial<ServiceInput> = {
     name: String(formData.get("name") || "").trim(),
@@ -262,11 +279,17 @@ export async function adminDeleteService(
   return result;
 }
 
+// Catálogo: recurso COMPARTIDO del negocio (no hay noción de "producto de
+// tal profesional" en el modelo, confirmado antes de construir el Editor
+// rápido) — cualquier cuenta que pueda gestionar el negocio, dueño o
+// profesional, tiene el mismo poder sobre él. requireBusinessMember en
+// vez de requireAdminFor, sin chequeo adicional en la rama "worker".
+
 export async function adminCreateProduct(
   businessId: string,
   formData: FormData
 ) {
-  await requireAdminFor(businessId);
+  await requireBusinessMember(businessId);
 
   const input: ProductInput = {
     business_id: businessId,
@@ -274,6 +297,7 @@ export async function adminCreateProduct(
     description: String(formData.get("description") || ""),
     price: Number(formData.get("price") || 0),
     image: String(formData.get("image") || ""),
+    active: formData.get("active") === "on",
   };
 
   if (!input.name) return { success: false, error: "El nombre es obligatorio." };
@@ -288,13 +312,14 @@ export async function adminUpdateProduct(
   productId: string,
   formData: FormData
 ) {
-  await requireAdminFor(businessId);
+  await requireBusinessMember(businessId);
 
   const input: Partial<ProductInput> = {
     name: String(formData.get("name") || "").trim(),
     description: String(formData.get("description") || ""),
     price: Number(formData.get("price") || 0),
     image: String(formData.get("image") || ""),
+    active: formData.get("active") === "on",
   };
 
   const result = await updateProduct(productId, input);
@@ -341,7 +366,13 @@ export async function adminUpdateProfessional(
   professionalId: string,
   formData: FormData
 ) {
-  await requireAdminFor(businessId);
+  // requireBusinessMember: una cuenta "worker" (Editor rápido, "Mi
+  // perfil") solo puede editarse a SÍ MISMA — el id de sesión, nunca el
+  // que mande la request, decide si coincide con `professionalId`.
+  const access = await requireBusinessMember(businessId);
+  if (access.scope === "worker" && access.professionalId !== professionalId) {
+    throw new Error("No autorizado para editar este profesional.");
+  }
 
   const input: Partial<ProfessionalInput> = {
     name: String(formData.get("name") || "").trim(),
@@ -351,7 +382,21 @@ export async function adminUpdateProfessional(
     experience: String(formData.get("experience") || ""),
     active: formData.get("active") === "on",
   };
-  const serviceIds = formData.getAll("service_ids").map(String);
+
+  // Ojo acá: `formData.getAll("service_ids")` da `[]` (no `undefined`)
+  // cuando el form no tiene esos checkboxes — y `updateProfessional`
+  // trata cualquier array, incluso vacío, como "reemplazar las
+  // asignaciones". Antes esto nunca se notaba porque el único form que
+  // llamaba a esta acción (ProfessionalsManager, dueño) siempre los
+  // manda. "Mi perfil" (Editor rápido) no los muestra a propósito —
+  // asignar especialidades queda exclusivo del dueño, ver el plan — así
+  // que acá se gatea por `formData.has(...)` para no borrar
+  // silenciosamente las asignaciones de un profesional que edita su
+  // propio perfil, y nunca se tocan en absoluto si la sesión es "worker".
+  const serviceIds =
+    access.scope === "full" && formData.has("service_ids_present")
+      ? formData.getAll("service_ids").map(String)
+      : undefined;
 
   const result = await updateProfessional(professionalId, input, serviceIds);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
@@ -543,12 +588,26 @@ export async function adminUpdateAppearance(
  * hacerlo para cualquier negocio; el dueño solo para el suyo —
  * requireAdminFor ya cubre ambos casos.
  */
+const ACCOUNT_ROLES = new Set<AccountRole>(["owner", "admin", "worker"]);
+
+/**
+ * "worker" es una cuenta de Editor rápido — vinculada a UN profesional
+ * puntual del negocio (ver requireBusinessMember en authorize.ts). Se
+ * exige `professional_id` y se verifica que ese id pertenezca de verdad
+ * a ESTE negocio (nunca confiar en el id que mande el formulario sin
+ * chequearlo) antes de crear la cuenta.
+ */
 export async function adminCreateAccount(businessId: string, formData: FormData) {
   await requireAdminFor(businessId);
 
   const name = String(formData.get("name") || "").trim();
   const username = String(formData.get("username") || "").trim();
   const password = String(formData.get("password") || "");
+  const roleRaw = String(formData.get("role") || "owner");
+  const role = ACCOUNT_ROLES.has(roleRaw as AccountRole)
+    ? (roleRaw as AccountRole)
+    : "owner";
+  const professionalId = String(formData.get("professional_id") || "").trim();
 
   if (!name || !username || !password) {
     return {
@@ -566,12 +625,30 @@ export async function adminCreateAccount(businessId: string, formData: FormData)
     return { success: false, error: "Ese usuario ya está en uso." };
   }
 
+  if (role === "worker") {
+    if (!professionalId) {
+      return {
+        success: false,
+        error: "Elegí a qué profesional se vincula esta cuenta.",
+      };
+    }
+    const professionals = await listProfessionalsByBusiness(businessId);
+    if (!professionals.some((p) => p.id === professionalId)) {
+      return {
+        success: false,
+        error: "Ese profesional no pertenece a este negocio.",
+      };
+    }
+  }
+
   const passwordHash = await hashPassword(password);
   const result = await createAccount({
     business_id: businessId,
     name,
     username,
     password_hash: passwordHash,
+    role,
+    professional_id: role === "worker" ? professionalId : null,
   });
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
@@ -646,7 +723,12 @@ export async function adminUploadImage(
   if (folder === "new") {
     await requireSuperAdmin();
   } else {
-    await requireAdminFor(folder);
+    // requireBusinessMember (no requireAdminFor): subir un archivo no
+    // toca ninguna fila puntual — lo usan tanto ImageUploadField/
+    // GalleryUploadField del editor completo como los mismos
+    // componentes reutilizados en el Editor rápido (foto de perfil,
+    // galería). No hace falta distinguir "worker" acá adentro.
+    await requireBusinessMember(folder);
   }
 
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {

@@ -8,7 +8,8 @@ import { Account, AccountRole } from "@/types/business";
 // pública (a diferencia de businesses): solo supabaseAdmin puede leerla, así
 // que la única protección real del hash es que estas funciones nunca lo
 // seleccionan.
-const ACCOUNT_PUBLIC_COLUMNS = "id, business_id, name, username, role, active, created_at";
+const ACCOUNT_PUBLIC_COLUMNS =
+  "id, business_id, name, username, role, professional_id, active, created_at";
 
 function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
@@ -23,12 +24,13 @@ export async function getAccountAuthByUsername(username: string): Promise<{
   business_id: string;
   password_hash: string;
   role: AccountRole;
+  professional_id: string | null;
   active: boolean;
 } | null> {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
   const { data } = await supabaseAdmin
     .from("accounts")
-    .select("id, business_id, password_hash, role, active")
+    .select("id, business_id, password_hash, role, professional_id, active")
     .eq("username", normalizeUsername(username))
     .single();
   return data ?? null;
@@ -65,6 +67,10 @@ export interface CreateAccountInput {
   name: string;
   username: string;
   password_hash: string;
+  role?: AccountRole;
+  // Requerido cuando role === "worker" — a qué profesional queda atada
+  // la cuenta (ver Editor rápido). Ignorado/null para owner/admin.
+  professional_id?: string | null;
   active?: boolean;
 }
 
@@ -77,6 +83,7 @@ export async function createAccount(
       error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY.",
     };
   }
+  const role = input.role ?? "owner";
   const { data, error } = await supabaseAdmin
     .from("accounts")
     .insert({
@@ -84,6 +91,8 @@ export async function createAccount(
       name: input.name,
       username: normalizeUsername(input.username),
       password_hash: input.password_hash,
+      role,
+      professional_id: role === "worker" ? input.professional_id ?? null : null,
       active: input.active ?? true,
     })
     .select("id")
