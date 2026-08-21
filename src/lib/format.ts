@@ -1,4 +1,7 @@
-export function formatPrice(price: number): string {
+// price null/undefined = el servicio no tiene precio cargado (ver Service.price)
+// — nunca se muestra "$0" en ese caso, se pide consultarlo directamente.
+export function formatPrice(price: number | null | undefined): string {
+  if (price == null) return "Consultar precio";
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
@@ -6,7 +9,10 @@ export function formatPrice(price: number): string {
   }).format(price);
 }
 
-export function formatDuration(minutes: number): string {
+// null = sin duración configurada (ver Service.duration) — quien llama
+// decide si ocultar el elemento entero en vez de mostrar un texto vacío.
+export function formatDuration(minutes: number | null | undefined): string | null {
+  if (minutes == null) return null;
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;

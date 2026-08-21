@@ -147,9 +147,24 @@ export interface Service {
   business_id: string;
   name: string;
   description: string;
-  price: number;
-  duration: number; // minutos
+  // Ambos opcionales — un servicio puede publicarse sin precio y/o sin
+  // duración definidos todavía (ej. "a consultar"). null = sin cargar.
+  // El motor de reservas (availability.ts/business-repository.ts) nunca
+  // inventa un valor por defecto para `duration`: un servicio sin
+  // duración simplemente no se puede reservar online (ver createBooking).
+  price: number | null;
+  duration: number | null; // minutos
   active: boolean;
+}
+
+// Un Service ya confirmado como reservable online (duration != null) — el
+// wizard de reserva (BookingModal) solo llega a los pasos de fecha/hora y
+// éxito una vez que este chequeo ya pasó, así esos pasos no vuelven a
+// lidiar con la posibilidad de "sin duración" en su propio tipo.
+export type BookableService = Service & { duration: number };
+
+export function isBookableService(service: Service): service is BookableService {
+  return service.duration != null;
 }
 
 // Catálogo de productos — capa de contenido mínima (foto + nombre +
@@ -305,7 +320,8 @@ export interface ClientBookingHistoryItem {
   status: BookingStatus;
   service_name: string;
   professional_name: string | null;
-  price: number;
+  // null si el servicio de esa reserva ya no tiene precio cargado.
+  price: number | null;
 }
 
 // Ficha del cliente — no es un simple contacto, agrega historial y

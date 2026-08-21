@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Business, Location, Service } from "@/types/business";
+import { BookableService, Business, Location } from "@/types/business";
 import { readableTextColor, whatsappLink } from "@/lib/format";
 
 interface StepSuccessProps {
@@ -11,7 +11,7 @@ interface StepSuccessProps {
    *  modo real, pero el link "Gestionar mi turno" simplemente no se
    *  muestra en ese caso en vez de romper la pantalla de éxito). */
   bookingId: string | null;
-  service: Service;
+  service: BookableService;
   location: Location;
   date: string;
   time: string;

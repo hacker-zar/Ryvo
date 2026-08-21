@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Location, Service } from "@/types/business";
+import { BookableService, isBookableService, Location, Service } from "@/types/business";
 import { PublicBooking } from "@/lib/data/business-repository";
 import { useBookingModal } from "@/lib/booking-modal-context";
 import { cancelBooking, rescheduleBooking } from "@/lib/actions/booking-actions";
@@ -98,7 +98,7 @@ export default function ManageBookingView({
         </p>
       </div>
 
-      {mode === "reschedule" && service && location ? (
+      {mode === "reschedule" && service && isBookableService(service) && location ? (
         <div className="mt-8">
           <RescheduleForm
             booking={booking}
@@ -112,13 +112,20 @@ export default function ManageBookingView({
         </div>
       ) : isUpcoming ? (
         <div className="mt-8 flex flex-col gap-2.5 max-w-xs">
-          <button
-            type="button"
-            onClick={() => setMode("reschedule")}
-            className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass transition-colors"
-          >
-            Reprogramar
-          </button>
+          {service && !isBookableService(service) ? (
+            <p className="text-xs text-bone-muted">
+              Este servicio ya no tiene una duración configurada — para
+              reprogramar, contactá al negocio directamente.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMode("reschedule")}
+              className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass transition-colors"
+            >
+              Reprogramar
+            </button>
+          )}
           <button
             type="button"
             disabled={cancelStatus.isPending}
@@ -173,7 +180,7 @@ function RescheduleForm({
   onCancel,
 }: {
   booking: PublicBooking;
-  service: Service;
+  service: BookableService;
   location: Location;
   locations: Location[];
   primaryColor: string;

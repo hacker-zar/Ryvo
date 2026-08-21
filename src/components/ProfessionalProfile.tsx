@@ -108,9 +108,11 @@ export default function ProfessionalProfile({
                       {formatPrice(service.price)}
                     </span>
                   </div>
-                  <span className="mt-1 block text-xs text-bone-muted/70">
-                    {formatDuration(service.duration)}
-                  </span>
+                  {service.duration != null ? (
+                    <span className="mt-1 block text-xs text-bone-muted/70">
+                      {formatDuration(service.duration)}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             ))}

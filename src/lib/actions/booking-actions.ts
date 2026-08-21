@@ -3,6 +3,7 @@
 import {
   cancelBookingById,
   createBooking,
+  getServiceDuration,
   rescheduleBookingById,
   resolveAnyProfessional,
 } from "@/lib/data/business-repository";
@@ -32,6 +33,20 @@ export async function submitBooking(input: CreateBookingInput) {
     !input.time
   ) {
     return { success: false, error: "Completá todos los campos." };
+  }
+
+  // Chequeo temprano y explícito: un servicio sin duración configurada no
+  // se puede reservar online (el motor de disponibilidad no tiene forma
+  // de calcular el intervalo que ocuparía) — se rechaza acá antes de
+  // intentar resolver profesional/crear la reserva, en vez de inventar una
+  // duración por defecto en algún paso más adelante.
+  const durationMin = await getServiceDuration(input.service_id);
+  if (durationMin == null) {
+    return {
+      success: false,
+      error:
+        "Este servicio todavía no tiene una duración configurada y no se puede reservar online. Contactá al negocio directamente para coordinarlo.",
+    };
   }
 
   let professionalId: string | null = null;

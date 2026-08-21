@@ -112,8 +112,12 @@ create table if not exists services (
   business_id uuid not null references businesses(id) on delete cascade,
   name text not null,
   description text default '',
-  price numeric(10,2) not null default 0,
-  duration integer not null default 30, -- minutos
+  -- Ambos opcionales: un servicio puede publicarse sin precio y/o sin
+  -- duración todavía definidos (ej. "a consultar") — ver Service en
+  -- types/business.ts y el chequeo explícito en createBooking (nunca se
+  -- inventa una duración para reservar un servicio que no la tiene).
+  price numeric(10,2) default 0,
+  duration integer default 30, -- minutos
   active boolean not null default true
 );
 

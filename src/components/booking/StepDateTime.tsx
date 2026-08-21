@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Business, Location, Service } from "@/types/business";
+import { BookableService, Business, Location } from "@/types/business";
 import { getAvailableSlots } from "@/lib/actions/availability-actions";
 import MiniCalendar from "./MiniCalendar";
 
 interface StepDateTimeProps {
   business: Pick<Business, "id" | "primary_color">;
   locations: Location[];
-  service: Service;
+  service: BookableService;
   selectedLocationId: string | null;
   selectedDate: string | null;
   selectedTime: string | null;

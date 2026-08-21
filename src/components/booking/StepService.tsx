@@ -60,9 +60,11 @@ export default function StepService({
                 <p className="text-bone font-medium text-sm">
                   {service.name}
                 </p>
-                <p className="text-xs text-bone-muted mt-0.5">
-                  {formatDuration(service.duration)}
-                </p>
+                {service.duration != null ? (
+                  <p className="text-xs text-bone-muted mt-0.5">
+                    {formatDuration(service.duration)}
+                  </p>
+                ) : null}
               </div>
               <span
                 className="ticket-number text-sm shrink-0"

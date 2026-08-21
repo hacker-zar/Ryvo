@@ -15,7 +15,10 @@ export interface AvailabilityQuery {
   businessId: string;
   locationId: string | null;
   date: string;
-  serviceDurationMin: number;
+  // null = el servicio elegido no tiene duración configurada — no hay
+  // forma de calcular horarios reales para él (ver getAvailableSlots,
+  // que devuelve vacío en vez de inventar una duración).
+  serviceDurationMin: number | null;
   openingHours: OpeningHours[];
   // Reserva con UN profesional específico.
   professionalId?: string;
@@ -31,6 +34,8 @@ export interface AvailabilityQuery {
 export async function getAvailableSlots(
   query: AvailabilityQuery
 ): Promise<string[]> {
+  if (query.serviceDurationMin == null) return [];
+
   const allSlots = generateSlotsForDay(
     query.openingHours,
     query.date,

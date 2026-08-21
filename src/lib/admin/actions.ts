@@ -47,6 +47,15 @@ import { AccountRole, OpeningHours, SectionConfig } from "@/types/business";
 import { slugify } from "@/lib/slug";
 import { sanitizeSectionOrder } from "@/lib/section-order";
 
+// Campo numérico opcional de un form (precio/duración de un servicio):
+// vacío o ausente → null (no "0"/valor inventado), nunca NaN.
+function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /**
  * Crear negocios nuevos es exclusivo de RYVO (superadmin) — un dueño no
  * debería poder crear otros negocios desde su propia sesión.
@@ -222,8 +231,8 @@ export async function adminCreateService(
     business_id: businessId,
     name: String(formData.get("name") || "").trim(),
     description: String(formData.get("description") || ""),
-    price: Number(formData.get("price") || 0),
-    duration: Number(formData.get("duration") || 30),
+    price: parseOptionalNumber(formData.get("price")),
+    duration: parseOptionalNumber(formData.get("duration")),
     active: formData.get("active") === "on",
   };
 
@@ -259,8 +268,8 @@ export async function adminUpdateService(
   const input: Partial<ServiceInput> = {
     name: String(formData.get("name") || "").trim(),
     description: String(formData.get("description") || ""),
-    price: Number(formData.get("price") || 0),
-    duration: Number(formData.get("duration") || 30),
+    price: parseOptionalNumber(formData.get("price")),
+    duration: parseOptionalNumber(formData.get("duration")),
     active: formData.get("active") === "on",
   };
 

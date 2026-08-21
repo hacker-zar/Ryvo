@@ -341,16 +341,23 @@ export async function listQualifiedProfessionals(
 }
 
 /** Duración real de un servicio (minutos), con fallback conservador si no
- *  se encuentra — usada al persistir/chequear reservas server-side, nunca
- *  confiando en un valor que pudiera mandar el cliente. */
-async function getServiceDuration(serviceId: string): Promise<number> {
+ *  se ENCUENTRA el servicio — usada al persistir/chequear reservas
+ *  server-side, nunca confiando en un valor que pudiera mandar el
+ *  cliente. Devuelve `null` si el servicio existe pero no tiene duración
+ *  configurada (ver Service.duration) — a diferencia del caso "no
+ *  encontrado", acá NO se inventa un valor: quien llama debe rechazar
+ *  explícitamente la reserva (ver createBooking/resolveAnyProfessional). */
+export async function getServiceDuration(
+  serviceId: string
+): Promise<number | null> {
   if (!isSupabaseConfigured || !supabase) return 30;
   const { data } = await supabase
     .from("services")
     .select("duration")
     .eq("id", serviceId)
     .maybeSingle();
-  return data?.duration ?? 30;
+  if (!data) return 30;
+  return data.duration;
 }
 
 /** Resuelve "cualquiera disponible" a UN profesional real, server-side, en
@@ -372,6 +379,10 @@ export async function resolveAnyProfessional(
     listQualifiedProfessionals(businessId, serviceId),
     getServiceDuration(serviceId),
   ]);
+  // Sin duración configurada no hay forma de chequear solapamiento real —
+  // no se inventa un valor, se trata como "nadie disponible" (el llamador,
+  // submitBooking, ya rechaza este caso antes con un mensaje explícito).
+  if (durationMin == null) return null;
   const startMin = timeToMinutes(time);
   for (const professional of qualified) {
     const booked = await getBookedSlots(
@@ -465,6 +476,17 @@ export async function createBooking(
     // del que declara, rompiendo la garantía de no-solapamiento para
     // TODOS los demás).
     const durationMin = await getServiceDuration(booking.service_id);
+    if (durationMin == null) {
+      // Servicio sin duración configurada: el motor de reservas nunca
+      // inventa un valor por defecto (ver Service.duration) — se rechaza
+      // explícitamente en vez de persistir una reserva con una duración
+      // adivinada.
+      return {
+        success: false,
+        error:
+          "Este servicio todavía no tiene una duración configurada y no se puede reservar online. Contactá al negocio directamente para coordinarlo.",
+      };
+    }
     const startMin = timeToMinutes(booking.time);
 
     // Chequeo de disponibilidad antes de insertar, ahora por intervalo
@@ -1111,7 +1133,7 @@ export interface PublicBooking extends Booking {
   business_slug: string;
   business_name: string;
   service_name: string;
-  service_duration: number;
+  service_duration: number | null;
   professional_name: string | null;
 }
 
@@ -1133,7 +1155,7 @@ export async function getBookingById(
       business_slug: demoBusiness.slug,
       business_name: demoBusiness.name,
       service_name: service?.name ?? "Servicio eliminado",
-      service_duration: service?.duration ?? 30,
+      service_duration: service?.duration ?? null,
       professional_name: professional?.name ?? null,
     };
   }
@@ -1334,7 +1356,9 @@ export async function getClientProfile(
       professional_name: b.professional_id
         ? (professionalsById.get(b.professional_id)?.name ?? null)
         : null,
-      price: servicesById.get(b.service_id)?.price ?? 0,
+      // null si el servicio ya no tiene precio cargado — no se muestra
+      // "$0" (ver formatPrice).
+      price: servicesById.get(b.service_id)?.price ?? null,
     }));
 
   const next = upcoming[0];

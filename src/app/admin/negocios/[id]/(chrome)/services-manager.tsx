@@ -110,18 +110,18 @@ export default function ServicesManager({
                     type="number"
                     step="1"
                     min="0"
-                    defaultValue={service.price}
+                    defaultValue={service.price ?? ""}
                     className={adminInputClassesCompact}
-                    placeholder="Precio"
+                    placeholder="Precio (opcional)"
                   />
                   <input
                     name="duration"
                     type="number"
                     step="5"
                     min="5"
-                    defaultValue={service.duration}
+                    defaultValue={service.duration ?? ""}
                     className={adminInputClassesCompact}
-                    placeholder="Duración (min)"
+                    placeholder="Duración en min (opcional)"
                   />
                   <label className="flex items-center gap-2 text-xs text-bone-muted">
                     <input
@@ -170,7 +170,8 @@ export default function ServicesManager({
                     </p>
                   ) : null}
                   <p className="ticket-number text-xs text-bone-muted mt-1">
-                    {formatPrice(service.price)} · {service.duration} min
+                    {formatPrice(service.price)}
+                    {service.duration != null ? ` · ${service.duration} min` : ""}
                   </p>
                 </div>
                 <div className="flex gap-3 shrink-0">
@@ -219,19 +220,16 @@ export default function ServicesManager({
               type="number"
               step="1"
               min="0"
-              required
               className={adminInputClassesCompact}
-              placeholder="Precio"
+              placeholder="Precio (opcional)"
             />
             <input
               name="duration"
               type="number"
               step="5"
               min="5"
-              defaultValue={30}
-              required
               className={adminInputClassesCompact}
-              placeholder="Duración (min)"
+              placeholder="Duración en min (opcional)"
             />
           </div>
           <label className="flex items-center gap-2 text-xs text-bone-muted">

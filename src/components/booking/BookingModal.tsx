@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Business, Location, ProfessionalWithServices, Service } from "@/types/business";
+import {
+  Business,
+  isBookableService,
+  Location,
+  ProfessionalWithServices,
+  Service,
+} from "@/types/business";
 import { BookingSeed, useBookingModal } from "@/lib/booking-modal-context";
 import { submitBooking } from "@/lib/actions/booking-actions";
 import { isLikelyPhone, readableTextColor } from "@/lib/format";
@@ -65,7 +71,13 @@ function BookingModalContent({
     [services, seed?.serviceId]
   );
 
-  const [step, setStep] = useState<Step>(seededService ? "datetime" : "service");
+  // Si el servicio pre-elegido (seed) no tiene duración configurada, no se
+  // salta directo a "datetime" — vuelve al paso de servicio, donde el
+  // botón "Continuar" ya queda bloqueado con un mensaje explícito (ver
+  // canContinueService más abajo).
+  const [step, setStep] = useState<Step>(
+    seededService && isBookableService(seededService) ? "datetime" : "service"
+  );
   const [direction, setDirection] = useState<"forward" | "backward">(
     "forward"
   );
@@ -212,7 +224,13 @@ function BookingModalContent({
       ? qualifiedProfessionalIds(activeProfessionals, selectedService.id)
       : undefined;
 
-  const canContinueService = Boolean(selectedService);
+  // Un servicio sin duración configurada no se puede reservar online (el
+  // motor de disponibilidad no puede calcular el intervalo que ocuparía)
+  // — se bloquea acá, explícitamente, en vez de dejarlo avanzar y fallar
+  // más adelante o inventar una duración por defecto.
+  const canContinueService = Boolean(
+    selectedService && isBookableService(selectedService)
+  );
   const canContinueDatetime = Boolean(activeLocation && date && time);
   const canConfirmDetails = customerName.trim() && isLikelyPhone(customerPhone);
   const ctaTextColor = readableTextColor(business.primary_color);
@@ -281,7 +299,7 @@ function BookingModalContent({
             />
           ) : null}
 
-          {step === "datetime" && selectedService ? (
+          {step === "datetime" && selectedService && isBookableService(selectedService) ? (
             <StepDateTime
               business={business}
               locations={locations}
@@ -323,6 +341,7 @@ function BookingModalContent({
 
           {step === "success" &&
           selectedService &&
+          isBookableService(selectedService) &&
           activeLocation &&
           date &&
           time ? (
@@ -344,6 +363,13 @@ function BookingModalContent({
           <div className="shrink-0 border-t border-ink-line px-5 py-4">
             {step === "details" && submitError ? (
               <p className="text-sm text-red-400 mb-3">{submitError}</p>
+            ) : null}
+            {step === "service" && selectedService && selectedService.duration == null ? (
+              <p className="text-sm text-bone-muted mb-3">
+                Este servicio todavía no tiene una duración configurada y no
+                se puede reservar online — contactanos directamente para
+                coordinarlo.
+              </p>
             ) : null}
             <div className="flex gap-3">
               {stepIndex > 0 ? (

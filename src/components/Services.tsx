@@ -64,9 +64,11 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
                 {service.description ? (
                   <p className="mt-2 text-sm text-bone-muted leading-relaxed">{service.description}</p>
                 ) : null}
-                <span className="mt-4 block text-xs text-bone-muted/70">
-                  {formatDuration(service.duration)}
-                </span>
+                {service.duration != null ? (
+                  <span className="mt-4 block text-xs text-bone-muted/70">
+                    {formatDuration(service.duration)}
+                  </span>
+                ) : null}
               </div>
             </Reveal>
           ))}
@@ -117,7 +119,9 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
                   <span className="ticket-number text-xl md:text-2xl text-bone block">
                     {formatPrice(service.price)}
                   </span>
-                  <span className="text-xs text-bone-muted/70">{formatDuration(service.duration)}</span>
+                  {service.duration != null ? (
+                    <span className="text-xs text-bone-muted/70">{formatDuration(service.duration)}</span>
+                  ) : null}
                 </div>
               </div>
             </Reveal>
@@ -176,9 +180,11 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
                   {featured.description}
                 </p>
               ) : null}
-              <span className="mt-2 block text-xs text-bone-muted/70">
-                {formatDuration(featured.duration)}
-              </span>
+              {featured.duration != null ? (
+                <span className="mt-2 block text-xs text-bone-muted/70">
+                  {formatDuration(featured.duration)}
+                </span>
+              ) : null}
             </div>
             <span className="ticket-number text-2xl md:text-3xl shrink-0" style={{ color: primaryColor }}>
               {formatPrice(featured.price)}
@@ -211,9 +217,11 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
                     {service.description ? (
                       <p className="mt-1 text-sm text-bone-muted">{service.description}</p>
                     ) : null}
-                    <span className="mt-1 block text-xs text-bone-muted/70">
-                      {formatDuration(service.duration)}
-                    </span>
+                    {service.duration != null ? (
+                      <span className="mt-1 block text-xs text-bone-muted/70">
+                        {formatDuration(service.duration)}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </Reveal>
