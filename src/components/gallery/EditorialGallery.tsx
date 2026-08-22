@@ -62,7 +62,7 @@ export default function EditorialGallery({
                 type="button"
                 onClick={() => setOpenIndex(i)}
                 aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-                className="relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated"
+                className="image-frame relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated"
               >
                 <Image src={src} alt={`${businessName} - foto ${i + 1}`} fill sizes="85vw" className="object-cover" />
               </button>
@@ -76,7 +76,7 @@ export default function EditorialGallery({
                 type="button"
                 onClick={() => setOpenIndex(i)}
                 aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-                className="relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated group"
+                className="image-frame relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated group"
               >
                 <Image
                   src={src}
@@ -111,7 +111,7 @@ export default function EditorialGallery({
                 type="button"
                 onClick={() => setOpenIndex(i)}
                 aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-                className="relative aspect-square w-full overflow-hidden rounded-sm bg-ink-elevated"
+                className="image-frame relative aspect-square w-full overflow-hidden bg-ink-elevated"
               >
                 <Image src={src} alt={`${businessName} - foto ${i + 1}`} fill sizes="78vw" className="object-cover" />
               </button>
@@ -125,7 +125,7 @@ export default function EditorialGallery({
                 type="button"
                 onClick={() => setOpenIndex(i)}
                 aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-                className="relative aspect-square w-full overflow-hidden rounded-sm bg-ink-elevated group"
+                className="image-frame relative aspect-square w-full overflow-hidden bg-ink-elevated group"
               >
                 <Image
                   src={src}
@@ -162,7 +162,7 @@ export default function EditorialGallery({
               type="button"
               onClick={() => setOpenIndex(i)}
               aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-              className="relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset"
+              className="image-frame relative aspect-[4/5] w-full overflow-hidden bg-ink-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset"
             >
               <Image src={src} alt={`${businessName} - foto ${i + 1}`} fill sizes="78vw" className="object-cover" />
             </button>
@@ -179,7 +179,7 @@ export default function EditorialGallery({
                 type="button"
                 onClick={() => setOpenIndex(i)}
                 aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-                className="relative w-full h-full overflow-hidden bg-ink-elevated group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset"
+                className="image-frame relative w-full h-full overflow-hidden bg-ink-elevated group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset"
               >
                 <Image
                   src={src}

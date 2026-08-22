@@ -15,16 +15,23 @@ interface AppearanceScopeProps {
     | "animation_preset"
     | "template_layout"
     | "palette_id"
+    | "image_radius"
+    | "image_shadow"
   >;
   children: React.ReactNode;
 }
 
 /**
  * Aplica la apariencia configurable del negocio (tipografía, estilo de
- * botones, colores de fondo/texto) a todo lo que esté dentro. No usa
- * fuentes o CSS arbitrario del cliente — solo activa uno de los presets
- * ya definidos en globals.css vía data-attributes, y sobreescribe las
- * variables de color con lo que haya cargado el negocio.
+ * botones, estilo de imágenes, colores de fondo/texto) a todo lo que
+ * esté dentro. No usa fuentes o CSS arbitrario del cliente — solo activa
+ * uno de los presets ya definidos en globals.css vía data-attributes, y
+ * sobreescribe las variables de color con lo que haya cargado el negocio.
+ * `data-image-radius`/`data-image-shadow` siguen exactamente el mismo
+ * mecanismo que `data-button-style` (ver `.btn-radius`): fijan
+ * `--image-radius`/`--image-shadow` en globals.css, y cualquier foto
+ * pública con la clase `.image-frame` los toma solos — cero condicional
+ * por componente.
  *
  * También sobreescribe "--brass" con el primary_color real del negocio:
  * es el mismo mecanismo que ya usa BookingModal para su propio scope,
@@ -95,6 +102,8 @@ export default function AppearanceScope({
       data-button-style={business.button_style ?? "recto"}
       data-animation={business.animation_preset ?? "sutil"}
       data-layout={business.template_layout ?? undefined}
+      data-image-radius={business.image_radius ?? "recto"}
+      data-image-shadow={business.image_shadow ?? "ninguna"}
       // Pinta el fondo acá explícitamente: <body> usa --background/
       // --foreground definidos en :root (siempre el default oscuro), y
       // las variables de acá abajo solo alcanzan a los descendientes de

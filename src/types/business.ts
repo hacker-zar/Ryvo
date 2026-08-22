@@ -7,6 +7,14 @@ export type ButtonStyle = "redondeado" | "suave" | "recto";
 export type HeroVideoPosition = "center" | "top" | "bottom";
 export type AnimationPreset = "ninguna" | "sutil" | "dinamica";
 
+// Estilo visual de las fotos públicas (Galería/Profesionales/Productos/
+// contenido de plantilla) — mismo mecanismo de presets cerrados que
+// ButtonStyle/AnimationPreset (data-attribute en AppearanceScope + CSS en
+// globals.css), nunca CSS libre. "recto"/"ninguna" son el default y
+// reproducen exactamente el aspecto histórico (sin radio, sin sombra).
+export type ImageRadiusPreset = "recto" | "suave" | "redondeado" | "muy-redondeado";
+export type ImageShadowPreset = "ninguna" | "suave" | "media" | "marcada";
+
 // Cómo se presenta la galería pública (ver components/Gallery.tsx y sus
 // variantes en components/gallery/*) — independiente de la plantilla:
 // las 5 variantes reciben el MISMO array de fotos (business.gallery), no
@@ -93,6 +101,9 @@ export interface Business {
   text_color?: string;
   typography_preset?: TypographyPreset;
   button_style?: ButtonStyle;
+  // Estilo visual de fotos públicas — ver ImageRadiusPreset/ImageShadowPreset.
+  image_radius?: ImageRadiusPreset;
+  image_shadow?: ImageShadowPreset;
   // Onboarding self-service: tipo de negocio (texto libre, sin enum
   // cerrado), en qué paso del onboarding quedó (0-5), y si ya es visible
   // en /[slug]. Los negocios creados por el flujo del superadmin

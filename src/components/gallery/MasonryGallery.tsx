@@ -45,7 +45,7 @@ export default function MasonryGallery({
               type="button"
               onClick={() => setOpenIndex(i)}
               aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-              className={`relative block w-full overflow-hidden rounded-sm bg-ink-elevated group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset ${SHAPES[i % SHAPES.length]}`}
+              className={`image-frame relative block w-full overflow-hidden bg-ink-elevated group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset ${SHAPES[i % SHAPES.length]}`}
             >
               <Image
                 src={src}

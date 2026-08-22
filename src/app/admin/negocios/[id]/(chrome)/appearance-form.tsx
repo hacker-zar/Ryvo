@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimationPreset, Business, ButtonStyle, TypographyPreset } from "@/types/business";
+import {
+  AnimationPreset,
+  Business,
+  ButtonStyle,
+  ImageRadiusPreset,
+  ImageShadowPreset,
+  TypographyPreset,
+} from "@/types/business";
 import { adminUpdateAppearance } from "@/lib/admin/actions";
 import { contrastRatio, readableTextColor } from "@/lib/format";
 import { DEFAULT_BACKGROUND_COLOR } from "@/lib/appearance-presets";
@@ -25,6 +32,8 @@ interface AppearanceFormProps {
     | "typography_preset"
     | "button_style"
     | "animation_preset"
+    | "image_radius"
+    | "image_shadow"
   >;
 }
 
@@ -44,6 +53,20 @@ const ANIMATION_OPTIONS: { value: AnimationPreset; label: string; hint: string }
   { value: "ninguna", label: "Ninguna", hint: "Todo visible de entrada, sin movimiento" },
   { value: "sutil", label: "Sutil", hint: "Aparición suave al hacer scroll (recomendado)" },
   { value: "dinamica", label: "Dinámica", hint: "Un poco más de movimiento y escala" },
+];
+
+const IMAGE_RADIUS_OPTIONS: { value: ImageRadiusPreset; label: string; hint: string }[] = [
+  { value: "recto", label: "Recto", hint: "0px" },
+  { value: "suave", label: "Suave", hint: "8px" },
+  { value: "redondeado", label: "Redondeado", hint: "16px" },
+  { value: "muy-redondeado", label: "Muy redondeado", hint: "24px" },
+];
+
+const IMAGE_SHADOW_OPTIONS: { value: ImageShadowPreset; label: string }[] = [
+  { value: "ninguna", label: "Ninguna" },
+  { value: "suave", label: "Suave" },
+  { value: "media", label: "Media" },
+  { value: "marcada", label: "Marcada" },
 ];
 
 const colorInputClasses =
@@ -67,6 +90,12 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   );
   const [animationPreset, setAnimationPreset] = useState<AnimationPreset>(
     business.animation_preset || "sutil"
+  );
+  const [imageRadius, setImageRadius] = useState<ImageRadiusPreset>(
+    business.image_radius || "recto"
+  );
+  const [imageShadow, setImageShadow] = useState<ImageShadowPreset>(
+    business.image_shadow || "ninguna"
   );
   const { run, dirty, markDirty } = useAsyncStatus();
 
@@ -221,6 +250,88 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
               {opt.label}
             </label>
           ))}
+        </div>
+      </div>
+
+      {/* Estilo de imágenes: presets cerrados (radio + sombra), nunca CSS
+          libre — se aplican con .image-frame en Galería/Profesionales/
+          Productos/contenido de plantilla (ver globals.css). La preview
+          de acá usa el mismo mecanismo data-image-radius/data-image-shadow
+          que la página pública (AppearanceScope), así el efecto que se ve
+          acá es EXACTAMENTE el real, no una aproximación aparte. */}
+      <div>
+        <p className="section-eyebrow text-bone-muted mb-3">
+          Estilo de imágenes
+        </p>
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
+          <div className="grid gap-4">
+            <div>
+              <p className="text-xs text-bone-muted mb-2">Radio de borde</p>
+              <div className="grid grid-cols-2 gap-2">
+                {IMAGE_RADIUS_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex items-center gap-2 rounded-sm border px-3 py-2 text-sm text-bone cursor-pointer"
+                    style={{
+                      borderColor:
+                        imageRadius === opt.value ? primaryColor : "var(--ink-line)",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="image_radius"
+                      value={opt.value}
+                      checked={imageRadius === opt.value}
+                      onChange={() => setImageRadius(opt.value)}
+                    />
+                    {opt.label}
+                    <span className="text-xs text-bone-muted">{opt.hint}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-bone-muted mb-2">Sombra</p>
+              <div className="grid grid-cols-2 gap-2">
+                {IMAGE_SHADOW_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex items-center gap-2 rounded-sm border px-3 py-2 text-sm text-bone cursor-pointer"
+                    style={{
+                      borderColor:
+                        imageShadow === opt.value ? primaryColor : "var(--ink-line)",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="image_shadow"
+                      value={opt.value}
+                      checked={imageShadow === opt.value}
+                      onChange={() => setImageShadow(opt.value)}
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div
+            data-image-radius={imageRadius}
+            data-image-shadow={imageShadow}
+            className="justify-self-center sm:justify-self-start"
+          >
+            <div
+              className="image-frame h-24 w-24 bg-ink-elevated bg-cover bg-center"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, color-mix(in srgb, var(--brass) 35%, transparent), transparent)",
+              }}
+              aria-hidden="true"
+            />
+            <p className="mt-2 text-center text-[11px] text-bone-muted">Vista previa</p>
+          </div>
         </div>
       </div>
 

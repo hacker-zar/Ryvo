@@ -43,7 +43,7 @@ export default function BeforeAfter({ images, accentColor }: BeforeAfterProps) {
       <Reveal delay={100}>
         <div
           ref={containerRef}
-          className="relative mt-10 aspect-[4/3] md:aspect-[16/9] overflow-hidden select-none touch-none cursor-ew-resize bg-ink-elevated"
+          className="image-frame relative mt-10 aspect-[4/3] md:aspect-[16/9] overflow-hidden select-none touch-none cursor-ew-resize bg-ink-elevated"
           onPointerDown={(e) => {
             draggingRef.current = true;
             (e.target as HTMLElement).setPointerCapture(e.pointerId);

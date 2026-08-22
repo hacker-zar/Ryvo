@@ -45,6 +45,8 @@ export default async function ManageBookingPage({ params }: PageProps) {
         text_color: business.text_color,
         primary_color: business.primary_color,
         animation_preset: business.animation_preset,
+        image_radius: business.image_radius,
+        image_shadow: business.image_shadow,
       }}
     >
       <BookingModalProvider>

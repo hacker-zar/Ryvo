@@ -54,7 +54,7 @@ export default function SocialGrid({
           {shown.map((src, i) => (
             <div
               key={src + i}
-              className="relative aspect-square overflow-hidden bg-ink-elevated group"
+              className="image-frame relative aspect-square overflow-hidden bg-ink-elevated group"
             >
               <Image
                 src={src}

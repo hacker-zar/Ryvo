@@ -62,7 +62,7 @@ export default function FilmstripGallery({
                       ? `Ver foto ${i + 1} de ${businessName} en tamaño completo`
                       : `Mostrar foto ${i + 1} de ${businessName} como protagonista`
                   }
-                  className={`relative shrink-0 snap-center overflow-hidden rounded-sm bg-ink-elevated transition-all duration-500 ${
+                  className={`image-frame relative shrink-0 snap-center overflow-hidden bg-ink-elevated transition-all duration-500 ${
                     isActive
                       ? "h-64 sm:h-80 aspect-[4/5] ring-2 ring-inset"
                       : "h-40 sm:h-48 aspect-[3/4] opacity-60 hover:opacity-90"

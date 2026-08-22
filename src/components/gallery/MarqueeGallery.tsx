@@ -63,7 +63,7 @@ export default function MarqueeGallery({
             type="button"
             onClick={() => setOpenIndex(0)}
             aria-label={`Ver foto de ${businessName} en tamaño completo`}
-            className="relative mx-auto aspect-[16/10] w-full max-w-3xl overflow-hidden rounded-sm bg-ink-elevated block"
+            className="image-frame relative mx-auto aspect-[16/10] w-full max-w-3xl overflow-hidden bg-ink-elevated block"
           >
             <Image src={images[0]} alt={`${businessName} - foto`} fill sizes="(min-width: 768px) 60vw, 90vw" className="object-cover" />
           </button>
@@ -96,7 +96,7 @@ export default function MarqueeGallery({
             type="button"
             onClick={() => setOpenIndex(i)}
             aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-            className={`relative h-64 shrink-0 snap-start overflow-hidden rounded-sm bg-ink-elevated ${SHAPES[i % SHAPES.length]}`}
+            className={`image-frame relative h-64 shrink-0 snap-start overflow-hidden bg-ink-elevated ${SHAPES[i % SHAPES.length]}`}
           >
             <Image src={src} alt={`${businessName} - foto ${i + 1}`} fill sizes="60vw" className="object-cover" />
           </button>
@@ -122,7 +122,7 @@ export default function MarqueeGallery({
                 aria-hidden={isCanonical ? undefined : true}
                 tabIndex={isCanonical ? undefined : -1}
                 aria-label={isCanonical ? `Ver foto ${i + 1} de ${businessName} en tamaño completo` : undefined}
-                className={`relative h-full shrink-0 overflow-hidden rounded-sm bg-ink-elevated group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset ${SHAPES[i % SHAPES.length]}`}
+                className={`image-frame relative h-full shrink-0 overflow-hidden bg-ink-elevated group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-inset ${SHAPES[i % SHAPES.length]}`}
               >
                 <Image
                   src={src}

@@ -576,6 +576,8 @@ export async function adminDeleteLocation(
 const TYPOGRAPHY_PRESETS = new Set(["clasica", "moderna", "elegante"]);
 const BUTTON_STYLES = new Set(["redondeado", "suave", "recto"]);
 const ANIMATION_PRESETS = new Set(["ninguna", "sutil", "dinamica"]);
+const IMAGE_RADIUS_PRESETS = new Set(["recto", "suave", "redondeado", "muy-redondeado"]);
+const IMAGE_SHADOW_PRESETS = new Set(["ninguna", "suave", "media", "marcada"]);
 
 export async function adminUpdateAppearance(
   businessId: string,
@@ -586,6 +588,8 @@ export async function adminUpdateAppearance(
   const typography = String(formData.get("typography_preset") || "elegante");
   const buttonStyle = String(formData.get("button_style") || "recto");
   const animation = String(formData.get("animation_preset") || "sutil");
+  const imageRadius = String(formData.get("image_radius") || "recto");
+  const imageShadow = String(formData.get("image_shadow") || "ninguna");
 
   const input: Partial<BusinessInput> = {
     primary_color: String(formData.get("primary_color") || "#c9a15a"),
@@ -601,6 +605,12 @@ export async function adminUpdateAppearance(
     animation_preset: ANIMATION_PRESETS.has(animation)
       ? (animation as BusinessInput["animation_preset"])
       : "sutil",
+    image_radius: IMAGE_RADIUS_PRESETS.has(imageRadius)
+      ? (imageRadius as BusinessInput["image_radius"])
+      : "recto",
+    image_shadow: IMAGE_SHADOW_PRESETS.has(imageShadow)
+      ? (imageShadow as BusinessInput["image_shadow"])
+      : "ninguna",
   };
 
   const result = await updateBusiness(businessId, input);

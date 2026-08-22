@@ -63,6 +63,8 @@ export const demoBusiness: Business = {
     { id: "contact", enabled: true },
   ],
   animation_preset: "sutil",
+  image_radius: "recto",
+  image_shadow: "ninguna",
   created_at: "2024-01-15T00:00:00.000Z",
 };
 

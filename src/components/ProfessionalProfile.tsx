@@ -38,7 +38,7 @@ export default function ProfessionalProfile({
     <section className="mx-auto max-w-3xl px-4 py-16 md:py-24">
       <Reveal>
         <div className="grid md:grid-cols-[220px_1fr] gap-8 items-start">
-          <div className="relative aspect-square overflow-hidden bg-ink-elevated rounded-sm">
+          <div className="image-frame relative aspect-square overflow-hidden bg-ink-elevated">
             {professional.photo ? (
               <Image
                 src={professional.photo}

@@ -174,6 +174,8 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         animation_preset: business.animation_preset,
         template_layout: business.template_layout,
         palette_id: business.palette_id,
+        image_radius: business.image_radius,
+        image_shadow: business.image_shadow,
       }}
     >
       <BookingModalProvider>

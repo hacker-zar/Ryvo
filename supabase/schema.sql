@@ -375,3 +375,15 @@ create policy "public read products" on products for select using (true);
 -- valor válido. ===
 alter table businesses add column if not exists gallery_layout text not null default 'editorial'
   check (gallery_layout in ('editorial','movimiento','filmstrip','masonry','showcase'));
+
+-- === Estilo visual de fotos públicas (aplicado directo contra Supabase
+-- vía apply_migration; documentación posterior, no fuente de verdad).
+-- Mismo mecanismo de preset cerrado que typography_preset/button_style
+-- (ver ImageRadiusPreset/ImageShadowPreset en types/business.ts,
+-- AppearanceScope.tsx y la clase .image-frame en globals.css). Defaults
+-- 'recto'/'ninguna' — backfillean también los negocios existentes con el
+-- aspecto exacto de siempre (sin radio, sin sombra). ===
+alter table businesses add column if not exists image_radius text not null default 'recto'
+  check (image_radius in ('recto','suave','redondeado','muy-redondeado'));
+alter table businesses add column if not exists image_shadow text not null default 'ninguna'
+  check (image_shadow in ('ninguna','suave','media','marcada'));

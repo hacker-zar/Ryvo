@@ -56,7 +56,7 @@ export default function About({ business, layout }: AboutProps) {
           {image ? (
             <Reveal
               delay={100}
-              className="relative aspect-[4/5] md:aspect-square overflow-hidden bg-ink-elevated order-first md:order-last"
+              className="image-frame relative aspect-[4/5] md:aspect-square overflow-hidden bg-ink-elevated order-first md:order-last"
             >
               <Image
                 src={image}

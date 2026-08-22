@@ -36,7 +36,7 @@ export default function ShowcaseGallery({
           type="button"
           onClick={() => setOpenIndex(activeIndex)}
           aria-label={`Ver foto ${activeIndex + 1} de ${businessName} en tamaño completo`}
-          className="relative block aspect-[16/10] w-full overflow-hidden rounded-sm bg-ink-elevated"
+          className="image-frame relative block aspect-[16/10] w-full overflow-hidden bg-ink-elevated"
         >
           <Image
             key={activeIndex}
@@ -59,7 +59,7 @@ export default function ShowcaseGallery({
                   onClick={() => setActiveIndex(i)}
                   aria-label={`Mostrar foto ${i + 1} de ${businessName} como protagonista`}
                   aria-current={isActive}
-                  className="relative h-16 w-16 shrink-0 overflow-hidden rounded-sm bg-ink-elevated sm:h-20 sm:w-20 transition-opacity"
+                  className="image-frame relative h-16 w-16 shrink-0 overflow-hidden bg-ink-elevated sm:h-20 sm:w-20 transition-opacity"
                   style={{
                     outline: isActive ? `2px solid ${primaryColor}` : "1px solid var(--ink-line)",
                     outlineOffset: "-1px",

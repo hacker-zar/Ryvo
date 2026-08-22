@@ -130,6 +130,68 @@
   border-radius: var(--button-radius, 0.125rem);
 }
 
+/* Estilo de fotos públicas controlado: mismo mecanismo que
+   data-button-style de arriba — data-image-radius/data-image-shadow (ver
+   AppearanceScope.tsx) fijan --image-radius/--image-shadow, y cualquier
+   foto pública usa .image-frame en vez de un rounded/shadow fijo de
+   Tailwind. Default recto/ninguna = exactamente el aspecto histórico
+   (sin radio, sin sombra) — ningún negocio existente cambia de aspecto
+   sin elegirlo. Sombras discretas a propósito (nunca "genéricas" ni muy
+   marcadas, ver el pedido de "calidad visual, no efectos de más"). */
+[data-image-radius="recto"] {
+  --image-radius: 0px;
+}
+[data-image-radius="suave"] {
+  --image-radius: 8px;
+}
+[data-image-radius="redondeado"] {
+  --image-radius: 16px;
+}
+[data-image-radius="muy-redondeado"] {
+  --image-radius: 24px;
+}
+/* "0 0 #0000" (no "none") a propósito — es la convención de "sombra
+   cero" que usa el propio Tailwind v4 para sus variables --tw-*-shadow
+   (ver abajo): un valor de <box-shadow> válido para poder encadenarse en
+   una lista separada por comas sin romper la propiedad. */
+[data-image-shadow="ninguna"] {
+  --image-shadow: 0 0 #0000;
+}
+[data-image-shadow="suave"] {
+  --image-shadow: 0 12px 28px -16px rgba(0, 0, 0, 0.4);
+}
+[data-image-shadow="media"] {
+  --image-shadow: 0 20px 40px -16px rgba(0, 0, 0, 0.5);
+}
+[data-image-shadow="marcada"] {
+  --image-shadow: 0 28px 52px -14px rgba(0, 0, 0, 0.6);
+}
+/* .image-frame encadena --image-shadow a través de --tw-shadow (el mismo
+   mecanismo interno que usan los shadow/ring de Tailwind — ver el
+   box-shadow de 5 capas que generan focus-visible:ring-2 y compañía) en
+   vez de pisar `box-shadow` directo. Es necesario: varias fotos públicas
+   YA combinan esta clase con focus-visible:ring-2 (foco de teclado) o
+   ring-1 (borde decorativo de la plantilla Noir), que también usan
+   box-shadow — un `box-shadow` propio y directo acá los reemplazaría por
+   completo (rompiendo el foco de teclado, ver "Mantener accesibilidad").
+   Encadenando por la MISMA variable que ya consume Tailwind, ambos
+   efectos se combinan en vez de pisarse, sin importar cuál de las dos
+   reglas gane la cascada. */
+.image-frame {
+  border-radius: var(--image-radius, 0px);
+  --tw-shadow: var(--image-shadow, 0 0 #0000);
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+/* Sin transition acá a propósito, ni siquiera en la vista previa del
+   editor: probado en el navegador, animar border-radius cuando su valor
+   depende de una custom property HEREDADA que cambia por un atributo en
+   un ancestro (data-image-radius) puede quedar "pegado" a medio camino
+   en vez de resolver al valor nuevo — un límite real de cómo Chromium
+   interpola transitions sobre var() heredadas, no un typo. Más seguro
+   que el cambio se vea instantáneo (correcto siempre) a arriesgar una
+   vista previa visualmente incorrecta. */
+
 body {
   background: var(--background);
   color: var(--foreground);

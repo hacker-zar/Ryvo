@@ -50,7 +50,7 @@ export default function Professionals({
           <div
             data-editable-category="profesionales"
             data-editable-item={specialist.id}
-            className={`relative aspect-square overflow-hidden bg-ink-elevated max-w-xs md:max-w-none mx-auto md:mx-0 w-full ${cardFrame}`}
+            className={`image-frame relative aspect-square overflow-hidden bg-ink-elevated max-w-xs md:max-w-none mx-auto md:mx-0 w-full ${cardFrame}`}
           >
             {specialist.photo ? (
               <Image
@@ -127,7 +127,7 @@ export default function Professionals({
               data-editable-category="profesionales"
               data-editable-item={professional.id}
             >
-              <div className={`relative aspect-square overflow-hidden bg-ink-elevated ${cardFrame}`}>
+              <div className={`image-frame relative aspect-square overflow-hidden bg-ink-elevated ${cardFrame}`}>
                 {professional.photo ? (
                   <Image
                     src={professional.photo}

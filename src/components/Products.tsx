@@ -56,7 +56,7 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
                 data-editable-item={product.id}
                 className="bg-ink-elevated border border-ink-line overflow-hidden group"
               >
-                <div className="relative aspect-square bg-ink overflow-hidden">
+                <div className="image-frame relative aspect-square bg-ink overflow-hidden">
                   {product.image ? (
                     <Image
                       src={product.image}
@@ -97,7 +97,7 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
           {products.map((product, i) => (
             <Reveal key={product.id} delay={staggerDelay(i)}>
               <div data-editable-category="productos" data-editable-item={product.id}>
-                <div className="relative aspect-square rounded-sm overflow-hidden bg-ink-elevated">
+                <div className="image-frame relative aspect-square overflow-hidden bg-ink-elevated">
                   {imageOrPlaceholder(product, "(min-width: 768px) 30vw, 90vw")}
                 </div>
                 <h3 className="mt-3 text-bone font-medium">{product.name}</h3>
@@ -126,7 +126,7 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
           {products.map((product, i) => (
             <Reveal key={product.id} delay={staggerDelay(i)}>
               <div data-editable-category="productos" data-editable-item={product.id}>
-                <div className="relative aspect-[4/3] overflow-hidden bg-ink-elevated">
+                <div className="image-frame relative aspect-[4/3] overflow-hidden bg-ink-elevated">
                   {imageOrPlaceholder(product, "(min-width: 768px) 40vw, 90vw")}
                 </div>
                 <div className="mt-4 flex items-start justify-between gap-4">
@@ -175,7 +175,7 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
                 <div
                   data-editable-category="productos"
                   data-editable-item={product.id}
-                  className="relative w-full h-full overflow-hidden bg-ink-elevated group"
+                  className="image-frame relative w-full h-full overflow-hidden bg-ink-elevated group"
                 >
                   {product.image ? (
                     <Image
@@ -217,7 +217,7 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
         {products.map((product, i) => (
           <Reveal key={product.id} delay={staggerDelay(i)}>
             <div data-editable-category="productos" data-editable-item={product.id}>
-              <div className="relative aspect-[4/5] overflow-hidden bg-ink-elevated">
+              <div className="image-frame relative aspect-[4/5] overflow-hidden bg-ink-elevated">
                 {imageOrPlaceholder(product, "(min-width: 768px) 30vw, 90vw")}
               </div>
               <div className="mt-4 flex items-start justify-between gap-4">
