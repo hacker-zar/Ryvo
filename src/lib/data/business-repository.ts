@@ -1275,25 +1275,51 @@ export async function deleteLocation(
  *  para mostrar en la lista de turnos del admin sin otro round-trip. */
 export interface BookingWithDetails extends Booking {
   service_name: string;
+  // null si el servicio no tiene precio cargado (ver Service.price) — la
+  // Agenda nunca debe tratar esto como $0 real (ver DaySummary).
+  service_price: number | null;
   location_name: string;
+  // null si el negocio no tiene profesionales, o si el booking no tiene
+  // uno asignado (legado/negocio sin profesionales al momento de
+  // reservar) — nunca "Profesional eliminado" a secas para no confundir
+  // con "sin asignar", que es un caso normal.
+  professional_name: string | null;
 }
+
+/** Un día puntual ("2026-08-22"), o un rango inclusive [from, to] — la
+ *  vista Semana de la Agenda pasa un rango en vez de repetir 7 llamadas
+ *  sueltas (mismo espíritu de "una sola query" que ya tenía esta función
+ *  para el resto de los datos). */
+export type BookingDateFilter = string | { from: string; to: string };
 
 export async function listBookingsByBusiness(
   businessId: string,
-  date?: string
+  date?: BookingDateFilter
 ): Promise<BookingWithDetails[]> {
+  const matchesDate = (bookingDate: string): boolean => {
+    if (!date) return true;
+    if (typeof date === "string") return bookingDate === date;
+    return bookingDate >= date.from && bookingDate <= date.to;
+  };
+
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     if (businessId !== demoBusiness.id) return [];
     const serviceNames = new Map(demoServices.map((s) => [s.id, s.name]));
+    const servicePrices = new Map(demoServices.map((s) => [s.id, s.price]));
     const locationNames = new Map(demoLocations.map((l) => [l.id, l.name]));
+    const professionalNames = new Map(demoProfessionals.map((p) => [p.id, p.name]));
     return demoBookings
-      .filter((b) => !date || b.date === date)
+      .filter((b) => matchesDate(b.date))
       .map((b) => ({
         ...b,
         service_name: serviceNames.get(b.service_id) ?? "Servicio eliminado",
+        service_price: servicePrices.get(b.service_id) ?? null,
         location_name: b.location_id
           ? (locationNames.get(b.location_id) ?? "Local eliminado")
           : "Local único",
+        professional_name: b.professional_id
+          ? (professionalNames.get(b.professional_id) ?? null)
+          : null,
       }));
   }
 
@@ -1304,35 +1330,57 @@ export async function listBookingsByBusiness(
     .order("date", { ascending: true })
     .order("time", { ascending: true });
 
-  if (date) query = query.eq("date", date);
+  if (typeof date === "string") {
+    query = query.eq("date", date);
+  } else if (date) {
+    query = query.gte("date", date.from).lte("date", date.to);
+  }
 
   const { data: bookings } = await query;
   if (!bookings || bookings.length === 0) return [];
 
-  const [{ data: services }, { data: locations }] = await Promise.all([
-    supabaseAdmin
-      .from("services")
-      .select("id, name")
-      .eq("business_id", businessId),
-    supabaseAdmin
-      .from("locations")
-      .select("id, name")
-      .eq("business_id", businessId),
-  ]);
+  // 3 queries batched (nunca por-booking): servicios/locales/profesionales
+  // del NEGOCIO, no por cada fila de `bookings` — el mismo patrón que ya
+  // usaba esta función para servicios/locales, solo un Map más.
+  const [{ data: services }, { data: locations }, { data: professionals }] =
+    await Promise.all([
+      supabaseAdmin
+        .from("services")
+        .select("id, name, price")
+        .eq("business_id", businessId),
+      supabaseAdmin
+        .from("locations")
+        .select("id, name")
+        .eq("business_id", businessId),
+      supabaseAdmin
+        .from("professionals")
+        .select("id, name")
+        .eq("business_id", businessId),
+    ]);
 
   const serviceNames = new Map(
     (services ?? []).map((s: { id: string; name: string }) => [s.id, s.name])
   );
+  const servicePrices = new Map(
+    (services ?? []).map((s: { id: string; price: number | null }) => [s.id, s.price])
+  );
   const locationNames = new Map(
     (locations ?? []).map((l: { id: string; name: string }) => [l.id, l.name])
+  );
+  const professionalNames = new Map(
+    (professionals ?? []).map((p: { id: string; name: string }) => [p.id, p.name])
   );
 
   return bookings.map((b) => ({
     ...b,
     service_name: serviceNames.get(b.service_id) ?? "Servicio eliminado",
+    service_price: servicePrices.get(b.service_id) ?? null,
     location_name: b.location_id
       ? (locationNames.get(b.location_id) ?? "Local eliminado")
       : "Local único",
+    professional_name: b.professional_id
+      ? (professionalNames.get(b.professional_id) ?? null)
+      : null,
   }));
 }
 
@@ -1471,7 +1519,14 @@ export async function cancelBookingById(
 export async function rescheduleBookingById(
   id: string,
   date: string,
-  time: string
+  time: string,
+  // Solo la Agenda (admin) lo usa — el flujo público de "Gestionar mi
+  // turno" nunca lo pasa, así que su comportamiento no cambia en
+  // absoluto (sigue chequeando disponibilidad contra el profesional
+  // ACTUAL del booking, como siempre). Si se pasa, la reprogramación
+  // también cambia de profesional: el chequeo de solapamiento corre
+  // contra el profesional NUEVO, no el viejo.
+  professionalId?: string | null
 ): Promise<{ success: boolean; error?: string; conflict?: boolean }> {
   if (!isSupabaseConfigured) {
     return { success: true }; // modo demo real
@@ -1485,6 +1540,9 @@ export async function rescheduleBookingById(
   const booking = await getBookingById(id);
   if (!booking) return { success: false, error: "Turno no encontrado." };
 
+  const targetProfessionalId =
+    professionalId !== undefined ? professionalId : booking.professional_id;
+
   // Usa la duración YA PERSISTIDA de la propia reserva (no la duración
   // actual del servicio) — reprogramar conserva la duración original con
   // la que se reservó, coherente con que duration_min es inmutable desde
@@ -1493,7 +1551,7 @@ export async function rescheduleBookingById(
     booking.business_id,
     booking.location_id,
     date,
-    booking.professional_id ?? undefined,
+    targetProfessionalId ?? undefined,
     id
   );
   const startMin = timeToMinutes(time);
@@ -1513,9 +1571,15 @@ export async function rescheduleBookingById(
     };
   }
 
+  const update: { date: string; time: string; professional_id?: string | null } = {
+    date,
+    time,
+  };
+  if (professionalId !== undefined) update.professional_id = professionalId;
+
   const { error } = await supabaseAdmin
     .from("bookings")
-    .update({ date, time })
+    .update(update)
     .eq("id", id);
   if (error) {
     // 23505 = unique_violation (legado), 23P01 = exclusion_violation

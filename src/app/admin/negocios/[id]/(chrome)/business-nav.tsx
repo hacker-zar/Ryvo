@@ -15,7 +15,7 @@ interface BusinessNavProps {
 
 const TABS: { key: NavKey; label: string; suffix: string }[] = [
   { key: "editor", label: "Editor", suffix: "" },
-  { key: "turnos", label: "Turnos", suffix: "/turnos" },
+  { key: "turnos", label: "Agenda", suffix: "/turnos" },
   { key: "clientes", label: "Clientes", suffix: "/clientes" },
   { key: "estadisticas", label: "Estadísticas", suffix: "/estadisticas" },
   { key: "oportunidades", label: "Oportunidades", suffix: "/oportunidades" },

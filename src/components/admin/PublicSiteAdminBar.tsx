@@ -28,7 +28,7 @@ export default function PublicSiteAdminBar({
 
   const items = [
     { label: "Ver página", href: `/${slug}` },
-    { label: "Turnos", href: `/admin/negocios/${businessId}/turnos` },
+    { label: "Agenda", href: `/admin/negocios/${businessId}/turnos` },
     { label: "Clientes", href: `/admin/negocios/${businessId}/clientes` },
     { label: "Estadísticas", href: `/admin/negocios/${businessId}/estadisticas` },
     { label: "Editor", href: `/admin/negocios/${businessId}` },

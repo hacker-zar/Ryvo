@@ -24,11 +24,13 @@ import {
   deleteService,
   deleteTemplate,
   getBusinessById,
+  getClientProfile,
   getOfficialTemplateById,
   getTemplateById,
   isProfessionalQualifiedForService,
   listProfessionalsByBusiness,
   reorderProfessional,
+  rescheduleBookingById,
   updateBookingStatus,
   updateBusiness,
   updateClientNotes,
@@ -496,6 +498,30 @@ export async function adminUpdateBookingStatus(
   return result;
 }
 
+/**
+ * Reprogramar desde la Agenda (a diferencia del flujo público de
+ * "Gestionar mi turno", acá el dueño/admin puede además cambiar de
+ * profesional) — mismo `rescheduleBookingById` de siempre, extendido con
+ * un parámetro opcional. `professionalId` solo se pasa cuando el panel
+ * de reprogramación lo cambió explícitamente; si no, `undefined` deja el
+ * profesional actual del booking intacto (ver rescheduleBookingById).
+ */
+export async function adminRescheduleBooking(
+  businessId: string,
+  bookingId: string,
+  date: string,
+  time: string,
+  professionalId?: string | null
+) {
+  await requireAdminFor(businessId);
+  const result = await rescheduleBookingById(bookingId, date, time, professionalId);
+  if (result.success) {
+    revalidatePath(`/admin/negocios/${businessId}/turnos`);
+    await dispatchDueNotificationsForBooking(bookingId);
+  }
+  return result;
+}
+
 export async function adminUpdateClientNotes(
   businessId: string,
   clientId: string,
@@ -506,6 +532,21 @@ export async function adminUpdateClientNotes(
   const result = await updateClientNotes(clientId, notes);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}/clientes/${clientId}`);
   return result;
+}
+
+/**
+ * Usada por el panel de detalle de un turno en la Agenda (Client
+ * Component) para mostrar última visita/cantidad de visitas al abrir un
+ * booking puntual — UNA llamada por apertura de panel, nunca una por
+ * fila del timeline (eso sería el N+1 que el pedido pide evitar
+ * explícitamente). Reutiliza `getClientProfile` tal cual, la misma
+ * función que ya arma /clientes/[clientId] — sin segunda agregación.
+ */
+export async function adminGetClientProfile(businessId: string, clientId: string) {
+  await requireAdminFor(businessId);
+  const profile = await getClientProfile(businessId, clientId);
+  if (!profile) return { success: false as const, error: "Cliente no encontrado." };
+  return { success: true as const, profile };
 }
 
 /**

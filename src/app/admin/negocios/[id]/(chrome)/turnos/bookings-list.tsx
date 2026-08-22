@@ -6,6 +6,7 @@ import { BookingWithDetails } from "@/lib/data/business-repository";
 import { adminUpdateBookingStatus } from "@/lib/admin/actions";
 import { whatsappLink } from "@/lib/format";
 import { BookingStatus } from "@/types/business";
+import { STATUS_COLOR, STATUS_LABELS, isPastBooking as isPast } from "./booking-status";
 
 interface BookingsListProps {
   businessId: string;
@@ -16,22 +17,6 @@ interface BookingsListProps {
   nowTime: string;
   viewAll: boolean;
 }
-
-const STATUS_LABELS: Record<BookingStatus, string> = {
-  pending: "Pendiente",
-  confirmed: "Confirmado",
-  completed: "Completado",
-  cancelled: "Cancelado",
-  no_show: "No asistió",
-};
-
-const STATUS_COLOR: Record<BookingStatus, string> = {
-  pending: "var(--bone-muted)",
-  confirmed: "var(--brass)",
-  completed: "#4ade80",
-  cancelled: "#f87171",
-  no_show: "#fb923c",
-};
 
 function formatDateLong(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -53,15 +38,6 @@ function StatusBadge({ status }: { status: BookingStatus }) {
       {STATUS_LABELS[status] ?? status}
     </span>
   );
-}
-
-/** Un turno "ya pasó" si su fecha es anterior a hoy, o es hoy pero su hora
- *  ya pasó — recién ahí tiene sentido ofrecer marcarlo Completado/No
- *  asistió (completar un turno futuro no tiene sentido). */
-function isPast(booking: BookingWithDetails, today: string, nowTime: string): boolean {
-  if (booking.date < today) return true;
-  if (booking.date > today) return false;
-  return booking.time.slice(0, 5) < nowTime;
 }
 
 function QuickActions({

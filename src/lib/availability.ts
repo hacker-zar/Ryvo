@@ -44,7 +44,7 @@ export function intervalsOverlap(
   return aStartMin < bEnd && bStartMin < aEnd;
 }
 
-function minutesToTime(mins: number): string {
+export function minutesToTime(mins: number): string {
   const h = Math.floor(mins / 60)
     .toString()
     .padStart(2, "0");
