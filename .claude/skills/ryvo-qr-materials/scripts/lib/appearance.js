@@ -1,47 +1,33 @@
-// Mismas 2 variantes curadas que src/lib/appearance-presets.ts (oscuro/
-// claro) — background_color/text_color de un negocio siempre son una de
-// estas dos combinaciones ya afinadas, nunca colores libres. Se replica
-// acá (no se importa el .ts) por la misma razón que el resto de scripts/lib:
-// este código corre con Node plano, sin loader de TypeScript. Si cambia
-// appearance-presets.ts, replicar el cambio acá.
-const BACKGROUND_VARIANTS = {
-  oscuro: {
-    background: "#1a1815",
-    text: "#f7f4ee",
-    elevated: "#242019",
-    line: "#3a342c",
-  },
-  claro: {
-    background: "#f7f4ee",
-    text: "#1a1815",
-    elevated: "#efe8db",
-    line: "#ddd0ba",
-  },
-};
+// Refleja src/components/AppearanceScope.tsx + src/lib/appearance-presets.ts:
+// el fondo de un negocio es un color libre (input type="color"), no un
+// preset — se replica acá (no se importa el .ts) por la misma razón que
+// el resto de scripts/lib: este código corre con Node plano, sin loader
+// de TypeScript. Si cambia AppearanceScope.tsx, replicar el cambio acá.
+const { relativeLuminance, mixHex } = require("./color");
 
-function variantFor(backgroundColor) {
-  if (backgroundColor === BACKGROUND_VARIANTS.claro.background) return "claro";
-  return "oscuro";
-}
+const DEFAULT_BACKGROUND = "#1a1815";
+const DEFAULT_TEXT = "#f7f4ee";
 
 /** Paleta resuelta lista para usar en las plantillas — misma resolución
- *  que src/components/AppearanceScope.tsx: background_color/text_color
- *  RAW del negocio ganan si están seteados (algunos negocios cargados
- *  antes de que background/text pasaran a ser 2 variantes curadas tienen
- *  un hex propio, ej. "#1e1206"), y solo caen al preset si están vacíos;
- *  elevated/line SIEMPRE salen del preset más cercano (el negocio nunca
- *  los elige directo). primary_color es el acento, siempre libre. */
+ *  que AppearanceScope.tsx: background_color/text_color RAW del negocio
+ *  ganan si están seteados, y solo caen al default si están vacíos;
+ *  elevated/line se calculan mezclando el fondo hacia blanco o negro
+ *  según sea oscuro o claro (mismo color-mix() de AppearanceScope, acá
+ *  reimplementado en JS puro — ver mixHex). primary_color es el acento,
+ *  siempre libre. */
 function resolvePalette(business) {
-  const variant = variantFor(business.background_color);
-  const base = BACKGROUND_VARIANTS[variant];
+  const background = business.background_color || DEFAULT_BACKGROUND;
+  const text = business.text_color || DEFAULT_TEXT;
+  const luminance = relativeLuminance(background);
+  const isLight = luminance !== null && luminance > 0.179;
+  const mixTarget = isLight ? "#000000" : "#ffffff";
   return {
-    variant,
-    background: business.background_color || base.background,
-    text: business.text_color || base.text,
-    elevated: base.elevated,
-    line: base.line,
-    accent: business.primary_color || base.text,
+    background,
+    text,
+    elevated: mixHex(background, mixTarget, 6),
+    line: mixHex(background, mixTarget, 14),
+    accent: business.primary_color || text,
   };
 }
 
-module.exports = { BACKGROUND_VARIANTS, variantFor, resolvePalette };
+module.exports = { DEFAULT_BACKGROUND, DEFAULT_TEXT, resolvePalette };

@@ -79,11 +79,35 @@ function pickReadableAccent(accentHex, bgHex, fallbackHex, minRatio = MIN_TEXT_C
   return fallbackHex;
 }
 
+// Mezcla lineal en sRGB de dos colores hex — misma idea que el
+// color-mix(in srgb, ...) que usa src/components/AppearanceScope.tsx,
+// reimplementada acá porque esta rasterización via sharp/svg no corre
+// en un navegador (sin soporte garantizado de color-mix() en SVG
+// estático). `percentB` es el peso (0-100) del segundo color.
+function mixHex(hexA, hexB, percentB) {
+  const a = normalizeHex(hexA);
+  const b = normalizeHex(hexB);
+  if (!a || !b) return a ? `#${a}` : "#000000";
+  const pb = Math.max(0, Math.min(100, percentB)) / 100;
+  const pa = 1 - pb;
+  const mixed = [0, 2, 4]
+    .map((i) => {
+      const va = parseInt(a.slice(i, i + 2), 16);
+      const vb = parseInt(b.slice(i, i + 2), 16);
+      return Math.round(va * pa + vb * pb)
+        .toString(16)
+        .padStart(2, "0");
+    })
+    .join("");
+  return `#${mixed}`;
+}
+
 module.exports = {
   normalizeHex,
   relativeLuminance,
   contrastRatio,
   readableTextColor,
+  mixHex,
   pickQrColors,
   pickReadableAccent,
   QR_MIN_CONTRAST,

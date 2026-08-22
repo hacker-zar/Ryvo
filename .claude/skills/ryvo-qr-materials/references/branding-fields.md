@@ -37,17 +37,17 @@ hace falta fidelidad pixel-perfect con Fraunces real, hay que sumar los
 archivos de fuente como asset de la skill y decírselo al usuario
 explícitamente antes, no asumirlo.
 
-## Paleta oscuro/claro: por qué no es cualquier hex
+## Fondo: color libre, elevated/line derivados
 
-`business.background_color`/`text_color` no son color libre — el editor
-(`AppearanceForm`) los resuelve a una de dos variantes curadas
-(`oscuro`/`claro`, ver `src/lib/appearance-presets.ts`), cada una con su
-propio par fondo+texto+superficie-elevada+línea ya afinado para
-contrastar bien solo. `scripts/lib/appearance.js` replica exactamente
-esa tabla (`BACKGROUND_VARIANTS`) más la misma regla de resolución que
-`AppearanceScope.tsx`: el valor RAW guardado en `background_color`/
-`text_color` gana si está seteado (algunos negocios cargados antes de
-que existieran las 2 variantes tienen un hex propio, ej. `#1e1206`), y
-`elevated`/`line` siempre salen del preset más cercano porque el
-negocio nunca los elige directo. Si `appearance-presets.ts` cambia,
-replicar el cambio en `scripts/lib/appearance.js`.
+`business.background_color` es un color libre (`input type="color"` en
+`AppearanceForm`) — `text_color` se deriva automáticamente de él
+(`readableTextColor`, el más legible entre claro/oscuro) y se guarda,
+no se elige aparte. `elevated`/`line` (superficie alternada, borde) no
+son un preset: se calculan mezclando el fondo hacia blanco o negro según
+sea oscuro o claro (`color-mix()` en `AppearanceScope.tsx`).
+`scripts/lib/appearance.js` replica esa misma resolución con
+`mixHex()` (`scripts/lib/color.js`) en vez de `color-mix()` CSS, porque
+la rasterización de este script (SVG → `sharp`) no corre en un navegador
+y no hay garantía de soporte de `color-mix()` ahí. Si
+`AppearanceScope.tsx` cambia esta lógica, replicar el cambio en
+`scripts/lib/appearance.js`.

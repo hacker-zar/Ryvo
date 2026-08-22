@@ -1,5 +1,6 @@
 import { Business } from "@/types/business";
-import { BACKGROUND_VARIANTS, backgroundVariantFor } from "@/lib/appearance-presets";
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_TEXT_COLOR } from "@/lib/appearance-presets";
+import { isLightColor } from "@/lib/format";
 import { resolvePalette } from "@/lib/palette-presets";
 import { LAYOUT_BLUEPRINTS } from "@/lib/templates/blueprints";
 
@@ -31,10 +32,17 @@ interface AppearanceScopeProps {
  * (Header, Contact) mostrarían siempre el dorado de demo en vez del
  * color que el negocio eligió.
  *
+ * El fondo (background_color) es un color libre, no un preset — ver
+ * appearance-form.tsx. --ink-elevated/--ink-line (superficies alternadas,
+ * bordes) se calculan a partir de ese mismo color con color-mix(),
+ * mezclando hacia blanco o negro según si el fondo elegido es oscuro o
+ * claro (isLightColor) — funciona para cualquier hex, no solo para los
+ * dos presets que existían antes.
+ *
  * Sistema de plantillas: si el negocio tiene `palette_id`, esa paleta
- * (11 posibles, ver palette-presets.ts) reemplaza el mecanismo de 2
- * variantes de fondo de abajo para ink/ink-elevated/bone/bone-muted/
- * brass. Si tiene `template_layout`, la fuente de esa plantilla
+ * (11 posibles, ver palette-presets.ts) reemplaza lo de arriba para
+ * ink/ink-elevated/bone/bone-muted/brass. Si tiene `template_layout`, la
+ * fuente de esa plantilla
  * sobreescribe --font-display-stack/--font-sans-stack por encima del
  * sistema de 3 presets de tipografía (un inline style gana por
  * especificidad sobre el bloque [data-typography] sin tocar ese
@@ -45,16 +53,17 @@ export default function AppearanceScope({
   business,
   children,
 }: AppearanceScopeProps) {
-  // El fondo es una de dos variantes prediseñadas (oscuro/claro), no un
-  // color libre — ver appearance-presets.ts. Además de --ink/--bone,
-  // hace falta ajustar --ink-elevated/--ink-line (superficies alternadas,
-  // bordes) para que la variante clara no quede con bordes/tarjetas
-  // pensados para fondo oscuro encima de un fondo claro.
-  const preset = BACKGROUND_VARIANTS[backgroundVariantFor(business.background_color)];
   const palette = resolvePalette(business.palette_id);
   const layoutFonts = business.template_layout
     ? LAYOUT_BLUEPRINTS[business.template_layout]
     : null;
+
+  const background = business.background_color || DEFAULT_BACKGROUND_COLOR;
+  // Mezclar hacia blanco "eleva" un fondo oscuro; mezclar hacia negro
+  // "eleva" uno claro — así cualquier color libre elegido por el negocio
+  // termina con una superficie/borde ligeramente distinguibles del fondo,
+  // sin necesitar un preset para cada tono posible.
+  const mixTarget = isLightColor(background) ? "#000000" : "#ffffff";
 
   const colorVars: Record<string, string> = palette
     ? {
@@ -66,10 +75,10 @@ export default function AppearanceScope({
         "--brass": palette.accent,
       }
     : {
-        "--ink": business.background_color || preset.background,
-        "--bone": business.text_color || preset.text,
-        "--ink-elevated": preset.elevated,
-        "--ink-line": preset.line,
+        "--ink": background,
+        "--bone": business.text_color || DEFAULT_TEXT_COLOR,
+        "--ink-elevated": `color-mix(in srgb, ${background}, ${mixTarget} 6%)`,
+        "--ink-line": `color-mix(in srgb, ${background}, ${mixTarget} 14%)`,
         "--brass": business.primary_color,
       };
 

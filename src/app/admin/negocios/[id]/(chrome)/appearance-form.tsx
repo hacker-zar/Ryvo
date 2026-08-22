@@ -3,12 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimationPreset, Business, ButtonStyle, TypographyPreset } from "@/types/business";
 import { adminUpdateAppearance } from "@/lib/admin/actions";
-import { contrastRatio } from "@/lib/format";
-import {
-  BACKGROUND_VARIANTS,
-  BackgroundVariant,
-  backgroundVariantFor,
-} from "@/lib/appearance-presets";
+import { contrastRatio, readableTextColor } from "@/lib/format";
+import { DEFAULT_BACKGROUND_COLOR } from "@/lib/appearance-presets";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 import { useAsyncStatus } from "@/lib/useAsyncStatus";
 
@@ -50,11 +46,6 @@ const ANIMATION_OPTIONS: { value: AnimationPreset; label: string; hint: string }
   { value: "dinamica", label: "Dinámica", hint: "Un poco más de movimiento y escala" },
 ];
 
-const BACKGROUND_OPTIONS = Object.entries(BACKGROUND_VARIANTS) as [
-  BackgroundVariant,
-  (typeof BACKGROUND_VARIANTS)[BackgroundVariant],
-][];
-
 const colorInputClasses =
   "h-10 w-full rounded-sm border border-ink-line bg-ink-elevated";
 
@@ -65,8 +56,8 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   const [secondaryColor, setSecondaryColor] = useState(
     business.secondary_color
   );
-  const [backgroundVariant, setBackgroundVariant] = useState<BackgroundVariant>(
-    backgroundVariantFor(business.background_color)
+  const [backgroundColor, setBackgroundColor] = useState(
+    business.background_color || DEFAULT_BACKGROUND_COLOR
   );
   const [typography, setTypography] = useState<TypographyPreset>(
     business.typography_preset || "elegante"
@@ -79,13 +70,15 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   );
   const { run, dirty, markDirty } = useAsyncStatus();
 
-  const backgroundPreset = BACKGROUND_VARIANTS[backgroundVariant];
+  // El texto se deriva automáticamente del fondo elegido (el más legible
+  // entre claro/oscuro, ver readableTextColor) — no es un color libre
+  // aparte: con un fondo totalmente libre, dejar el texto también libre
+  // podría producir combinaciones ilegibles sin que nada lo evite.
+  const textColor = readableTextColor(backgroundColor);
 
   // Aviso de contraste (no bloquea el guardado — es la elección del dueño,
-  // solo lo alertamos si va a costar leerlo). El fondo/texto ya vienen
-  // curados por RYVO con buen contraste entre sí; lo único que puede
-  // quedar bajo es el color principal elegido libremente contra ese fondo.
-  const accentContrast = contrastRatio(primaryColor, backgroundPreset.background);
+  // solo lo alertamos si va a costar leerlo).
+  const accentContrast = contrastRatio(primaryColor, backgroundColor);
   const lowAccentContrast = accentContrast !== null && accentContrast < 3;
 
   async function save(formData: FormData) {
@@ -121,38 +114,20 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
         profesional sin importar qué elijas.
       </p>
 
-      {/* Fondo: variante prediseñada, no un color libre — ver
-          appearance-presets.ts. Se guarda en las mismas columnas
-          background_color/text_color de siempre. */}
-      <input type="hidden" name="background_color" value={backgroundPreset.background} />
-      <input type="hidden" name="text_color" value={backgroundPreset.text} />
+      {/* Fondo: color libre — el texto (text_color) se deriva
+          automáticamente del que se elija acá (ver readableTextColor),
+          así siempre queda legible sin exponer un segundo picker. */}
+      <input type="hidden" name="text_color" value={textColor} />
       <div>
         <p className="section-eyebrow text-bone-muted mb-3">Fondo</p>
-        <div className="flex gap-3">
-          {BACKGROUND_OPTIONS.map(([value, preset]) => (
-            <label
-              key={value}
-              className="flex-1 flex items-center gap-3 rounded-sm border px-3 py-2.5 cursor-pointer"
-              style={{
-                borderColor:
-                  backgroundVariant === value ? primaryColor : "var(--ink-line)",
-              }}
-            >
-              <input
-                type="radio"
-                name="background_variant"
-                checked={backgroundVariant === value}
-                onChange={() => setBackgroundVariant(value)}
-              />
-              <span
-                aria-hidden="true"
-                className="h-6 w-6 rounded-full border border-ink-line shrink-0"
-                style={{ backgroundColor: preset.background }}
-              />
-              <span className="text-sm text-bone">{preset.label}</span>
-            </label>
-          ))}
-        </div>
+        <input
+          id="background_color"
+          name="background_color"
+          type="color"
+          value={backgroundColor}
+          onChange={(e) => setBackgroundColor(e.target.value)}
+          className={colorInputClasses}
+        />
       </div>
 
       {/* Colores */}

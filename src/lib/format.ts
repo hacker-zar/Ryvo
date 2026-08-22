@@ -143,6 +143,20 @@ export function readableTextColor(
 }
 
 /**
+ * true si un color hex es "claro" (más cerca de blanco que de negro),
+ * mismo punto de corte de luminancia que readableTextColor. Usado para
+ * decidir hacia dónde mezclar las superficies derivadas de un
+ * background_color elegido libremente (ver AppearanceScope): sobre un
+ * fondo oscuro, "elevar" una superficie es aclararla un poco; sobre uno
+ * claro, es oscurecerla — así funciona con cualquier color, no solo con
+ * los dos presets que existían antes.
+ */
+export function isLightColor(hex: string): boolean {
+  const luminance = relativeLuminance(hex);
+  return luminance !== null && luminance > 0.179;
+}
+
+/**
  * Ratio de contraste WCAG 2.x entre dos colores hex (1 = sin contraste,
  * 21 = máximo posible, negro sobre blanco). Devuelve null si algún color
  * no es un hex válido. Usada en el admin (AppearanceForm) para avisarle
