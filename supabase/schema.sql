@@ -439,3 +439,17 @@ alter table notification_events enable row level security;
 -- Sin políticas públicas a propósito (mismo criterio que accounts/clients):
 -- solo supabaseAdmin, desde Server Actions/el endpoint de cron ya
 -- protegidos, puede leer/escribir esta tabla.
+
+-- === Animaciones de entrada: 2 presets nuevos (aplicado directo contra
+-- Supabase vía apply_migration; documentación posterior, no fuente de
+-- verdad). Reveal.tsx/useScrollReveal.ts no cambian — ver AnimationPreset
+-- en types/business.ts y los bloques [data-animation="revelado"/
+-- "escalonada"] en globals.css. Solo ensancha los 2 CHECK constraints ya
+-- existentes, ningún dato ni default cambia para negocios existentes. ===
+alter table businesses drop constraint businesses_animation_preset_check;
+alter table businesses add constraint businesses_animation_preset_check
+  check (animation_preset in ('ninguna','sutil','dinamica','revelado','escalonada'));
+
+alter table templates drop constraint templates_animation_preset_check;
+alter table templates add constraint templates_animation_preset_check
+  check (animation_preset in ('ninguna','sutil','dinamica','revelado','escalonada'));

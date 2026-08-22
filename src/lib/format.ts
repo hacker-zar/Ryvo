@@ -40,6 +40,43 @@ export function isLikelyPhone(value: string): boolean {
   return value.replace(/\D/g, "").length >= 6;
 }
 
+/** Sugiere (nunca fuerza) el código de área para precargar el campo del
+ *  formulario de reserva, a partir del WhatsApp que el propio negocio ya
+ *  cargó (nunca por geolocalización del cliente). No hay un campo
+ *  estructurado de "código de área" en el negocio — se aprovecha que
+ *  quien lo tipeó ya lo separó con espacios/guiones (ej. "+54 9 341
+ *  123-4567", "341 123-4567"): se descartan el código de país (54) y el
+ *  prefijo de celular (9) si aparecen como token propio, y se toma el
+ *  token que sigue. Si el formato no es reconocible, devuelve "" — el
+ *  cliente lo completa a mano, nunca se inventa un valor. */
+export function suggestAreaCode(businessPhone: string | null | undefined): string {
+  if (!businessPhone) return "";
+  const tokens = businessPhone
+    .split(/[^\d]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  let i = 0;
+  if (tokens[i] === "54") i++;
+  if (tokens[i] === "9") i++;
+  const candidate = tokens[i];
+  if (candidate && candidate.length >= 2 && candidate.length <= 4) {
+    return candidate;
+  }
+  return "";
+}
+
+/** Arma un teléfono de cliente en un formato consistente y ya compatible
+ *  con wa.me (ver whatsappLink) — mismo criterio que ya usa
+ *  `business.whatsapp` en producción (código de país 54 + 9 de celular +
+ *  área + número). Si no hay código de área, no lo inventa: arma el
+ *  número sin ese segmento en vez de adivinar uno. */
+export function composeCustomerPhone(areaCode: string, localNumber: string): string {
+  const area = areaCode.replace(/\D/g, "");
+  const number = localNumber.replace(/\D/g, "");
+  if (!number) return "";
+  return area ? `+54 9 ${area} ${number}` : `+54 9 ${number}`;
+}
+
 /** Fecha de hoy en hora local del servidor, formato "YYYY-MM-DD" — mismo
  *  formato que usa la columna `bookings.date`. */
 export function todayDateString(): string {

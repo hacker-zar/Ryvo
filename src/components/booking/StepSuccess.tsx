@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { BookableService, Business, Location } from "@/types/business";
 import { readableTextColor, whatsappLink } from "@/lib/format";
 
@@ -16,6 +16,17 @@ interface StepSuccessProps {
   date: string;
   time: string;
   onClose: () => void;
+}
+
+// El flujo de "Gestionar mi turno" en sí funciona (navega a
+// /[slug]/turno/[id]): lo verificado como problema real es la falta de
+// feedback durante esa navegación (Server Component, puede tardar un
+// instante en 3G/4G) — sin esto, un tap en mobile "no parece hacer nada"
+// hasta que la página nueva termina de cargar. `useLinkStatus` (Next.js)
+// es el primitivo oficial para esto, cero librería nueva.
+function ManageBookingLabel() {
+  const { pending } = useLinkStatus();
+  return <>{pending ? "Abriendo…" : "Gestionar mi turno"}</>;
 }
 
 function formatDateLong(dateStr: string): string {
@@ -130,9 +141,9 @@ export default function StepSuccess({
         {bookingId ? (
           <Link
             href={`/${slug}/turno/${bookingId}`}
-            className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+            className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass active:opacity-60 focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
           >
-            Gestionar mi turno
+            <ManageBookingLabel />
           </Link>
         ) : null}
       </div>

@@ -53,6 +53,8 @@ const ANIMATION_OPTIONS: { value: AnimationPreset; label: string; hint: string }
   { value: "ninguna", label: "Ninguna", hint: "Todo visible de entrada, sin movimiento" },
   { value: "sutil", label: "Sutil", hint: "Aparición suave al hacer scroll (recomendado)" },
   { value: "dinamica", label: "Dinámica", hint: "Un poco más de movimiento y escala" },
+  { value: "revelado", label: "Reveal", hint: "Aparece como si se descorriera una cortina" },
+  { value: "escalonada", label: "Stagger", hint: "Los elementos de una sección aparecen en cadena" },
 ];
 
 const IMAGE_RADIUS_OPTIONS: { value: ImageRadiusPreset; label: string; hint: string }[] = [

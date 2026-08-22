@@ -5,7 +5,7 @@
 export type TypographyPreset = "clasica" | "moderna" | "elegante";
 export type ButtonStyle = "redondeado" | "suave" | "recto";
 export type HeroVideoPosition = "center" | "top" | "bottom";
-export type AnimationPreset = "ninguna" | "sutil" | "dinamica";
+export type AnimationPreset = "ninguna" | "sutil" | "dinamica" | "revelado" | "escalonada";
 
 // Estilo visual de las fotos públicas (Galería/Profesionales/Productos/
 // contenido de plantilla) — mismo mecanismo de presets cerrados que

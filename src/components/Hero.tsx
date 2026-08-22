@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Business, TemplateLayoutId } from "@/types/business";
 import { useBookingModal } from "@/lib/booking-modal-context";
 import { readableTextColor } from "@/lib/format";
+import Reveal from "@/components/Reveal";
 
 interface HeroProps {
   business: Pick<
@@ -141,18 +142,24 @@ export default function Hero({ business, layout }: HeroProps) {
       <section id="inicio" className="bg-ink">
         <div className="mx-auto max-w-5xl px-4 py-16 md:py-24 grid gap-10 md:grid-cols-2 md:items-center">
           <div>
-            <p className="section-eyebrow" style={{ color: business.primary_color }}>
-              Reservá tu turno online
-            </p>
-            <h1 className="display-title mt-4 text-3xl sm:text-4xl md:text-5xl text-bone">
-              {business.name}
-            </h1>
-            {business.description ? (
-              <p className="mt-5 max-w-md text-bone-muted text-sm md:text-base leading-relaxed line-clamp-3">
-                {business.description}
+            <Reveal>
+              <p className="section-eyebrow" style={{ color: business.primary_color }}>
+                Reservá tu turno online
               </p>
+              <h1 className="display-title mt-4 text-3xl sm:text-4xl md:text-5xl text-bone">
+                {business.name}
+              </h1>
+            </Reveal>
+            {business.description ? (
+              <Reveal delay={120}>
+                <p className="mt-5 max-w-md text-bone-muted text-sm md:text-base leading-relaxed line-clamp-3">
+                  {business.description}
+                </p>
+              </Reveal>
             ) : null}
-            <div className="mt-8">{primaryCta}</div>
+            <Reveal delay={220}>
+              <div className="mt-8">{primaryCta}</div>
+            </Reveal>
           </div>
           <div className="relative aspect-[4/3] md:aspect-square rounded-sm overflow-hidden bg-ink-elevated">
             {backgroundMedia()}
@@ -173,35 +180,41 @@ export default function Hero({ business, layout }: HeroProps) {
       >
         <div className="mx-auto max-w-5xl px-4 py-16 md:py-28 w-full grid gap-10 md:grid-cols-[1.2fr_1fr] md:items-center">
           <div className="relative z-10">
-            <p
-              className="section-eyebrow"
-              style={{ color: ctaTextColor, opacity: 0.8 }}
-            >
-              Reservá tu turno online
-            </p>
-            <h1
-              className="display-title mt-3 text-4xl sm:text-5xl md:text-7xl leading-[0.95]"
-              style={{ color: ctaTextColor }}
-            >
-              {business.name}
-            </h1>
-            {business.description ? (
+            <Reveal>
               <p
-                className="mt-5 max-w-md text-sm md:text-base leading-relaxed line-clamp-3"
-                style={{ color: ctaTextColor, opacity: 0.85 }}
+                className="section-eyebrow"
+                style={{ color: ctaTextColor, opacity: 0.8 }}
               >
-                {business.description}
+                Reservá tu turno online
               </p>
-            ) : null}
-            <div className="mt-8">
-              <button
-                type="button"
-                onClick={open}
-                className="section-eyebrow text-xs px-7 py-3.5 btn-radius font-semibold hover:opacity-90 transition-opacity bg-ink text-bone"
+              <h1
+                className="display-title mt-3 text-4xl sm:text-5xl md:text-7xl leading-[0.95]"
+                style={{ color: ctaTextColor }}
               >
-                Reservar turno
-              </button>
-            </div>
+                {business.name}
+              </h1>
+            </Reveal>
+            {business.description ? (
+              <Reveal delay={120}>
+                <p
+                  className="mt-5 max-w-md text-sm md:text-base leading-relaxed line-clamp-3"
+                  style={{ color: ctaTextColor, opacity: 0.85 }}
+                >
+                  {business.description}
+                </p>
+              </Reveal>
+            ) : null}
+            <Reveal delay={220}>
+              <div className="mt-8">
+                <button
+                  type="button"
+                  onClick={open}
+                  className="section-eyebrow text-xs px-7 py-3.5 btn-radius font-semibold hover:opacity-90 transition-opacity bg-ink text-bone"
+                >
+                  Reservar turno
+                </button>
+              </div>
+            </Reveal>
           </div>
           {business.hero_image ? (
             <div className="relative aspect-[4/5] md:translate-y-6 shadow-2xl rounded-sm overflow-hidden md:rotate-1">
@@ -232,41 +245,43 @@ export default function Hero({ business, layout }: HeroProps) {
           isEditorial ? "flex items-end" : ""
         }`}
       >
-        <div
-          className={`animate-[fadeIn_0.2s_ease-out] ${
-            isEditorial ? "max-w-2xl" : "max-w-xl"
-          }`}
-        >
-          <p className="section-eyebrow" style={{ color: business.primary_color }}>
-            Reservá tu turno online
-          </p>
-          <h1
-            className={`display-title mt-4 text-bone [text-shadow:0_2px_20px_rgba(0,0,0,0.35)] ${
-              isEditorial
-                ? "text-4xl sm:text-5xl md:text-8xl leading-[0.92] uppercase"
-                : isAtelier
-                  ? "text-3xl sm:text-5xl md:text-7xl"
-                  : "text-3xl sm:text-4xl md:text-6xl"
-            }`}
-          >
-            {business.name}
-          </h1>
-          {business.description ? (
-            <p className="mt-5 max-w-md text-bone-muted text-sm md:text-base leading-relaxed line-clamp-3">
-              {business.description}
+        <div className={isEditorial ? "max-w-2xl" : "max-w-xl"}>
+          <Reveal>
+            <p className="section-eyebrow" style={{ color: business.primary_color }}>
+              Reservá tu turno online
             </p>
+            <h1
+              className={`display-title mt-4 text-bone [text-shadow:0_2px_20px_rgba(0,0,0,0.35)] ${
+                isEditorial
+                  ? "text-4xl sm:text-5xl md:text-8xl leading-[0.92] uppercase"
+                  : isAtelier
+                    ? "text-3xl sm:text-5xl md:text-7xl"
+                    : "text-3xl sm:text-4xl md:text-6xl"
+              }`}
+            >
+              {business.name}
+            </h1>
+          </Reveal>
+          {business.description ? (
+            <Reveal delay={120}>
+              <p className="mt-5 max-w-md text-bone-muted text-sm md:text-base leading-relaxed line-clamp-3">
+                {business.description}
+              </p>
+            </Reveal>
           ) : null}
-          <div className="mt-8 flex flex-wrap gap-3">
-            {primaryCta}
-            {isAtelier ? (
-              <a
-                href="#servicios"
-                className="section-eyebrow text-xs px-7 py-3.5 btn-radius font-semibold border border-bone/40 text-bone hover:border-bone transition-colors"
-              >
-                Ver servicios
-              </a>
-            ) : null}
-          </div>
+          <Reveal delay={220}>
+            <div className="mt-8 flex flex-wrap gap-3">
+              {primaryCta}
+              {isAtelier ? (
+                <a
+                  href="#servicios"
+                  className="section-eyebrow text-xs px-7 py-3.5 btn-radius font-semibold border border-bone/40 text-bone hover:border-bone transition-colors"
+                >
+                  Ver servicios
+                </a>
+              ) : null}
+            </div>
+          </Reveal>
         </div>
       </div>
     </section>

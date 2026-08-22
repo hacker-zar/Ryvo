@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Business, Location, Service } from "@/types/business";
-import { formatPrice, isLikelyPhone } from "@/lib/format";
+import { composeCustomerPhone, formatPrice, isLikelyPhone, suggestAreaCode } from "@/lib/format";
 
 interface StepDetailsProps {
-  business: Pick<Business, "primary_color">;
+  business: Pick<Business, "primary_color" | "whatsapp">;
   service: Service;
   location: Location;
   date: string;
@@ -47,6 +47,26 @@ export default function StepDetails({
   const phoneInvalid =
     phoneTouched && customerPhone.trim().length > 0 && !isLikelyPhone(customerPhone);
 
+  // Código de área y número por separado (pedido explícito: el cliente
+  // no debería tener que acordarse de anteponer el código de área él
+  // mismo). Se sugiere el del propio negocio (nunca por geolocalización
+  // del cliente) pero queda editable — si no se puede sugerir, arranca
+  // vacío. Estado local: `customerPhone` (el string combinado que ya
+  // maneja el wizard) es la única fuente de verdad para submit/validación,
+  // estos dos campos solo existen para la UX de carga.
+  const [areaCode, setAreaCode] = useState(() => suggestAreaCode(business.whatsapp));
+  const [localNumber, setLocalNumber] = useState("");
+
+  function handleAreaCodeChange(v: string) {
+    setAreaCode(v);
+    onChangePhone(composeCustomerPhone(v, localNumber));
+  }
+
+  function handleLocalNumberChange(v: string) {
+    setLocalNumber(v);
+    onChangePhone(composeCustomerPhone(areaCode, v));
+  }
+
   return (
     <div>
       <p className="section-eyebrow" style={{ color: business.primary_color }}>
@@ -74,17 +94,35 @@ export default function StepDetails({
           <label htmlFor="booking_phone" className="text-xs text-bone-muted">
             WhatsApp / Teléfono
           </label>
-          <input
-            id="booking_phone"
-            type="tel"
-            required
-            value={customerPhone}
-            onChange={(e) => onChangePhone(e.target.value)}
-            onBlur={() => setPhoneTouched(true)}
-            aria-invalid={phoneInvalid}
-            className={`${inputClasses} ${phoneInvalid ? "border-red-400" : ""}`}
-            placeholder="11 1234-5678"
-          />
+          <div className="flex gap-2">
+            <input
+              id="booking_area_code"
+              type="tel"
+              inputMode="numeric"
+              aria-label="Código de área"
+              value={areaCode}
+              onChange={(e) => handleAreaCodeChange(e.target.value)}
+              onBlur={() => setPhoneTouched(true)}
+              className={`${inputClasses} w-20 text-center`}
+              placeholder="341"
+            />
+            <input
+              id="booking_phone"
+              type="tel"
+              inputMode="numeric"
+              required
+              aria-label="Número de teléfono"
+              value={localNumber}
+              onChange={(e) => handleLocalNumberChange(e.target.value)}
+              onBlur={() => setPhoneTouched(true)}
+              aria-invalid={phoneInvalid}
+              className={`${inputClasses} flex-1 min-w-0 ${phoneInvalid ? "border-red-400" : ""}`}
+              placeholder="1234-5678"
+            />
+          </div>
+          <p className="text-[11px] text-bone-muted/70">
+            Código de área + número. Lo vamos a usar por WhatsApp para confirmar tu turno.
+          </p>
           {phoneInvalid ? (
             <p className="text-xs text-red-400">Revisá tu número de teléfono.</p>
           ) : null}

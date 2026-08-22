@@ -384,6 +384,35 @@ body {
   transform: translateY(0) scale(1);
 }
 
+/* "Reveal" — a diferencia de sutil/dinámica (que son variantes de
+   intensidad del mismo fade+translateY), esta es una forma distinta:
+   una máscara que se descorre en vez de deslizar el contenido. */
+[data-animation="revelado"] .reveal {
+  opacity: 0;
+  clip-path: inset(0 0 100% 0);
+  transition: opacity 0.55s ease-out, clip-path 0.55s cubic-bezier(0.65, 0, 0.35, 1);
+}
+[data-animation="revelado"] .reveal-visible {
+  opacity: 1;
+  clip-path: inset(0 0 0% 0);
+}
+
+/* "Stagger" — mismo fade+translateY sutil de siempre, pero agrega un
+   transition-delay creciente por posición entre hermanos `.reveal`, así
+   cualquier grupo (título/subtítulo/CTA del Hero, por ejemplo) se
+   escalona solo con este preset, sin que cada sección tenga que pasar
+   `delay` a mano. Donde ya se pasa `delay` explícito (Services.tsx,
+   etc.) el estilo inline sigue ganando sobre esto — no se duplica ni se
+   rompe el stagger manual existente. */
+[data-animation="escalonada"] .reveal {
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+[data-animation="escalonada"] .reveal:nth-of-type(2) { transition-delay: 90ms; }
+[data-animation="escalonada"] .reveal:nth-of-type(3) { transition-delay: 180ms; }
+[data-animation="escalonada"] .reveal:nth-of-type(4) { transition-delay: 270ms; }
+[data-animation="escalonada"] .reveal:nth-of-type(5) { transition-delay: 360ms; }
+[data-animation="escalonada"] .reveal:nth-of-type(6) { transition-delay: 450ms; }
+
 /* Marquee.tsx (plantillas Noir/Bold) — el contenido se duplica 2 veces
    en el componente, así -50% es un loop perfectamente continuo. */
 @keyframes marquee-scroll {
@@ -426,6 +455,10 @@ body {
   [data-animation] .reveal {
     opacity: 1;
     transform: none;
+    /* clip-path también se resetea acá — con "revelado" un usuario con
+       reduced motion vería el contenido recortado al 100% (aunque
+       opacity ya quede en 1) si esto faltara. */
+    clip-path: none;
     transition: none;
   }
   .marquee-track,

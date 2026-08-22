@@ -1,4 +1,3 @@
-import { QRCodeSVG } from "qrcode.react";
 import { Business } from "@/types/business";
 import { dayLabel, whatsappLink } from "@/lib/format";
 import Reveal from "@/components/Reveal";
@@ -34,10 +33,9 @@ interface ContactProps {
     | "primary_color"
     | "slug"
   >;
-  bookingUrl: string;
 }
 
-export default function Contact({ business, bookingUrl }: ContactProps) {
+export default function Contact({ business }: ContactProps) {
   const mapsQuery = encodeURIComponent(business.address);
 
   return (
@@ -52,8 +50,8 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
           </h2>
         </Reveal>
 
-        <Reveal delay={100} className="mt-10 grid md:grid-cols-2 gap-10">
-          <div className="grid gap-4">
+        <Reveal delay={100} className="mt-10">
+          <div className="grid gap-4 max-w-md">
             {business.address ? (
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${mapsQuery}`}
@@ -146,20 +144,6 @@ export default function Contact({ business, bookingUrl }: ContactProps) {
                 </ul>
               </div>
             ) : null}
-          </div>
-
-          <div className="flex flex-col items-center justify-center gap-4 rounded-sm border border-ink-line bg-ink p-8">
-            <div className="bg-bone p-3 rounded-sm">
-              <QRCodeSVG
-                value={bookingUrl}
-                size={150}
-                fgColor="#1a1815"
-                bgColor="#f7f4ee"
-              />
-            </div>
-            <p className="section-eyebrow text-bone-muted text-center text-[10px]">
-              Escaneá para reservar
-            </p>
           </div>
         </Reveal>
       </div>

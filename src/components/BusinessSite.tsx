@@ -46,11 +46,6 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
   const { business, services, reviews, locations, professionals, products } = profile;
   const layout = business.template_layout ?? undefined;
 
-  // URL a la que apunta el QR: la página principal con un parámetro que
-  // abre el modal de reserva automáticamente al cargar.
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const bookingUrl = `${siteUrl}/${slug}?reservar=1`;
-
   // "hero" queda fuera de este registro a propósito — es estructural
   // (siempre primera, siempre visible, igual que Header/Footer), no
   // forma parte del orden configurable. Ver SectionId en types/business.ts.
@@ -108,7 +103,6 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
           primary_color: business.primary_color,
           slug: business.slug,
         }}
-        bookingUrl={bookingUrl}
       />
     ),
   };
