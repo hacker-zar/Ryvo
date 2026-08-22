@@ -138,14 +138,28 @@ body {
 
 /* Título de sección: mayúsculas, tracking amplio, tipo cartel de local.
    Se usa consistentemente para que la voz tipográfica del sitio no
-   dependa de que cada negocio elija bien sus estilos. */
-.section-eyebrow {
-  font-family: var(--font-label-stack);
-  text-transform: var(--label-transform);
-  letter-spacing: var(--label-tracking);
-  font-weight: var(--label-weight);
-  font-size: 0.75rem;
-  color: var(--brass);
+   dependa de que cada negocio elija bien sus estilos.
+
+   El color por defecto vive en @layer base (no como regla suelta):
+   Tailwind v4 emite sus utilidades dentro de @layer utilities, y
+   cualquier regla fuera de un @layer siempre gana por encima de una
+   capa sin importar el orden — así, una regla suelta acá pisaría SIEMPRE
+   cualquier text-ink/text-bone-muted/text-brass que se combine con esta
+   clase (bug real: el botón "Guardar cambios" y otros ~12 usos con
+   bg-brass+text-ink quedaban con texto invisible, del mismo color que
+   el fondo, porque su text-ink nunca llegaba a aplicarse). Con la regla
+   dentro de @layer base, las utilidades (@layer utilities, de mayor
+   prioridad) pueden seguir pisándola normalmente cuando alguien la
+   combina con un color explícito. */
+@layer base {
+  .section-eyebrow {
+    font-family: var(--font-label-stack);
+    text-transform: var(--label-transform);
+    letter-spacing: var(--label-tracking);
+    font-weight: var(--label-weight);
+    font-size: 0.75rem;
+    color: var(--brass);
+  }
 }
 
 .section-title {
