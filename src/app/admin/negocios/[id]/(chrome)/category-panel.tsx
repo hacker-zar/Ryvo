@@ -14,6 +14,7 @@ import ProductsManager from "./products-manager";
 import LocationsManager from "./locations-manager";
 import AppearanceForm from "./appearance-form";
 import TemplatePanel from "./template-panel";
+import NotificationSettingsPanel from "./notification-settings-panel";
 import ComingSoonRow from "@/components/ui/ComingSoonRow";
 
 interface CategoryPanelProps {
@@ -148,16 +149,22 @@ export default function CategoryPanel({
                   </div>
                 ) : null}
                 {key === "automatizaciones" ? (
-                  <div className="mt-2">
-                    <p className="text-xs text-bone-muted mb-4 max-w-sm">
-                      RYVO ya detecta oportunidades de recontacto (ver
-                      Oportunidades) — enviarlas automáticamente todavía no
-                      está disponible.
-                    </p>
-                    <ComingSoonRow label="Recordatorios" />
-                    <ComingSoonRow label="Rebooking automático" />
-                    <ComingSoonRow label="Solicitud de reseñas" />
-                    <ComingSoonRow label="Recuperación de clientes" />
+                  <div className="mt-2 grid gap-6">
+                    <NotificationSettingsPanel
+                      businessId={business.id}
+                      whatsappEnabled={business.notify_whatsapp_enabled ?? false}
+                      reminder24hEnabled={business.notify_reminder_24h_enabled ?? false}
+                    />
+                    <div>
+                      <p className="text-xs text-bone-muted mb-4 max-w-sm">
+                        RYVO ya detecta oportunidades de recontacto (ver
+                        Oportunidades) — enviarlas automáticamente todavía no
+                        está disponible.
+                      </p>
+                      <ComingSoonRow label="Rebooking automático" />
+                      <ComingSoonRow label="Solicitud de reseñas" />
+                      <ComingSoonRow label="Recuperación de clientes" />
+                    </div>
                   </div>
                 ) : null}
                 {key === "plantilla" ? (

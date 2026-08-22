@@ -104,6 +104,13 @@ export interface Business {
   // Estilo visual de fotos públicas — ver ImageRadiusPreset/ImageShadowPreset.
   image_radius?: ImageRadiusPreset;
   image_shadow?: ImageShadowPreset;
+  // Notification Engine (ver lib/notifications/*) — apagado por default,
+  // cero envíos hasta que el dueño lo prenda explícitamente desde
+  // Automatizaciones. notify_whatsapp_enabled es el interruptor general
+  // (confirmación/cancelación/reprogramación de turnos); el recordatorio
+  // 24h es un sub-interruptor que solo importa si el general está prendido.
+  notify_whatsapp_enabled?: boolean;
+  notify_reminder_24h_enabled?: boolean;
   // Onboarding self-service: tipo de negocio (texto libre, sin enum
   // cerrado), en qué paso del onboarding quedó (0-5), y si ya es visible
   // en /[slug]. Los negocios creados por el flujo del superadmin
@@ -246,6 +253,48 @@ export interface Booking {
   status: BookingStatus;
   created_at: string;
   updated_at: string;
+}
+
+// Notification Engine — outbox de envíos (ver lib/notifications/*.ts).
+// Cada Server Action que muta `bookings` inserta una fila acá en vez de
+// llamar al proveedor de WhatsApp directo, para que un fallo de envío
+// nunca pueda romper la reserva real. Un solo canal hoy (whatsapp); el
+// campo queda desde ahora para no migrar de nuevo el día que se agregue
+// email.
+export type NotificationEventType =
+  | "booking_created"
+  | "booking_confirmed"
+  | "booking_cancelled"
+  | "booking_rescheduled"
+  | "reminder_24h";
+
+export type NotificationEventStatus = "pending" | "sent" | "failed" | "skipped";
+
+// Snapshot inmutable de los datos que necesita el mensaje — no depende
+// de que el booking/servicio/negocio sigan igual después (mismo criterio
+// que duration_min en Booking).
+export interface NotificationEventPayload {
+  business_name: string;
+  customer_name: string;
+  service_name: string;
+  date: string;
+  time: string;
+}
+
+export interface NotificationEvent {
+  id: string;
+  business_id: string;
+  booking_id: string | null;
+  type: NotificationEventType;
+  channel: "whatsapp";
+  recipient: string;
+  status: NotificationEventStatus;
+  scheduled_for: string;
+  payload: NotificationEventPayload;
+  provider_message_id?: string | null;
+  error?: string | null;
+  created_at: string;
+  sent_at?: string | null;
 }
 
 export interface Review {

@@ -14,6 +14,8 @@ import {
   ClientBookingHistoryItem,
   ClientProfile,
   Location,
+  NotificationEventPayload,
+  NotificationEventType,
   Opportunity,
   Product,
   Professional,
@@ -47,7 +49,7 @@ import { detectOpportunities } from "@/lib/opportunities";
 // funciones de autenticación de más abajo, porque el hash terminaría
 // serializado en el HTML/RSC payload aunque ningún componente lo muestre.
 const BUSINESS_PUBLIC_COLUMNS =
-  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, gallery_layout, about_image, opening_hours, background_color, text_color, typography_preset, button_style, image_radius, image_shadow, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, template_id, template_layout, palette_id, created_at";
+  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, gallery_layout, about_image, opening_hours, background_color, text_color, typography_preset, button_style, image_radius, image_shadow, notify_whatsapp_enabled, notify_reminder_24h_enabled, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, template_id, template_layout, palette_id, created_at";
 
 /**
  * Punto único de acceso a datos de negocio.
@@ -458,6 +460,226 @@ async function upsertClientForBooking(input: {
   }
 }
 
+// ---------------------------------------------------------------------
+// Notification Engine — outbox de envíos (ver lib/notifications/*.ts).
+// Estas funciones solo INSERTAN/actualizan filas en `notification_events`
+// — nunca llaman a un proveedor de WhatsApp acá (eso vive en
+// lib/notifications/dispatch.ts, invocado desde la capa de acciones
+// después de que la mutación de `bookings` ya se confirmó). Igual que
+// upsertClientForBooking, nunca deben poder romper la reserva real si
+// algo falla: try/catch mudo, la reserva sigue siendo lo crítico.
+// ---------------------------------------------------------------------
+
+/** Nombre de un servicio por id — lectura pública mínima (services es de
+ *  lectura pública por RLS), para no traer el Service completo solo para
+ *  el nombre que va en el mensaje. */
+async function getServiceNameById(serviceId: string): Promise<string> {
+  if (!isSupabaseConfigured || !supabase) {
+    return demoServices.find((s) => s.id === serviceId)?.name ?? "tu servicio";
+  }
+  const { data } = await supabase
+    .from("services")
+    .select("name")
+    .eq("id", serviceId)
+    .maybeSingle();
+  return data?.name ?? "tu servicio";
+}
+
+/** 24hs antes de la fecha/hora de un turno, en ISO — `null` si ese
+ *  momento ya pasó (el turno se creó/reprogramó a menos de 24hs de
+ *  distancia), para no encolar un recordatorio que nacería vencido. */
+function reminder24hScheduledFor(date: string, time: string): string | null {
+  const [h, m] = time.split(":").map(Number);
+  const [y, mo, d] = date.split("-").map(Number);
+  const appointment = new Date(y, mo - 1, d, h, m);
+  const reminderAt = new Date(appointment.getTime() - 24 * 60 * 60 * 1000);
+  if (reminderAt.getTime() <= Date.now()) return null;
+  return reminderAt.toISOString();
+}
+
+async function enqueueNotificationEvent(input: {
+  business_id: string;
+  booking_id: string;
+  type: NotificationEventType;
+  recipient: string;
+  scheduled_for?: string;
+  payload: NotificationEventPayload;
+}): Promise<void> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return;
+  if (!input.recipient.trim()) return;
+  try {
+    await supabaseAdmin.from("notification_events").insert({
+      business_id: input.business_id,
+      booking_id: input.booking_id,
+      type: input.type,
+      recipient: input.recipient,
+      scheduled_for: input.scheduled_for ?? new Date().toISOString(),
+      payload: input.payload,
+    });
+  } catch {
+    // Nunca romper la reserva por esto — el turno ya se guardó.
+  }
+}
+
+/** Encola booking_created (+ reminder_24h si el negocio lo tiene
+ *  prendido) para un turno recién creado. Sin efecto si el negocio no
+ *  tiene notify_whatsapp_enabled — apagado por default, cero envíos para
+ *  cualquier negocio que no lo haya prendido explícitamente. */
+async function enqueueBookingCreatedNotifications(booking: {
+  id: string;
+  business_id: string;
+  service_id: string;
+  customer_name: string;
+  customer_phone: string;
+  date: string;
+  time: string;
+}): Promise<void> {
+  try {
+    const business = await getBusinessById(booking.business_id);
+    if (!business?.notify_whatsapp_enabled) return;
+
+    const serviceName = await getServiceNameById(booking.service_id);
+    const payload: NotificationEventPayload = {
+      business_name: business.name,
+      customer_name: booking.customer_name,
+      service_name: serviceName,
+      date: booking.date,
+      time: booking.time,
+    };
+
+    await enqueueNotificationEvent({
+      business_id: booking.business_id,
+      booking_id: booking.id,
+      type: "booking_created",
+      recipient: booking.customer_phone,
+      payload,
+    });
+
+    if (business.notify_reminder_24h_enabled) {
+      const scheduledFor = reminder24hScheduledFor(booking.date, booking.time);
+      if (scheduledFor) {
+        await enqueueNotificationEvent({
+          business_id: booking.business_id,
+          booking_id: booking.id,
+          type: "reminder_24h",
+          recipient: booking.customer_phone,
+          scheduled_for: scheduledFor,
+          payload,
+        });
+      }
+    }
+  } catch {
+    // Nunca romper la reserva por esto.
+  }
+}
+
+/** Encola booking_confirmed/booking_cancelled para un turno ya existente
+ *  — usada tanto por el cambio de estado del dueño (updateBookingStatus)
+ *  como por la cancelación pública (cancelBookingById). Resuelve el
+ *  negocio/servicio de nuevo en vez de recibirlos por parámetro porque
+ *  los dos llamadores parten de puntos distintos (uno ya tiene el
+ *  PublicBooking a mano, el otro no) — es una sola query extra, no vale
+ *  la pena duplicar la lógica de armado del payload en cada lado. */
+async function enqueueBookingStatusNotification(
+  bookingId: string,
+  status: "confirmed" | "cancelled"
+): Promise<void> {
+  try {
+    const booking = await getBookingById(bookingId);
+    if (!booking) return;
+    const business = await getBusinessById(booking.business_id);
+    if (!business?.notify_whatsapp_enabled) return;
+
+    await enqueueNotificationEvent({
+      business_id: booking.business_id,
+      booking_id: booking.id,
+      type: status === "confirmed" ? "booking_confirmed" : "booking_cancelled",
+      recipient: booking.customer_phone,
+      payload: {
+        business_name: business.name,
+        customer_name: booking.customer_name,
+        service_name: booking.service_name,
+        date: booking.date,
+        time: booking.time,
+      },
+    });
+
+    if (status === "cancelled") {
+      await cancelPendingRemindersForBooking(bookingId);
+    }
+  } catch {
+    // Nunca romper el cambio de estado por esto.
+  }
+}
+
+/** Encola booking_rescheduled con la fecha/hora NUEVA (no la que traía
+ *  `booking`, que es la vieja — se resolvió antes del update en
+ *  rescheduleBookingById) y, si corresponde, reprograma también el
+ *  recordatorio 24h contra el nuevo horario. */
+async function enqueueBookingRescheduledNotification(
+  booking: PublicBooking,
+  newDate: string,
+  newTime: string
+): Promise<void> {
+  try {
+    const business = await getBusinessById(booking.business_id);
+    if (!business?.notify_whatsapp_enabled) return;
+
+    const payload: NotificationEventPayload = {
+      business_name: business.name,
+      customer_name: booking.customer_name,
+      service_name: booking.service_name,
+      date: newDate,
+      time: newTime,
+    };
+
+    await enqueueNotificationEvent({
+      business_id: booking.business_id,
+      booking_id: booking.id,
+      type: "booking_rescheduled",
+      recipient: booking.customer_phone,
+      payload,
+    });
+
+    // El recordatorio viejo (si había) apunta a un horario que ya no es
+    // el correcto — se descarta y, si el negocio tiene el recordatorio
+    // prendido, se encola uno nuevo contra el horario nuevo.
+    await cancelPendingRemindersForBooking(booking.id);
+    if (business.notify_reminder_24h_enabled) {
+      const scheduledFor = reminder24hScheduledFor(newDate, newTime);
+      if (scheduledFor) {
+        await enqueueNotificationEvent({
+          business_id: booking.business_id,
+          booking_id: booking.id,
+          type: "reminder_24h",
+          recipient: booking.customer_phone,
+          scheduled_for: scheduledFor,
+          payload,
+        });
+      }
+    }
+  } catch {
+    // Nunca romper la reprogramación por esto.
+  }
+}
+
+/** Marca como "skipped" cualquier recordatorio 24h pendiente de un turno
+ *  puntual — se llama al cancelar/reprogramar, para no mandar un
+ *  recordatorio de un turno que ya no es válido en esa fecha/hora. */
+async function cancelPendingRemindersForBooking(bookingId: string): Promise<void> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return;
+  try {
+    await supabaseAdmin
+      .from("notification_events")
+      .update({ status: "skipped" })
+      .eq("booking_id", bookingId)
+      .eq("type", "reminder_24h")
+      .eq("status", "pending");
+  } catch {
+    // No crítico — en el peor caso, dispatch.ts igual filtra por scheduled_for.
+  }
+}
+
 export async function createBooking(
   booking: Omit<
     Booking,
@@ -549,6 +771,18 @@ export async function createBooking(
         };
       }
       return { success: false, error: error.message };
+    }
+
+    if (data?.id) {
+      await enqueueBookingCreatedNotifications({
+        id: data.id,
+        business_id: booking.business_id,
+        service_id: booking.service_id,
+        customer_name: booking.customer_name,
+        customer_phone: booking.customer_phone,
+        date: booking.date,
+        time: booking.time,
+      });
     }
     return { success: true, id: data?.id };
   }
@@ -1118,6 +1352,13 @@ export async function updateBookingStatus(
     .update({ status })
     .eq("id", id);
   if (error) return { success: false, error: error.message };
+
+  // Solo confirmado/cancelado generan un aviso — completado/no-show son
+  // estados internos de gestión, no algo que el cliente necesite recibir
+  // por WhatsApp.
+  if (status === "confirmed" || status === "cancelled") {
+    await enqueueBookingStatusNotification(id, status);
+  }
   return { success: true };
 }
 
@@ -1222,6 +1463,8 @@ export async function cancelBookingById(
     .update({ status: "cancelled" })
     .eq("id", id);
   if (error) return { success: false, error: error.message };
+
+  await enqueueBookingStatusNotification(id, "cancelled");
   return { success: true };
 }
 
@@ -1286,7 +1529,93 @@ export async function rescheduleBookingById(
     }
     return { success: false, error: error.message };
   }
+
+  await enqueueBookingRescheduledNotification(booking, date, time);
   return { success: true };
+}
+
+// ---------------------------------------------------------------------
+// Notification Engine — lectura/escritura para lib/notifications/dispatch.ts
+// (el único módulo que además llama al proveedor de WhatsApp). Separado
+// de las funciones de encolado de más arriba porque esas corren DENTRO de
+// la mutación de bookings (nunca pueden tirar); estas corren desde la
+// capa de acciones, después de que la mutación ya se confirmó.
+// ---------------------------------------------------------------------
+
+export interface DueNotificationEvent {
+  id: string;
+  business_id: string;
+  type: NotificationEventType;
+  channel: "whatsapp";
+  recipient: string;
+  payload: NotificationEventPayload;
+}
+
+/** Eventos listos para enviar — `pending` y con `scheduled_for` ya
+ *  vencido (los reactivos se encolan con scheduled_for = now(), así que
+ *  siempre califican de inmediato; los recordatorios 24h recién califican
+ *  cuando llega su horario). */
+export async function listDueNotificationEvents(
+  limit = 25
+): Promise<DueNotificationEvent[]> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return [];
+  const { data } = await supabaseAdmin
+    .from("notification_events")
+    .select("id, business_id, type, channel, recipient, payload")
+    .eq("status", "pending")
+    .lte("scheduled_for", new Date().toISOString())
+    .order("scheduled_for", { ascending: true })
+    .limit(limit);
+  return data ?? [];
+}
+
+/** Mismo filtro que listDueNotificationEvents pero acotado a UN turno
+ *  puntual — usado por la capa de acciones para el envío inmediato del
+ *  evento recién encolado por esa misma acción, sin tocar los de otros
+ *  turnos/negocios. Los 4 puntos que encolan (createBooking/
+ *  updateBookingStatus/cancelBookingById/rescheduleBookingById) siempre
+ *  tienen un booking_id a mano, así que alcanza con este filtro — no
+ *  hace falta conocer el business_id en la capa de acciones. */
+export async function listDueNotificationEventsForBooking(
+  bookingId: string,
+  limit = 5
+): Promise<DueNotificationEvent[]> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return [];
+  const { data } = await supabaseAdmin
+    .from("notification_events")
+    .select("id, business_id, type, channel, recipient, payload")
+    .eq("booking_id", bookingId)
+    .eq("status", "pending")
+    .lte("scheduled_for", new Date().toISOString())
+    .order("scheduled_for", { ascending: true })
+    .limit(limit);
+  return data ?? [];
+}
+
+export async function markNotificationEventSent(
+  id: string,
+  providerMessageId: string | null
+): Promise<void> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return;
+  await supabaseAdmin
+    .from("notification_events")
+    .update({
+      status: "sent",
+      provider_message_id: providerMessageId,
+      sent_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+}
+
+export async function markNotificationEventFailed(
+  id: string,
+  error: string
+): Promise<void> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return;
+  await supabaseAdmin
+    .from("notification_events")
+    .update({ status: "failed", error })
+    .eq("id", id);
 }
 
 // ---------------------------------------------------------------------

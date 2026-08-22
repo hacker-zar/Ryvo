@@ -7,6 +7,7 @@ import {
   rescheduleBookingById,
   resolveAnyProfessional,
 } from "@/lib/data/business-repository";
+import { dispatchDueNotificationsForBooking } from "@/lib/notifications/dispatch";
 
 export interface CreateBookingInput {
   business_id: string;
@@ -69,7 +70,14 @@ export async function submitBooking(input: CreateBookingInput) {
     professionalId = input.professional_id;
   }
 
-  return createBooking({ ...input, professional_id: professionalId });
+  const result = await createBooking({ ...input, professional_id: professionalId });
+  // Envío inmediato del evento reactivo recién encolado (ver createBooking
+  // → enqueueBookingCreatedNotifications) — no bloquea ni puede fallar la
+  // respuesta al cliente, que ya tiene su reserva confirmada en `result`.
+  if (result.success && result.id) {
+    await dispatchDueNotificationsForBooking(result.id);
+  }
+  return result;
 }
 
 /** Cancelar/reprogramar el propio turno, sin sesión — el id de la reserva
@@ -77,7 +85,11 @@ export async function submitBooking(input: CreateBookingInput) {
  *  otra forma de referenciar una reserva ajena. */
 export async function cancelBooking(bookingId: string) {
   if (!bookingId) return { success: false, error: "Turno no encontrado." };
-  return cancelBookingById(bookingId);
+  const result = await cancelBookingById(bookingId);
+  if (result.success) {
+    await dispatchDueNotificationsForBooking(bookingId);
+  }
+  return result;
 }
 
 export async function rescheduleBooking(
@@ -88,5 +100,9 @@ export async function rescheduleBooking(
   if (!bookingId || !date || !time) {
     return { success: false, error: "Completá fecha y hora." };
   }
-  return rescheduleBookingById(bookingId, date, time);
+  const result = await rescheduleBookingById(bookingId, date, time);
+  if (result.success) {
+    await dispatchDueNotificationsForBooking(bookingId);
+  }
+  return result;
 }

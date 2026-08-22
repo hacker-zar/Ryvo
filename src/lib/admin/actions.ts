@@ -46,6 +46,7 @@ import {
 import { AccountRole, OpeningHours, SectionConfig } from "@/types/business";
 import { slugify } from "@/lib/slug";
 import { sanitizeSectionOrder } from "@/lib/section-order";
+import { dispatchDueNotificationsForBooking } from "@/lib/notifications/dispatch";
 
 // Campo numérico opcional de un form (precio/duración de un servicio):
 // vacío o ausente → null (no "0"/valor inventado), nunca NaN.
@@ -488,7 +489,10 @@ export async function adminUpdateBookingStatus(
 ) {
   await requireAdminFor(businessId);
   const result = await updateBookingStatus(bookingId, status);
-  if (result.success) revalidatePath(`/admin/negocios/${businessId}/turnos`);
+  if (result.success) {
+    revalidatePath(`/admin/negocios/${businessId}/turnos`);
+    await dispatchDueNotificationsForBooking(bookingId);
+  }
   return result;
 }
 
@@ -611,6 +615,31 @@ export async function adminUpdateAppearance(
     image_shadow: IMAGE_SHADOW_PRESETS.has(imageShadow)
       ? (imageShadow as BusinessInput["image_shadow"])
       : "ninguna",
+  };
+
+  const result = await updateBusiness(businessId, input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+/**
+ * Notification Engine — prender/apagar el envío automático por WhatsApp
+ * (confirmación/cancelación/reprogramación de turnos) y el recordatorio
+ * 24hs. Ambos apagados por default (ver la migración): un negocio que
+ * nunca entra a esta pantalla no manda nada, igual que cualquier otro
+ * preset nuevo de este proyecto. Checkboxes: ausentes en el FormData si
+ * están destildados, así que `=== "on"` (nunca `!== "off"`) es el chequeo
+ * correcto — mismo criterio ya usado en Servicios/Profesionales/Productos.
+ */
+export async function adminUpdateNotificationSettings(
+  businessId: string,
+  formData: FormData
+) {
+  await requireAdminFor(businessId);
+
+  const input: Partial<BusinessInput> = {
+    notify_whatsapp_enabled: formData.get("notify_whatsapp_enabled") === "on",
+    notify_reminder_24h_enabled: formData.get("notify_reminder_24h_enabled") === "on",
   };
 
   const result = await updateBusiness(businessId, input);

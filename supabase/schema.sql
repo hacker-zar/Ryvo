@@ -387,3 +387,55 @@ alter table businesses add column if not exists image_radius text not null defau
   check (image_radius in ('recto','suave','redondeado','muy-redondeado'));
 alter table businesses add column if not exists image_shadow text not null default 'ninguna'
   check (image_shadow in ('ninguna','suave','media','marcada'));
+
+-- === Notification Engine (aplicado directo contra Supabase vía
+-- apply_migration; documentación posterior, no fuente de verdad).
+-- Los toggles viven en `businesses` (mismo patrón que gallery_layout/
+-- image_radius: default apagado = cero cambio de comportamiento para
+-- negocios existentes) — no una tabla de "settings" aparte, para
+-- reutilizar 1:1 BUSINESS_PUBLIC_COLUMNS/adminUpdateBusiness en vez de
+-- inventar un segundo mecanismo de fetch+guardado.
+--
+-- `notification_events` es el outbox: cada Server Action que ya muta
+-- `bookings` (createBooking/updateBookingStatus/cancelBookingById/
+-- rescheduleBookingById) inserta una fila acá en vez de llamar al
+-- proveedor de WhatsApp directo — así un fallo de red al enviar nunca
+-- puede romper la reserva real (mismo criterio que
+-- upsertClientForBooking, que tampoco puede bloquear la reserva si
+-- falla). `payload` es un snapshot inmutable (nombre/fecha/hora/
+-- servicio) para que el mensaje no dependa de que el booking siga
+-- igual después. Sin tabla de plantillas separada a propósito: los
+-- textos son presets fijos de RYVO (ver lib/notifications/messages.ts),
+-- mismo criterio de "presets controlados, no texto libre" que
+-- gallery_layout/image_radius. Un solo canal (whatsapp) en esta primera
+-- entrega — el `channel` queda como columna desde ahora para no tener
+-- que migrar de nuevo el día que se agregue email. ===
+alter table businesses add column if not exists notify_whatsapp_enabled boolean not null default false;
+alter table businesses add column if not exists notify_reminder_24h_enabled boolean not null default false;
+
+create table if not exists notification_events (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  booking_id uuid references bookings(id) on delete cascade,
+  type text not null check (type in (
+    'booking_created','booking_confirmed','booking_cancelled',
+    'booking_rescheduled','reminder_24h'
+  )),
+  channel text not null default 'whatsapp' check (channel in ('whatsapp')),
+  recipient text not null,
+  status text not null default 'pending' check (status in ('pending','sent','failed','skipped')),
+  scheduled_for timestamptz not null default now(),
+  payload jsonb not null default '{}',
+  provider_message_id text,
+  error text,
+  created_at timestamptz not null default now(),
+  sent_at timestamptz
+);
+create index if not exists notification_events_due_idx on notification_events (status, scheduled_for);
+create index if not exists notification_events_booking_idx on notification_events (booking_id);
+create index if not exists notification_events_business_idx on notification_events (business_id);
+
+alter table notification_events enable row level security;
+-- Sin políticas públicas a propósito (mismo criterio que accounts/clients):
+-- solo supabaseAdmin, desde Server Actions/el endpoint de cron ya
+-- protegidos, puede leer/escribir esta tabla.

@@ -65,6 +65,8 @@ export const demoBusiness: Business = {
   animation_preset: "sutil",
   image_radius: "recto",
   image_shadow: "ninguna",
+  notify_whatsapp_enabled: false,
+  notify_reminder_24h_enabled: false,
   created_at: "2024-01-15T00:00:00.000Z",
 };
 
