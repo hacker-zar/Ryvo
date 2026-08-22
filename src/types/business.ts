@@ -7,6 +7,18 @@ export type ButtonStyle = "redondeado" | "suave" | "recto";
 export type HeroVideoPosition = "center" | "top" | "bottom";
 export type AnimationPreset = "ninguna" | "sutil" | "dinamica";
 
+// Cómo se presenta la galería pública (ver components/Gallery.tsx y sus
+// variantes en components/gallery/*) — independiente de la plantilla:
+// las 5 variantes reciben el MISMO array de fotos (business.gallery), no
+// hay copias por variante. "editorial" es el fallback para negocios sin
+// este campo cargado (comportamiento histórico, sin cambios visuales).
+export type GalleryLayoutId =
+  | "editorial"
+  | "movimiento"
+  | "filmstrip"
+  | "masonry"
+  | "showcase";
+
 // Secciones reordenables/activables del sitio público. "hero" queda
 // deliberadamente fuera de este union — es estructural (siempre primera,
 // siempre visible), igual que Header/Footer, no forma parte del orden
@@ -65,6 +77,9 @@ export interface Business {
   city?: string;
   hero_image?: string;
   gallery?: string[];
+  // Estilo de presentación de la galería pública — ver GalleryLayoutId.
+  // Vacío/no seteado = "editorial" (ver Gallery.tsx).
+  gallery_layout?: GalleryLayoutId | null;
   // Imagen de la sección "Quiénes somos", elegida explícitamente por el
   // negocio — independiente del orden de `gallery`. Vacío/no seteado =
   // usa `gallery[0]` como fallback (comportamiento histórico, ver

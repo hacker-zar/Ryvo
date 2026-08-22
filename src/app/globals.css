@@ -333,6 +333,21 @@ body {
   width: max-content;
 }
 
+/* Galería "Movimiento" (MarqueeGallery.tsx) — mismo keyframe de arriba
+   (misma matemática de loop, contenido duplicado x2), duración variable
+   por negocio vía --gallery-marquee-duration (más fotos en la tira =
+   loop más largo, para que la velocidad no dependa de cuántas fotos
+   tenga cada negocio). Pausa al hover — solo tiene sentido en desktop,
+   que es donde este track se renderiza (mobile usa scroll táctil normal,
+   ver el componente). */
+.gallery-marquee-track {
+  animation: marquee-scroll var(--gallery-marquee-duration, 30s) linear infinite;
+  width: max-content;
+}
+.gallery-marquee-track:hover {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-\[fadeIn_0\.2s_ease-out\],
   .animate-\[slideUp_0\.25s_ease-out\],
@@ -351,7 +366,14 @@ body {
     transform: none;
     transition: none;
   }
-  .marquee-track {
+  .marquee-track,
+  .gallery-marquee-track {
     animation: none;
+  }
+  /* Sin el loop automático, el contenedor (normalmente overflow-hidden)
+     pasa a ser scrolleable a mano — si no, el resto de las fotos de la
+     tira quedaría inalcanzable con el movimiento apagado. */
+  .gallery-marquee-viewport {
+    overflow-x: auto;
   }
 }

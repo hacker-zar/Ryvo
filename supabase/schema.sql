@@ -364,3 +364,14 @@ create table if not exists products (
 create index if not exists products_business_id_idx on products(business_id);
 alter table products enable row level security;
 create policy "public read products" on products for select using (true);
+
+-- === Estilo de galería pública (aplicado directo contra Supabase vía
+-- apply_migration; documentación posterior, no fuente de verdad). Cómo
+-- se presenta el MISMO array `gallery` — no agrega ninguna copia de
+-- imágenes (ver GalleryLayoutId en types/business.ts y
+-- components/gallery/*). Default 'editorial' backfillea also los
+-- negocios existentes (ADD COLUMN ... NOT NULL DEFAULT completa las
+-- filas ya existentes con ese valor), así ningún negocio queda sin
+-- valor válido. ===
+alter table businesses add column if not exists gallery_layout text not null default 'editorial'
+  check (gallery_layout in ('editorial','movimiento','filmstrip','masonry','showcase'));

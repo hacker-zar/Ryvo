@@ -92,6 +92,7 @@ export default function CategoryPanel({
                         logo={business.logo}
                         heroImage={business.hero_image ?? ""}
                         gallery={business.gallery ?? []}
+                        galleryLayout={business.gallery_layout ?? "editorial"}
                         aboutImage={business.about_image ?? ""}
                         favicon={business.favicon ?? ""}
                         heroVideo={business.hero_video ?? ""}

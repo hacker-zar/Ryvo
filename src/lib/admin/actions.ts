@@ -175,6 +175,13 @@ const UPDATABLE_BUSINESS_FIELDS = [
 ] as const;
 
 const HERO_VIDEO_POSITIONS = new Set(["center", "top", "bottom"]);
+const GALLERY_LAYOUTS = new Set([
+  "editorial",
+  "movimiento",
+  "filmstrip",
+  "masonry",
+  "showcase",
+]);
 
 /**
  * El editor ahora manda cada categoría (Información, Fotos, ...) como un
@@ -207,6 +214,17 @@ export async function adminUpdateBusiness(id: string, formData: FormData) {
       ? (position as BusinessInput["hero_video_position"])
       : "center";
     input.hero_video_enabled = formData.get("hero_video_enabled") === "on";
+  }
+
+  // Mismo criterio que hero_video_position arriba: <select> siempre
+  // presente en el form de fotos-panel.tsx, se valida contra el
+  // allow-list y cae a "editorial" (el mismo fallback que ya aplica el
+  // default de la columna para negocios sin este campo cargado).
+  if (formData.has("gallery_layout")) {
+    const galleryLayout = String(formData.get("gallery_layout") || "editorial");
+    input.gallery_layout = GALLERY_LAYOUTS.has(galleryLayout)
+      ? (galleryLayout as BusinessInput["gallery_layout"])
+      : "editorial";
   }
 
   if ("name" in input && !input.name?.trim()) {

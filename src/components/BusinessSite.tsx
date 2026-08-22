@@ -73,6 +73,7 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         businessName={business.name}
         primaryColor={business.primary_color}
         layout={layout}
+        galleryLayout={business.gallery_layout}
       />
     ),
     products: () => (

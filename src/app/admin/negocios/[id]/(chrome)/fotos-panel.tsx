@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HeroVideoPosition } from "@/types/business";
+import { GalleryLayoutId, HeroVideoPosition } from "@/types/business";
 import { adminUpdateBusiness } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 import { useAsyncStatus } from "@/lib/useAsyncStatus";
@@ -21,6 +21,7 @@ interface FotosPanelProps {
   logo: string;
   heroImage: string;
   gallery: string[];
+  galleryLayout: GalleryLayoutId;
   aboutImage: string;
   favicon: string;
   heroVideo: string;
@@ -34,11 +35,24 @@ const VIDEO_POSITION_OPTIONS: { value: HeroVideoPosition; label: string }[] = [
   { value: "bottom", label: "Abajo" },
 ];
 
+// RYVO controla la composición de cada variante (sin parámetros de
+// diseño sueltos) — el negocio solo elige CUÁL de las 5, ver
+// components/gallery/*. "hint" es intencionalmente corto: la idea real
+// se ve en la vista previa, no hace falta explicarla en el selector.
+const GALLERY_LAYOUT_OPTIONS: { value: GalleryLayoutId; label: string; hint: string }[] = [
+  { value: "editorial", label: "Editorial", hint: "Mosaico asimétrico, el de siempre" },
+  { value: "movimiento", label: "Movimiento", hint: "Tira continua en loop" },
+  { value: "filmstrip", label: "Filmstrip", hint: "Tira con una foto destacada" },
+  { value: "masonry", label: "Masonry", hint: "Composición tipo mampostería" },
+  { value: "showcase", label: "Showcase", hint: "Foto grande + miniaturas" },
+];
+
 export default function FotosPanel({
   businessId,
   logo,
   heroImage,
   gallery,
+  galleryLayout,
   aboutImage,
   favicon,
   heroVideo,
@@ -160,6 +174,24 @@ export default function FotosPanel({
             PNG o SVG cuadrado — recomendado 512×512px, mínimo 32×32px. Si no
             subís uno, se usa tu logo en la pestaña del navegador.
           </p>
+        </div>
+
+        <div className="grid gap-1.5" data-editable-category="apariencia" data-editable-field="galeria">
+          <label htmlFor="gallery_layout" className="text-xs text-bone-muted">
+            Estilo de galería
+          </label>
+          <select
+            id="gallery_layout"
+            name="gallery_layout"
+            defaultValue={galleryLayout}
+            className="h-9 rounded-sm border border-ink-line bg-ink-elevated px-2 text-sm text-bone"
+          >
+            {GALLERY_LAYOUT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label} — {opt.hint}
+              </option>
+            ))}
+          </select>
         </div>
 
       </form>

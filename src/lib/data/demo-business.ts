@@ -30,6 +30,7 @@ export const demoBusiness: Business = {
   email: "hola@bellavista.com.ar",
   city: "Rosario, Santa Fe",
   hero_image: "/demo/hero.png",
+  gallery_layout: "editorial",
   gallery: [
     "/demo/gallery-1.png",
     "/demo/gallery-2.png",
