@@ -2,6 +2,7 @@ import { Business } from "@/types/business";
 import { dayLabel, whatsappLink } from "@/lib/format";
 import Reveal from "@/components/Reveal";
 import SectionHeader from "@/components/SectionHeader";
+import SiteQrBlock from "@/components/SiteQrBlock";
 import Icon from "@/components/ui/Icon";
 
 interface ContactProps {
@@ -17,9 +18,12 @@ interface ContactProps {
     | "primary_color"
     | "slug"
   >;
+  /** URL pública absoluta actual del negocio, para el QR de demo — ver
+   *  SiteQrBlock.tsx y getPublicSiteUrl en lib/site-url.ts. */
+  publicSiteUrl: string;
 }
 
-export default function Contact({ business }: ContactProps) {
+export default function Contact({ business, publicSiteUrl }: ContactProps) {
   const mapsQuery = encodeURIComponent(business.address);
 
   return (
@@ -31,7 +35,7 @@ export default function Contact({ business }: ContactProps) {
           primaryColor={business.primary_color}
         />
 
-        <Reveal delay={100} className="mt-10">
+        <Reveal delay={100} className="mt-10 grid gap-10 md:grid-cols-2">
           <div className="grid gap-4 max-w-md">
             {business.address ? (
               <a
@@ -126,6 +130,8 @@ export default function Contact({ business }: ContactProps) {
               </div>
             ) : null}
           </div>
+
+          <SiteQrBlock url={publicSiteUrl} />
         </Reveal>
       </div>
     </section>
