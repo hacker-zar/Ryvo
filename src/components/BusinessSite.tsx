@@ -18,7 +18,6 @@ import About from "@/components/About";
 import Reviews from "@/components/Reviews";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
-import SiteQrBlock from "@/components/SiteQrBlock";
 import Marquee from "@/components/Marquee";
 import Statement from "@/components/Statement";
 import BeforeAfter from "@/components/BeforeAfter";
@@ -106,6 +105,7 @@ export default async function BusinessSite({ profile, slug }: BusinessSiteProps)
           primary_color: business.primary_color,
           slug: business.slug,
         }}
+        publicSiteUrl={publicSiteUrl}
       />
     ),
   };
@@ -229,7 +229,6 @@ export default async function BusinessSite({ profile, slug }: BusinessSiteProps)
         {blueprint
           ? blueprint.slots.map((slot, i) => renderSlot(slot, i))
           : renderCoreSections()}
-        <SiteQrBlock url={publicSiteUrl} />
         <Footer business={{ name: business.name, slug: business.slug }} layout={layout} />
 
         <BookingModal
