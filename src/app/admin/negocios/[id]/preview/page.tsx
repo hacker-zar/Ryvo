@@ -6,6 +6,7 @@ import {
 } from "@/lib/data/business-repository";
 import BusinessSite from "@/components/BusinessSite";
 import PreviewBridge from "./preview-bridge";
+import { requireFullEditorAccess } from "../(chrome)/require-full-editor-access";
 
 // Siempre datos frescos: esta ruta se usa como preview en vivo dentro del
 // editor, no tiene sentido servir una versión cacheada.
@@ -30,6 +31,7 @@ export default async function BusinessPreviewPage({ params }: PageProps) {
 
   const { id } = await params;
   if (!(await canManageBusiness(session, id))) redirect("/admin");
+  await requireFullEditorAccess(id);
 
   const business = await getBusinessById(id);
   if (!business) notFound();

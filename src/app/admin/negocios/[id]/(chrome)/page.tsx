@@ -16,6 +16,7 @@ import BusinessNav from "./business-nav";
 import EditorShell from "./editor-shell";
 import OnboardingChrome from "./onboarding-chrome";
 import TodaySummary from "./today-summary";
+import { requireFullEditorAccess } from "./require-full-editor-access";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -54,6 +55,12 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
   // confirme "Publicar", esta misma página muestra el onboarding en vez
   // del editor normal. Los negocios creados por el superadmin
   // (adminCreateBusiness) nacen publicados y nunca pasan por acá.
+  //
+  // Excepción deliberada a requireFullEditorAccess (ver más abajo): un
+  // Owner recién registrado SÍ necesita llegar hasta acá para completar
+  // el onboarding y publicar — no hay ningún equivalente en Cambios
+  // rápidos (ni el paso a paso, ni "Publicar"), así que bloquearlo acá
+  // dejaría un negocio nuevo sin ninguna forma de terminar de crearse.
   if (business.published === false) {
     return (
       <>
@@ -72,6 +79,10 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
       </>
     );
   }
+
+  // A partir de acá el negocio ya está publicado — el editor completo
+  // (todo lo de abajo) pasa a ser exclusivo de super/partner.
+  await requireFullEditorAccess(id);
 
   const todayBookings = await listBookingsByBusiness(id, todayDateString());
 

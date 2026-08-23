@@ -52,14 +52,12 @@ export async function loginAdmin(formData: FormData) {
       account.role,
       account.professional_id
     );
-    // Una cuenta "worker" (Barber) nunca aterriza en el editor completo —
-    // ver también el redirect inverso en (chrome)/layout.tsx, que cubre a
-    // quien intente llegar ahí más tarde por URL directa.
-    redirect(
-      account.role === "worker"
-        ? `/admin/negocios/${account.business_id}/rapido`
-        : `/admin/negocios/${account.business_id}`
-    );
+    // Ninguna cuenta "owner" (dueño o Barber, accountRole "owner"/"worker")
+    // aterriza en el editor completo — es exclusivo de super/partner (ver
+    // require-full-editor-access.ts). Owner y Barber van los dos a
+    // /rapido; lo que ven ahí adentro difiere por rol (Cambios rápidos vs.
+    // Mis turnos, ver rapido/page.tsx), pero la URL de entrada es la misma.
+    redirect(`/admin/negocios/${account.business_id}/rapido`);
   }
 
   // Sin username: login de superadmin (RYVO), independiente del sistema de

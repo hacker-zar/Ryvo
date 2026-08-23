@@ -9,11 +9,12 @@ export default async function AdminChrome({
   children: React.ReactNode;
 }) {
   const session = await getAdminSession();
+  // Owner (dueño de UN negocio, cualquier accountRole) ya no tiene el
+  // editor completo — "casa" es siempre Cambios rápidos. Super/partner
+  // vuelven al listado de negocios (ver require-full-editor-access.ts).
   const homeHref =
     session?.role === "owner"
-      ? session.accountRole === "worker"
-        ? `/admin/negocios/${session.businessId}/rapido`
-        : `/admin/negocios/${session.businessId}`
+      ? `/admin/negocios/${session.businessId}/rapido`
       : "/admin";
 
   return (

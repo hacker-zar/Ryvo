@@ -12,14 +12,16 @@ import AdminChrome from "@/components/admin/AdminChrome";
 import NewBusinessForm from "./new-business-form";
 
 // El listado de negocios (y "crear negocio") es de superadmin/partner — un
-// dueño/Barber de un negocio puntual (sesión "owner") no debe poder
-// ver ni el nombre de otros negocios, así que va directo al suyo. Super ve
-// TODOS los negocios; partner ve solo los que tiene asignados
-// (businesses.partner_id) — mismo componente, distinto dataset.
+// dueño/Barber de un negocio puntual (sesión "owner") no debe poder ver
+// ni el nombre de otros negocios, así que va directo a Cambios rápidos
+// de su negocio (el editor completo es exclusivo de super/partner, ver
+// require-full-editor-access.ts). Super ve TODOS los negocios; partner
+// ve solo los que tiene asignados (businesses.partner_id) — mismo
+// componente, distinto dataset.
 export default async function AdminHomePage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
-  if (session.role === "owner") redirect(`/admin/negocios/${session.businessId}`);
+  if (session.role === "owner") redirect(`/admin/negocios/${session.businessId}/rapido`);
 
   const [businesses, officialTemplates] = await Promise.all([
     session.role === "partner"
