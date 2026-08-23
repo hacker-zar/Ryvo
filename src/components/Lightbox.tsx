@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useEffect } from "react";
 import Image from "next/image";
 
@@ -51,10 +52,10 @@ export default function Lightbox({
         type="button"
         aria-label="Cerrar"
         onClick={onClose}
-        className="absolute inset-0 bg-black/85 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+        className="absolute inset-0 bg-black/85 backdrop-blur-sm anim-fade"
       />
 
-      <div className="relative w-full h-full max-w-4xl max-h-[85vh] mx-4 my-auto animate-[slideUp_0.25s_ease-out]">
+      <div className="relative w-full h-full max-w-4xl max-h-[85vh] mx-4 my-auto anim-slide-up">
         <Image
           key={index}
           src={images[index]}
@@ -69,9 +70,9 @@ export default function Lightbox({
         type="button"
         onClick={onClose}
         aria-label="Cerrar"
-        className="absolute top-4 right-4 sm:top-6 sm:right-6 h-10 w-10 rounded-full bg-black/50 text-bone text-lg flex items-center justify-center hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-brass transition-colors"
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 h-11 w-11 rounded-full bg-black/50 text-bone flex items-center justify-center hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-brass transition-colors"
       >
-        ✕
+        <Icon name="close" size={20} />
       </button>
 
       {images.length > 1 ? (
@@ -82,7 +83,7 @@ export default function Lightbox({
             aria-label="Foto anterior"
             className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/50 text-bone text-xl flex items-center justify-center hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-brass transition-colors"
           >
-            ‹
+            <Icon name="chevron" size={24} rotate={90} />
           </button>
           <button
             type="button"
@@ -90,7 +91,7 @@ export default function Lightbox({
             aria-label="Foto siguiente"
             className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/50 text-bone text-xl flex items-center justify-center hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-brass transition-colors"
           >
-            ›
+            <Icon name="chevron" size={24} rotate={270} />
           </button>
         </>
       ) : null}

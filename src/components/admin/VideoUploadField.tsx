@@ -81,16 +81,16 @@ export default function VideoUploadField({
           src={url}
           controls
           muted
-          className="w-full max-w-xs rounded-sm border border-ink-line bg-ink-elevated"
+          className="w-full max-w-xs radius-sm border border-ink-line bg-ink-elevated"
         />
       ) : null}
 
       <div className="flex items-center gap-3">
-        <label className="section-eyebrow text-[11px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass focus-within:ring-2 focus-within:ring-brass/60 focus-within:ring-offset-2 focus-within:ring-offset-ink transition-colors cursor-pointer">
+        <label className="section-eyebrow text-[11px] px-3 py-2 radius-sm border border-ink-line text-bone hover:border-brass focus-within:ring-2 focus-within:ring-brass/60 focus-within:ring-offset-2 focus-within:ring-offset-ink transition-colors cursor-pointer">
           {status === "uploading"
             ? "Subiendo..."
             : status === "success"
-              ? "✓ Subido"
+              ? "Subido"
               : url
                 ? "Cambiar video"
                 : "Subir video"}

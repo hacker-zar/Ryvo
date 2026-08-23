@@ -17,9 +17,15 @@ interface HeroProps {
     | "hero_video"
     | "hero_video_enabled"
     | "hero_video_position"
+    | "hero_kicker"
+    | "hero_headline"
   >;
   layout?: TemplateLayoutId;
 }
+
+/** Texto de apertura por defecto, cuando el negocio no cargó el suyo.
+ *  Es exactamente lo que mostraban TODOS los sitios hasta ahora. */
+const DEFAULT_KICKER = "Reservá tu turno online";
 
 export default function Hero({ business, layout }: HeroProps) {
   const { open } = useBookingModal();
@@ -58,6 +64,21 @@ export default function Hero({ business, layout }: HeroProps) {
     !prefersReducedMotion;
 
   const ctaTextColor = readableTextColor(business.primary_color);
+
+  /**
+   * Apertura del hero. Hasta acá TODOS los sitios de RYVO abrían
+   * exactamente igual: la misma cadena literal y el nombre del negocio como
+   * <h1> — que además ya está en el header sticky justo arriba, así que
+   * el título no comunicaba nada nuevo. Era la razón principal por la
+   * que dos sitios se reconocían como hermanos aunque tuvieran plantilla,
+   * paleta y tipografía distintas.
+   *
+   * `.trim() ||` y no `??`: la columna es NOT NULL DEFAULT '', así que el
+   * caso real a cubrir es la cadena vacía (y la que quedó con espacios),
+   * no null.
+   */
+  const kicker = business.hero_kicker?.trim() || DEFAULT_KICKER;
+  const headline = business.hero_headline?.trim() || business.name;
 
   // Capa de imagen/video de fondo, compartida por los layouts full-bleed
   // (Atelier/Noir/Editorial/default) — Studio y Bold NO la usan tal cual
@@ -145,14 +166,18 @@ export default function Hero({ business, layout }: HeroProps) {
   if (layout === "studio") {
     return (
       <section id="inicio" className="bg-ink">
-        <div className="mx-auto max-w-5xl px-4 py-16 md:py-24 grid gap-10 md:grid-cols-2 md:items-center">
+        <div className="mx-auto max-w-5xl px-4 section-y grid gap-10 md:grid-cols-2 md:items-center">
           <div>
             <Reveal>
-              <p className="section-eyebrow" style={{ color: business.primary_color }}>
-                Reservá tu turno online
+              <p
+                data-editable-category="pagina"
+                data-editable-field="portada_kicker" className="section-eyebrow" style={{ color: business.primary_color }}>
+                {kicker}
               </p>
-              <h1 className="display-title mt-4 text-3xl sm:text-4xl md:text-5xl text-bone">
-                {business.name}
+              <h1
+                data-editable-category="pagina"
+                data-editable-field="portada_titulo" className="display-title mt-4 text-3xl sm:text-4xl md:text-5xl text-bone">
+                {headline}
               </h1>
             </Reveal>
             {business.description ? (
@@ -166,7 +191,7 @@ export default function Hero({ business, layout }: HeroProps) {
               <div className="hidden md:block mt-8">{primaryCta}</div>
             </Reveal>
           </div>
-          <div className="relative aspect-[4/3] md:aspect-square rounded-sm overflow-hidden bg-ink-elevated">
+          <div className="relative aspect-[4/3] md:aspect-square radius-sm overflow-hidden bg-ink-elevated">
             {backgroundMedia()}
           </div>
         </div>
@@ -187,16 +212,20 @@ export default function Hero({ business, layout }: HeroProps) {
           <div className="relative z-10">
             <Reveal>
               <p
+                data-editable-category="pagina"
+                data-editable-field="portada_kicker"
                 className="section-eyebrow"
                 style={{ color: ctaTextColor, opacity: 0.8 }}
               >
-                Reservá tu turno online
+                {kicker}
               </p>
               <h1
+                data-editable-category="pagina"
+                data-editable-field="portada_titulo"
                 className="display-title mt-3 text-4xl sm:text-5xl md:text-7xl leading-[0.95]"
                 style={{ color: ctaTextColor }}
               >
-                {business.name}
+                {headline}
               </h1>
             </Reveal>
             {business.description ? (
@@ -222,7 +251,7 @@ export default function Hero({ business, layout }: HeroProps) {
             </Reveal>
           </div>
           {business.hero_image ? (
-            <div className="relative aspect-[4/5] md:translate-y-6 shadow-2xl rounded-sm overflow-hidden md:rotate-1">
+            <div className="relative aspect-[4/5] md:translate-y-6 shadow-2xl radius-sm overflow-hidden md:rotate-1">
               {backgroundMedia()}
             </div>
           ) : null}
@@ -252,10 +281,14 @@ export default function Hero({ business, layout }: HeroProps) {
       >
         <div className={isEditorial ? "max-w-2xl" : "max-w-xl"}>
           <Reveal>
-            <p className="section-eyebrow" style={{ color: business.primary_color }}>
-              Reservá tu turno online
+            <p
+                data-editable-category="pagina"
+                data-editable-field="portada_kicker" className="section-eyebrow" style={{ color: business.primary_color }}>
+              {kicker}
             </p>
             <h1
+                data-editable-category="pagina"
+                data-editable-field="portada_titulo"
               className={`display-title mt-4 text-bone [text-shadow:0_2px_20px_rgba(0,0,0,0.35)] ${
                 isEditorial
                   ? "text-4xl sm:text-5xl md:text-8xl leading-[0.92] uppercase"
@@ -264,7 +297,7 @@ export default function Hero({ business, layout }: HeroProps) {
                     : "text-3xl sm:text-4xl md:text-6xl"
               }`}
             >
-              {business.name}
+              {headline}
             </h1>
           </Reveal>
           {business.description ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
+import Icon, { IconName } from "@/components/ui/Icon";
 
 /**
  * Único punto de guardado visible del editor — reemplaza los botones
@@ -21,29 +22,37 @@ export default function GlobalSaveBar() {
   const showError = saveStatus === "error";
 
   let label: string;
+  let icon: IconName | null;
   if (saving) {
     label = "Guardando…";
+    icon = null;
   } else if (showError) {
-    label = "⚠ Error al guardar";
+    label = "Error al guardar";
+    icon = "alert";
   } else if (isDirty) {
-    label = "● Cambios sin guardar";
+    label = "Cambios sin guardar";
+    icon = "alert";
   } else {
-    label = "✓ Todos los cambios guardados";
+    label = "Todos los cambios guardados";
+    icon = "check";
   }
 
   let statusColor: string;
   if (showError) {
-    statusColor = "text-red-400";
+    statusColor = "text-danger";
   } else if (isDirty && !saving) {
     statusColor = "text-brass";
   } else {
-    statusColor = "text-bone-muted";
+    statusColor = "text-ok";
   }
 
   return (
-    <div className="sticky top-0 z-30 mb-6 flex items-center justify-between gap-4 rounded-sm border border-ink-line bg-ink/95 backdrop-blur px-4 py-3">
+    <div className="sticky top-0 z-30 mb-6 flex items-center justify-between gap-4 radius-sm border border-ink-line bg-ink/95 backdrop-blur px-4 py-3">
       <div>
-        <p className={`text-xs font-medium ${statusColor}`}>{label}</p>
+        <p className={`text-xs font-medium flex items-center gap-1.5 ${statusColor}`}>
+          {icon ? <Icon name={icon} size={16} className="shrink-0" /> : null}
+          {label}
+        </p>
         {showError ? (
           <p className="text-[11px] text-bone-muted mt-0.5">{saveError}</p>
         ) : null}
@@ -52,7 +61,7 @@ export default function GlobalSaveBar() {
         type="button"
         disabled={saving || (!isDirty && !showError)}
         onClick={() => saveChanges()}
-        className="section-eyebrow shrink-0 text-xs px-5 py-2.5 rounded-sm bg-brass text-ink font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+        className="section-eyebrow shrink-0 text-xs px-5 py-2.5 radius-sm bg-brass text-ink font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
       >
         {saving ? "Guardando…" : showError ? "Reintentar" : "Guardar cambios"}
       </button>

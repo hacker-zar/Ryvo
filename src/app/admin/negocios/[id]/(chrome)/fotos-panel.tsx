@@ -115,7 +115,7 @@ export default function FotosPanel({
             respaldo — no hay un campo de fallback separado. Por eso
             queda deshabilitado hasta que haya una portada cargada. */}
         <div
-          className="grid gap-3 rounded-sm border border-ink-line p-4"
+          className="grid gap-3 radius-sm border border-ink-line p-4"
           data-editable-category="apariencia"
           data-editable-field="hero_video"
         >
@@ -151,7 +151,7 @@ export default function FotosPanel({
               id="hero_video_position"
               name="hero_video_position"
               defaultValue={heroVideoPosition}
-              className="h-9 rounded-sm border border-ink-line bg-ink-elevated px-2 text-sm text-bone"
+              className="h-9 radius-sm border border-ink-line bg-ink-elevated px-2 text-sm text-bone"
             >
               {VIDEO_POSITION_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -184,7 +184,7 @@ export default function FotosPanel({
             id="gallery_layout"
             name="gallery_layout"
             defaultValue={galleryLayout}
-            className="h-9 rounded-sm border border-ink-line bg-ink-elevated px-2 text-sm text-bone"
+            className="h-9 radius-sm border border-ink-line bg-ink-elevated px-2 text-sm text-bone"
           >
             {GALLERY_LAYOUT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>

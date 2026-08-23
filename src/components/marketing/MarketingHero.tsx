@@ -10,7 +10,7 @@ export default function MarketingHero() {
         style={{ backgroundColor: "var(--signal)" }}
       />
 
-      <div className="relative mx-auto max-w-3xl px-4 pt-24 pb-20 md:pt-32 md:pb-28 text-center animate-[fadeIn_0.2s_ease-out]">
+      <div className="relative mx-auto max-w-3xl px-4 pt-24 pb-20 md:pt-32 md:pb-28 text-center anim-fade">
         <p className="text-xs uppercase tracking-[0.25em] text-signal">
           Software para peluquerías y barberías
         </p>

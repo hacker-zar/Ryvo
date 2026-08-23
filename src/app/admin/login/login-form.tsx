@@ -65,7 +65,7 @@ export default function LoginForm({ isOwnerLogin }: LoginFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="section-eyebrow rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity disabled:opacity-60"
+        className="section-eyebrow radius-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity disabled:opacity-60"
       >
         {loading ? "Ingresando..." : "Ingresar"}
       </button>

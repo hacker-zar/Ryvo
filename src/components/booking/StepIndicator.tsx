@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { Business } from "@/types/business";
 
 export type WizardStepId = "service" | "professional" | "datetime" | "details";
@@ -49,7 +50,7 @@ export default function StepIndicator({
               {i + 1} {STEP_LABELS[stepId]}
             </span>
             {i < steps.length - 1 ? (
-              <span className="text-bone-muted/40">→</span>
+              <Icon name="chevron" size={16} rotate={270} className="text-bone-muted/40 shrink-0" />
             ) : null}
           </div>
         );

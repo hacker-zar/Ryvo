@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useState } from "react";
 import { dayCodeForDate } from "@/lib/availability";
 import { OpeningHours } from "@/types/business";
@@ -105,9 +106,9 @@ export default function MiniCalendar({
           onClick={goPrevMonth}
           disabled={!canGoPrev}
           aria-label="Mes anterior"
-          className="h-7 w-7 rounded-sm border border-ink-line text-bone-muted flex items-center justify-center text-sm disabled:opacity-30 hover:border-brass hover:text-bone transition-colors"
+          className="h-11 w-11 radius-sm border border-ink-line text-bone-muted flex items-center justify-center disabled:opacity-30 hover:border-brass hover:text-bone transition-colors"
         >
-          ‹
+          <Icon name="chevron" size={20} rotate={90} />
         </button>
         <span className="section-eyebrow text-bone-muted">
           {MONTH_LABELS[viewMonth]} {viewYear}
@@ -116,9 +117,9 @@ export default function MiniCalendar({
           type="button"
           onClick={goNextMonth}
           aria-label="Mes siguiente"
-          className="h-7 w-7 rounded-sm border border-ink-line text-bone-muted flex items-center justify-center text-sm hover:border-brass hover:text-bone transition-colors"
+          className="h-11 w-11 radius-sm border border-ink-line text-bone-muted flex items-center justify-center hover:border-brass hover:text-bone transition-colors"
         >
-          ›
+          <Icon name="chevron" size={20} rotate={270} />
         </button>
       </div>
 
@@ -147,7 +148,7 @@ export default function MiniCalendar({
               type="button"
               disabled={disabled}
               onClick={() => handleSelectDate(iso)}
-              className={`aspect-square rounded-sm text-xs flex items-center justify-center transition-colors disabled:opacity-25 disabled:cursor-not-allowed ${
+              className={`aspect-square radius-sm text-xs flex items-center justify-center transition-colors disabled:opacity-25 disabled:cursor-not-allowed ${
                 pulsingDate === iso ? "select-pulse" : ""
               }`}
               style={{

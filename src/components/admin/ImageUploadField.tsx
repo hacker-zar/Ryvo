@@ -70,20 +70,20 @@ export default function ImageUploadField({
 
       <div className="flex items-center gap-3">
         {url ? (
-          <div className="relative h-14 w-14 shrink-0 rounded-sm overflow-hidden border border-ink-line bg-ink-elevated">
+          <div className="relative h-14 w-14 shrink-0 radius-sm overflow-hidden border border-ink-line bg-ink-elevated">
             <Image src={url} alt="" fill sizes="56px" className="object-cover" />
           </div>
         ) : (
-          <div className="h-14 w-14 shrink-0 rounded-sm border border-dashed border-ink-line flex items-center justify-center text-bone-muted text-[10px] text-center px-1">
+          <div className="h-14 w-14 shrink-0 radius-sm border border-dashed border-ink-line flex items-center justify-center text-bone-muted text-[10px] text-center px-1">
             Sin imagen
           </div>
         )}
 
-        <label className="section-eyebrow text-[11px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass focus-within:ring-2 focus-within:ring-brass/60 focus-within:ring-offset-2 focus-within:ring-offset-ink transition-colors cursor-pointer">
+        <label className="section-eyebrow text-[11px] px-3 py-2 radius-sm border border-ink-line text-bone hover:border-brass focus-within:ring-2 focus-within:ring-brass/60 focus-within:ring-offset-2 focus-within:ring-offset-ink transition-colors cursor-pointer">
           {status === "uploading"
             ? "Subiendo..."
             : status === "success"
-              ? "✓ Subida"
+              ? "Subida"
               : url
                 ? "Cambiar"
                 : "Subir imagen"}

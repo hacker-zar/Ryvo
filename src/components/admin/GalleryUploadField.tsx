@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { adminUploadImage } from "@/lib/admin/actions";
@@ -93,25 +94,25 @@ export default function GalleryUploadField({
         {images.map((url) => (
           <div
             key={url}
-            className="relative aspect-square rounded-sm overflow-hidden border border-ink-line bg-ink-elevated group"
+            className="relative aspect-square radius-sm overflow-hidden border border-ink-line bg-ink-elevated group"
           >
             <Image src={url} alt="" fill sizes="(min-width: 640px) 25vw, 33vw" className="object-cover" />
             <button
               type="button"
               onClick={() => handleRemove(url)}
               aria-label="Quitar foto"
-              className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/70 text-bone text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brass transition-opacity"
+              className="absolute top-1 right-1 h-7 w-7 rounded-full bg-black/70 text-bone flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brass transition-opacity"
             >
-              ✕
+              <Icon name="close" size={16} />
             </button>
           </div>
         ))}
 
-        <label className="aspect-square rounded-sm border border-dashed border-ink-line flex items-center justify-center text-bone-muted text-[11px] text-center cursor-pointer hover:border-brass focus-within:ring-2 focus-within:ring-brass/60 focus-within:ring-offset-2 focus-within:ring-offset-ink transition-colors">
+        <label className="aspect-square radius-sm border border-dashed border-ink-line flex items-center justify-center text-bone-muted text-[11px] text-center cursor-pointer hover:border-brass focus-within:ring-2 focus-within:ring-brass/60 focus-within:ring-offset-2 focus-within:ring-offset-ink transition-colors">
           {status === "uploading"
             ? "Subiendo..."
             : status === "success"
-              ? "✓ Agregado"
+              ? "Agregado"
               : "+ Agregar"}
           <input
             ref={inputRef}

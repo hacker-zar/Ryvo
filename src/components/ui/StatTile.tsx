@@ -9,7 +9,7 @@ interface StatTileProps {
  *  dashboard de estadísticas — sin decoración extra, solo el número. */
 export default function StatTile({ label, value, hint }: StatTileProps) {
   return (
-    <div className="rounded-sm border border-ink-line bg-ink-elevated px-5 py-4">
+    <div className="radius-sm border border-ink-line bg-ink-elevated px-5 py-4">
       <p className="ticket-number text-3xl text-brass">{value}</p>
       <p className="text-sm text-bone-muted mt-1">{label}</p>
       {hint ? <p className="text-xs text-bone-muted/70 mt-0.5">{hint}</p> : null}

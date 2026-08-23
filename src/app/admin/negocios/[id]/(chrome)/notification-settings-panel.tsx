@@ -66,7 +66,7 @@ export default function NotificationSettingsPanel({
         para que el mensaje siempre se lea profesional.
       </p>
 
-      <label className="flex items-start gap-3 rounded-sm border border-ink-line p-3 cursor-pointer">
+      <label className="flex items-start gap-3 radius-sm border border-ink-line p-3 cursor-pointer">
         <input
           type="checkbox"
           name="notify_whatsapp_enabled"
@@ -81,7 +81,7 @@ export default function NotificationSettingsPanel({
         </span>
       </label>
 
-      <label className="flex items-start gap-3 rounded-sm border border-ink-line p-3 cursor-pointer">
+      <label className="flex items-start gap-3 radius-sm border border-ink-line p-3 cursor-pointer">
         <input
           type="checkbox"
           name="notify_reminder_24h_enabled"

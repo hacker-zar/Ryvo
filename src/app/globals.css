@@ -29,6 +29,32 @@
   --text: var(--bone);
   --text-muted: var(--bone-muted);
   --border: var(--ink-line);
+
+  /* Estado semántico — deliberadamente separado del acento de marca.
+     El acento significa ACCIÓN (algo se puede tocar); el estado
+     significa RESULTADO (algo pasó). Cuando "confirmado" usaba
+     --brass, un turno confirmado se leía igual que un botón.
+
+     Antes eran hexadecimales crudos de la paleta por defecto de
+     Tailwind (#4ade80/#f87171/#fb923c) pegados en booking-status.ts:
+     tres tonos a plena saturación, sin relación entre sí ni con el
+     resto del sistema. Estos están desaturados y comparten luminosidad
+     para que convivan en la Agenda, donde aparecen los tres juntos,
+     sin leerse como un tablero de notificaciones. */
+  --ok: #6ba97f;
+  --warn: #c99248;
+  --danger: #cf7168;
+
+  /* Motion — tres duraciones y dos curvas, sin excepciones.
+     Antes había siete duraciones sueltas (0.15/0.2/0.22/0.25/0.5/0.55/
+     0.6s) y tres curvas sin relación, decididas componente por
+     componente: por eso las transiciones se sentían de productos
+     distintos en vez de uno solo. */
+  --motion-fast: 150ms;   /* color, borde, opacidad (hover/focus) */
+  --motion-base: 250ms;   /* entradas, pasos del wizard, pulsos */
+  --motion-slow: 400ms;   /* scroll reveal, paneles */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 /* Identidad de marca de RYVO como plataforma (landing en "/", nav, etc).
@@ -67,6 +93,9 @@
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-border: var(--border);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
   --font-display: var(--font-display-stack);
   --font-sans: var(--font-sans-stack);
 }
@@ -113,21 +142,121 @@
   --label-weight: 600;
 }
 
-/* Estilo de botones controlado: redondeado / suave / recto. Se aplica vía
-   data-button-style en el mismo contenedor de arriba, y los componentes
-   que dibujan botones usan la clase .btn-radius en vez de un rounded-*
-   fijo de Tailwind. */
-[data-button-style="redondeado"] {
-  --button-radius: 9999px;
-}
-[data-button-style="suave"] {
-  --button-radius: 0.5rem;
-}
-[data-button-style="recto"] {
+/* Geometría del negocio: una sola escala para TODO el chrome (botones,
+   cards, inputs, paneles, modales), derivada del preset de forma que el
+   dueño ya elegía para los botones (data-button-style).
+
+   Antes convivían tres sistemas que se contradecían: los botones tenían
+   radio configurable, las fotos también, y las cards/inputs/paneles
+   estaban clavados en `rounded-sm` (2px) en todo el código. Un negocio
+   que elegía "redondeado" terminaba con botones tipo píldora y fotos de
+   16px encima de cards de 2px: la página dejaba de tener UNA geometría.
+
+   El default (`recto`) reproduce exactamente el aspecto histórico —
+   2px es el mismo valor que daba `rounded-sm`. Un negocio que nunca
+   tocó este preset no cambia en nada.
+
+   El admin de RYVO NO vive dentro de AppearanceScope, así que nunca
+   recibe un data-button-style: se queda con estos valores de :root a
+   propósito. El chrome del software es de RYVO, no del negocio. */
+:root {
+  --radius-sm: 0.125rem;
+  --radius-lg: 0.25rem;
   --button-radius: 0.125rem;
 }
+[data-button-style="recto"] {
+  --radius-sm: 0.125rem;
+  --radius-lg: 0.25rem;
+  --button-radius: 0.125rem;
+}
+[data-button-style="suave"] {
+  --radius-sm: 0.375rem;
+  --radius-lg: 0.75rem;
+  --button-radius: 0.5rem;
+}
+[data-button-style="redondeado"] {
+  --radius-sm: 0.625rem;
+  --radius-lg: 1.25rem;
+  /* La píldora es la firma de este preset — el botón no sigue la escala,
+     la rompe a propósito. */
+  --button-radius: 9999px;
+}
+
+/* Densidad — el eje que más separa "lujo" de "catálogo".
+   El espacio negativo estaba clavado: `py-16 md:py-24` repetido en 25
+   secciones, sin nombre, así que cada sección nueva lo volvía a
+   decidir. Acá pasa a ser un token, y con eso se vuelve configurable.
+
+   "estandar" son exactamente los valores de siempre (64/96px) — un
+   negocio sin densidad elegida no cambia en nada. */
+:root,
+[data-density="estandar"] {
+  --section-y: 4rem;
+  --section-y-lg: 6rem;
+}
+[data-density="compacta"] {
+  --section-y: 3rem;
+  --section-y-lg: 4rem;
+}
+[data-density="amplia"] {
+  --section-y: 6rem;
+  --section-y-lg: 9rem;
+}
+
+/* Reemplaza `py-16 md:py-24` en las secciones públicas. El breakpoint
+   vive adentro de la clase (no como variante `md:`) porque `.section-y`
+   es una regla plana, fuera de @layer: una utilidad `md:py-*` de
+   Tailwind nunca podría pisarla de forma predecible. */
+.section-y {
+  padding-top: var(--section-y, 4rem);
+  padding-bottom: var(--section-y, 4rem);
+}
+@media (min-width: 768px) {
+  .section-y {
+    padding-top: var(--section-y-lg, 6rem);
+    padding-bottom: var(--section-y-lg, 6rem);
+  }
+}
+
+/* Tratamiento de imagen — el filtro va sobre la <img>, no sobre
+   `.image-frame`: el marco también dibuja el ring de foco de teclado y
+   el filete decorativo de Noir, y ésos no deben virarse con la foto.
+   "natural" no necesita regla: es la ausencia de filtro. */
+[data-image-treatment="byn"] .image-frame img {
+  filter: grayscale(1);
+}
+[data-image-treatment="contraste"] .image-frame img {
+  filter: contrast(1.15) saturate(0.85);
+}
+[data-image-treatment="calido"] .image-frame img {
+  filter: sepia(0.22) saturate(1.12) hue-rotate(-8deg);
+}
+
 .btn-radius {
   border-radius: var(--button-radius, 0.125rem);
+}
+/* Cards, inputs, chips, celdas: el grueso del chrome. */
+.radius-sm {
+  border-radius: var(--radius-sm, 0.125rem);
+}
+/* Modales — lo más grande que dibuja el sistema. */
+.radius-lg {
+  border-radius: var(--radius-lg, 0.25rem);
+}
+
+/* Modales que en mobile entran como hoja desde abajo (BookingModal,
+   UnsavedChangesDialog). Es UNA clase y no `rounded-t-2xl sm:radius-lg`
+   porque `.radius-*` son reglas planas, fuera de @layer: siempre le
+   ganarían a una utilidad de Tailwind sin importar el orden, y el borde
+   superior de la hoja se perdería. Acá el breakpoint vive adentro de la
+   propia clase, así que no hay pelea de cascada posible. */
+.sheet-radius {
+  border-radius: 1rem 1rem 0 0;
+}
+@media (min-width: 640px) {
+  .sheet-radius {
+    border-radius: var(--radius-lg, 0.25rem);
+  }
 }
 
 /* Estilo de fotos públicas controlado: mismo mecanismo que
@@ -217,11 +346,27 @@ body {
    profesional, gestión de turno). */
 #inicio,
 #servicios,
+#catalogo,
 #galeria,
 #profesionales,
 #resenas,
 #contacto {
-  scroll-margin-top: 5rem;
+  /* Mobile: el header sticky lleva DOS filas (identidad + la tira de
+     secciones, ver Header.tsx), así que necesita más margen que en
+     escritorio, donde el nav va en la misma fila que el logo. */
+  scroll-margin-top: 7.5rem;
+}
+
+@media (min-width: 768px) {
+  #inicio,
+  #servicios,
+  #catalogo,
+  #galeria,
+  #profesionales,
+  #resenas,
+  #contacto {
+    scroll-margin-top: 5rem;
+  }
 }
 
 /* Título de sección: mayúsculas, tracking amplio, tipo cartel de local.
@@ -324,12 +469,28 @@ body {
   }
 }
 
+/* Clases semánticas de animación.
+   Antes estas animaciones se aplicaban con utilidades arbitrarias de
+   Tailwind (`animate-[fadeIn_0.2s_ease-out]`) y el bloque de
+   prefers-reduced-motion las apagaba apuntando al NOMBRE DE CLASE
+   ESCAPADO, duración incluida. Cambiar 0.2s por 0.25s en un componente
+   hacía que ese selector dejara de coincidir EN SILENCIO y el elemento
+   se siguiera animando para alguien que pidió menos movimiento. Con
+   clases propias, la desactivación no depende de la duración. */
+.anim-fade {
+  animation: fadeIn var(--motion-base) var(--ease-out);
+}
+
+.anim-slide-up {
+  animation: slideUp var(--motion-base) var(--ease-out);
+}
+
 .step-forward {
-  animation: stepInFromRight 0.22s ease-out;
+  animation: stepInFromRight var(--motion-base) var(--ease-out);
 }
 
 .step-backward {
-  animation: stepInFromLeft 0.22s ease-out;
+  animation: stepInFromLeft var(--motion-base) var(--ease-out);
 }
 
 /* Feedback táctil al seleccionar una opción (servicio, día, local, hora):
@@ -347,7 +508,7 @@ body {
 }
 
 .select-pulse {
-  animation: selectPulse 0.2s ease-out;
+  animation: selectPulse var(--motion-base) var(--ease-out);
 }
 
 /* Indicador de edición en la preview del editor (ver
@@ -379,15 +540,33 @@ body {
    entrada extremadamente sutil, un fade + una elevación mínima, disparada
    una sola vez por IntersectionObserver — no es un efecto que se repite al
    volver a scrollear. */
+/* 400ms y 8px, antes 600ms y 16px: para un reveal disparado por scroll,
+   600ms está muy por encima del rango que se percibe como respuesta
+   (~300-450ms) — el contenido "perseguía" al usuario mientras bajaba.
+   Lento no se lee como elegante, se lee como lento. */
 .reveal {
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  transform: translateY(8px);
+  transition: opacity var(--motion-slow) var(--ease-out),
+    transform var(--motion-slow) var(--ease-out);
 }
 .reveal-visible {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* Escalonado automático entre `.reveal` hermanos: dejó de ser un preset
+   que el dueño tenía que elegir ("Stagger") y pasó a ser el
+   comportamiento por defecto de cualquier grilla. Donde una sección ya
+   pasa `delay` explícito (Services/Products/galerías, vía la prop de
+   Reveal.tsx) ese estilo inline gana sobre esto — no se duplica ni se
+   suma. Tope en 5 escalones: más allá, el último elemento tarda tanto
+   en aparecer que se lee como que la página se colgó. */
+.reveal:nth-of-type(2) { transition-delay: 60ms; }
+.reveal:nth-of-type(3) { transition-delay: 120ms; }
+.reveal:nth-of-type(4) { transition-delay: 180ms; }
+.reveal:nth-of-type(5) { transition-delay: 240ms; }
+.reveal:nth-of-type(n + 6) { transition-delay: 300ms; }
 
 /* Preset global de animaciones (Ninguna/Sutil/Dinámica), controlado
    desde el editor — mismo mecanismo de data-attribute que
@@ -396,48 +575,36 @@ body {
    necesidad de repetirlos acá). Reveal.tsx/useScrollReveal.ts no
    cambian: el IntersectionObserver sigue disparando igual, esto solo
    hace que el resultado visual sea distinto según el preset. */
+/* Tres presets públicos: Ninguna / Sutil / Editorial.
+   "Sutil" son los valores por defecto de `.reveal` de arriba, no necesita
+   reglas propias.
+
+   `dinamica` y `escalonada` ya no se ofrecen en el editor (eran variantes
+   de intensidad del mismo fade, y el escalonado pasó a ser automático).
+   Deliberadamente NO tienen reglas acá: cualquier negocio que las tenga
+   guardadas de antes cae en el `.reveal` base, o sea "Sutil". No se
+   borran de la base ni se migra nada — el CHECK de `businesses`
+   (ver supabase/schema.sql) sigue aceptando los cinco valores. */
 [data-animation="ninguna"] .reveal {
   opacity: 1;
   transform: none;
   transition: none;
 }
-[data-animation="dinamica"] .reveal {
-  transform: translateY(24px) scale(0.98);
-  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-[data-animation="dinamica"] .reveal-visible {
-  transform: translateY(0) scale(1);
-}
 
-/* "Reveal" — a diferencia de sutil/dinámica (que son variantes de
-   intensidad del mismo fade+translateY), esta es una forma distinta:
-   una máscara que se descorre en vez de deslizar el contenido. */
+/* "Editorial" (valor almacenado: `revelado`) — a diferencia de Sutil,
+   que desliza el contenido, ésta descorre una máscara. Es una forma
+   distinta, no una intensidad distinta: por eso sobrevivió a la poda. */
 [data-animation="revelado"] .reveal {
   opacity: 0;
+  transform: none;
   clip-path: inset(0 0 100% 0);
-  transition: opacity 0.55s ease-out, clip-path 0.55s cubic-bezier(0.65, 0, 0.35, 1);
+  transition: opacity var(--motion-slow) var(--ease-out),
+    clip-path var(--motion-slow) var(--ease-inout);
 }
 [data-animation="revelado"] .reveal-visible {
   opacity: 1;
   clip-path: inset(0 0 0% 0);
 }
-
-/* "Stagger" — mismo fade+translateY sutil de siempre, pero agrega un
-   transition-delay creciente por posición entre hermanos `.reveal`, así
-   cualquier grupo (título/subtítulo/CTA del Hero, por ejemplo) se
-   escalona solo con este preset, sin que cada sección tenga que pasar
-   `delay` a mano. Donde ya se pasa `delay` explícito (Services.tsx,
-   etc.) el estilo inline sigue ganando sobre esto — no se duplica ni se
-   rompe el stagger manual existente. */
-[data-animation="escalonada"] .reveal {
-  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-}
-[data-animation="escalonada"] .reveal:nth-of-type(2) { transition-delay: 90ms; }
-[data-animation="escalonada"] .reveal:nth-of-type(3) { transition-delay: 180ms; }
-[data-animation="escalonada"] .reveal:nth-of-type(4) { transition-delay: 270ms; }
-[data-animation="escalonada"] .reveal:nth-of-type(5) { transition-delay: 360ms; }
-[data-animation="escalonada"] .reveal:nth-of-type(6) { transition-delay: 450ms; }
 
 /* Marquee.tsx (plantillas Noir/Bold) — el contenido se duplica 2 veces
    en el componente, así -50% es un loop perfectamente continuo. */
@@ -466,8 +633,12 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-\[fadeIn_0\.2s_ease-out\],
-  .animate-\[slideUp_0\.25s_ease-out\],
+  /* Clases semánticas, no utilidades arbitrarias de Tailwind: el
+     selector ya no incluye la duración, así que cambiar --motion-base
+     (o la duración de cualquier animación) no puede romper esta
+     desactivación sin que nadie se entere. */
+  .anim-fade,
+  .anim-slide-up,
   .step-forward,
   .step-backward,
   .select-pulse {

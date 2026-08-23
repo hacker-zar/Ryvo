@@ -49,7 +49,7 @@ import { detectOpportunities } from "@/lib/opportunities";
 // funciones de autenticación de más abajo, porque el hash terminaría
 // serializado en el HTML/RSC payload aunque ningún componente lo muestre.
 const BUSINESS_PUBLIC_COLUMNS =
-  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, gallery_layout, about_image, opening_hours, background_color, text_color, typography_preset, button_style, image_radius, image_shadow, notify_whatsapp_enabled, notify_reminder_24h_enabled, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, template_id, template_layout, palette_id, created_at";
+  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, gallery_layout, about_image, opening_hours, background_color, text_color, typography_preset, button_style, image_radius, image_shadow, image_treatment, density, hero_kicker, hero_headline, notify_whatsapp_enabled, notify_reminder_24h_enabled, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, template_id, template_layout, palette_id, created_at";
 
 /**
  * Punto único de acceso a datos de negocio.

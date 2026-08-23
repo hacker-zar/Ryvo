@@ -106,7 +106,7 @@ export default function PreviewPane({ businessId }: PreviewPaneProps) {
             key={v.key}
             type="button"
             onClick={() => setViewport(v.key)}
-            className="section-eyebrow text-xs px-3 py-1.5 rounded-sm border focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+            className="section-eyebrow text-xs px-3 py-1.5 radius-sm border focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
             style={{
               borderColor:
                 viewport === v.key ? "var(--brass)" : "var(--ink-line)",
@@ -122,7 +122,7 @@ export default function PreviewPane({ businessId }: PreviewPaneProps) {
         className={
           viewport === "mobile"
             ? "relative mx-auto w-[390px] rounded-2xl border border-ink-line overflow-hidden bg-ink"
-            : "relative w-full rounded-sm border border-ink-line overflow-hidden bg-ink"
+            : "relative w-full radius-sm border border-ink-line overflow-hidden bg-ink"
         }
       >
         {!loaded && !loadError ? (
@@ -141,7 +141,7 @@ export default function PreviewPane({ businessId }: PreviewPaneProps) {
             <button
               type="button"
               onClick={() => setLocalRetry((n) => n + 1)}
-              className="section-eyebrow text-xs px-4 py-2 rounded-sm border border-ink-line text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+              className="section-eyebrow text-xs px-4 py-2 radius-sm border border-ink-line text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
             >
               Reintentar
             </button>

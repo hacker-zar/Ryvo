@@ -108,8 +108,32 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
   };
 
   const sectionOrder = sanitizeSectionOrder(business.section_order);
+
+  /**
+   * Secciones que REALMENTE se van a pintar — no alcanza con que estén
+   * activas en `section_order`.
+   *
+   * Casi todas las secciones se ocultan solas cuando no tienen contenido
+   * (`if (services.length === 0) return null` y equivalentes). Con la
+   * lista de activas a secas, el menú ofrecía destinos que no existían en
+   * la página: el ancla no llevaba a ningún lado y el usuario quedaba
+   * donde estaba, sin ninguna explicación. Se notaba poco cuando el nav
+   * cubría 4 secciones; con Catálogo y Profesionales sumados, un negocio
+   * sin productos cargados mostraba "Catálogo" en el menú siempre.
+   *
+   * `contact` no aparece acá porque Contact.tsx no tiene guarda de vacío:
+   * se renderiza siempre que esté activa.
+   */
+  const SECTION_HAS_CONTENT: Partial<Record<SectionId, boolean>> = {
+    services: services.length > 0,
+    products: products.length > 0,
+    professionals: professionals.length > 0,
+    gallery: (business.gallery ?? []).length > 0,
+    reviews: reviews.length > 0,
+  };
+
   const enabledSectionIds = sectionOrder
-    .filter((s) => s.enabled)
+    .filter((s) => s.enabled && SECTION_HAS_CONTENT[s.id] !== false)
     .map((s) => s.id);
 
   // Renderiza las secciones reordenables de siempre — opcionalmente
@@ -170,6 +194,8 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         palette_id: business.palette_id,
         image_radius: business.image_radius,
         image_shadow: business.image_shadow,
+        image_treatment: business.image_treatment,
+        density: business.density,
       }}
     >
       <BookingModalProvider>
@@ -192,6 +218,8 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
             hero_video: business.hero_video,
             hero_video_enabled: business.hero_video_enabled,
             hero_video_position: business.hero_video_position,
+            hero_kicker: business.hero_kicker,
+            hero_headline: business.hero_headline,
           }}
           layout={layout}
         />

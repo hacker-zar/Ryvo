@@ -177,7 +177,7 @@ function OnboardingSteps({
               <button
                 type="button"
                 onClick={() => goToStep(step - 1)}
-                className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
+                className="section-eyebrow text-xs px-5 py-3 radius-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
               >
                 Anterior
               </button>
@@ -185,7 +185,7 @@ function OnboardingSteps({
             <button
               type="button"
               onClick={() => goToStep(step + 1)}
-              className="section-eyebrow text-xs px-6 py-3 rounded-sm bg-brass text-ink font-semibold hover:opacity-90 transition-opacity"
+              className="section-eyebrow text-xs px-6 py-3 radius-sm bg-brass text-ink font-semibold hover:opacity-90 transition-opacity"
             >
               Continuar
             </button>
@@ -209,7 +209,7 @@ function OnboardingSteps({
             <button
               type="button"
               onClick={() => goToStep(LAST_STEP - 1)}
-              className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
+              className="section-eyebrow text-xs px-5 py-3 radius-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
             >
               Anterior
             </button>
@@ -217,7 +217,7 @@ function OnboardingSteps({
               type="button"
               disabled={publishing}
               onClick={handlePublish}
-              className="section-eyebrow text-xs px-6 py-3 rounded-sm bg-brass text-ink font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="section-eyebrow text-xs px-6 py-3 radius-sm bg-brass text-ink font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {publishing ? "Publicando..." : "Publicar mi web"}
             </button>

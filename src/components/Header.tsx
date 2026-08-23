@@ -15,8 +15,20 @@ interface HeaderProps {
   layout?: TemplateLayoutId;
 }
 
+/**
+ * Toda sección reordenable que tenga un ancla real en el sitio público.
+ * "about" queda afuera porque su <section> no lleva `id` (ver About.tsx),
+ * así que no hay a dónde saltar — no se inventa uno acá.
+ *
+ * Antes esta lista cubría solo 4 de las 6 secciones enlazables:
+ * Profesionales y Catálogo podían estar activos y no tener entrada en el
+ * menú. Ahora la usan tanto el nav de escritorio como el de mobile, así
+ * que las dos navegaciones no pueden volver a desincronizarse.
+ */
 const NAV_LINKS: { href: string; label: string; section: SectionId }[] = [
   { href: "#servicios", label: "Servicios", section: "services" },
+  { href: "#catalogo", label: "Catálogo", section: "products" },
+  { href: "#profesionales", label: "Profesionales", section: "professionals" },
   { href: "#galeria", label: "Galería", section: "gallery" },
   { href: "#resenas", label: "Reseñas", section: "reviews" },
   { href: "#contacto", label: "Contacto", section: "contact" },
@@ -91,6 +103,47 @@ export default function Header({ business, enabledSectionIds, layout }: HeaderPr
           Reservar
         </button>
       </div>
+
+      {/* Navegación mobile.
+          Hasta acá, en celular el header era solo logo + nombre: el <nav>
+          de arriba es `hidden md:flex` y el CTA `hidden md:inline-flex`,
+          así que no había NINGUNA forma de llegar a una sección sin
+          scrollear el sitio entero — justo en el dispositivo donde ocurre
+          el caso de uso principal (alguien con el QR frente al local).
+
+          Tira horizontal en vez de menú hamburguesa: son 6 destinos como
+          máximo, un hamburger agregaría un tap y una capa modal para algo
+          que entra en una fila. El desborde lateral es su propia
+          afordancia — el `pr-8` final deja que se asome un pedazo del
+          último chip en vez de cortarlo al ras, que es lo que le dice al
+          usuario que hay más.
+
+          No compite con MobileBookingBar: aquélla vive fija abajo, ésta
+          arriba, y ninguna de las dos es un CTA de reserva duplicado. */}
+      {visibleNavLinks.length > 0 ? (
+        <nav
+          aria-label="Secciones"
+          className="md:hidden border-t border-ink-line/60 overflow-x-auto hide-scrollbar"
+        >
+          <div className="flex items-stretch gap-1 px-2 pr-8 w-max">
+            <a
+              href="#inicio"
+              className="section-eyebrow text-[11px] text-bone-muted hover:text-brass transition-colors px-3 min-h-11 flex items-center whitespace-nowrap"
+            >
+              Inicio
+            </a>
+            {visibleNavLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="section-eyebrow text-[11px] text-bone-muted hover:text-brass transition-colors px-3 min-h-11 flex items-center whitespace-nowrap"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        </nav>
+      ) : null}
     </header>
   );
 }

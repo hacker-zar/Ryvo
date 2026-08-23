@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useState } from "react";
 import { Opportunity } from "@/types/business";
 import { daysAgoLabel } from "@/lib/format";
@@ -35,9 +36,12 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
       >
         <span className="text-sm text-bone">{opportunity.title}</span>
         {hasDetail ? (
-          <span className="text-bone-muted text-xs" aria-hidden="true">
-            {open ? "▼" : "▶"}
-          </span>
+          <Icon
+            name="chevron"
+            size={16}
+            rotate={open ? 0 : 270}
+            className="text-bone-muted shrink-0"
+          />
         ) : null}
       </button>
 

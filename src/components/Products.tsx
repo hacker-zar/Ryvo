@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Business, Product, TemplateLayoutId } from "@/types/business";
 import { formatPrice } from "@/lib/format";
 import Reveal from "@/components/Reveal";
+import SectionHeader from "@/components/SectionHeader";
 
 interface ProductsProps {
   products: Product[];
@@ -21,13 +22,16 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
 
   const staggerDelay = (index: number) => 100 + Math.min(index, 5) * 60;
 
-  const eyebrowAndTitle = (title: string) => (
-    <>
-      <p className="section-eyebrow" style={{ color: primaryColor }}>
-        Catálogo
-      </p>
-      <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">{title}</h2>
-    </>
+  // Ya trae su propio <Reveal> adentro (ver SectionHeader) — por eso los
+  // usos de abajo NO lo envuelven en uno, que anidaría dos animaciones de
+  // entrada sobre el mismo bloque.
+  const sectionHeader = (title: string) => (
+    <SectionHeader
+      eyebrow="Catálogo"
+      title={title}
+      primaryColor={primaryColor}
+      layout={layout}
+    />
   );
 
   function imageOrPlaceholder(product: Product, sizes: string) {
@@ -46,8 +50,8 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
   // === NOIR — cards oscuras con borde, foto protagonista. ===
   if (layout === "noir") {
     return (
-      <section id="catalogo" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-        <Reveal>{eyebrowAndTitle("Productos")}</Reveal>
+      <section id="catalogo" className="mx-auto max-w-5xl px-4 section-y">
+        {sectionHeader("Productos")}
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
           {products.map((product, i) => (
             <Reveal key={product.id} delay={staggerDelay(i)}>
@@ -91,8 +95,8 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
   // === STUDIO — grid parejo y limpio. ===
   if (layout === "studio") {
     return (
-      <section id="catalogo" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-        <Reveal>{eyebrowAndTitle("Productos")}</Reveal>
+      <section id="catalogo" className="mx-auto max-w-5xl px-4 section-y">
+        {sectionHeader("Productos")}
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((product, i) => (
             <Reveal key={product.id} delay={staggerDelay(i)}>
@@ -120,8 +124,8 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
   // === BOLD — cards grandes y expresivas, precio con tipografía enorme. ===
   if (layout === "bold") {
     return (
-      <section id="catalogo" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-        <Reveal>{eyebrowAndTitle("Productos")}</Reveal>
+      <section id="catalogo" className="mx-auto max-w-5xl px-4 section-y">
+        {sectionHeader("Productos")}
         <div className="mt-10 grid gap-8 sm:grid-cols-2">
           {products.map((product, i) => (
             <Reveal key={product.id} delay={staggerDelay(i)}>
@@ -159,9 +163,9 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
   if (layout === "editorial") {
     const featurePattern = [true, false, false, true, false, false];
     return (
-      <section id="catalogo" className="py-16 md:py-24">
+      <section id="catalogo" className="section-y">
         <div className="mx-auto max-w-5xl px-4">
-          <Reveal>{eyebrowAndTitle("Productos")}</Reveal>
+          {sectionHeader("Productos")}
         </div>
         <div className="mt-10 grid grid-cols-2 md:grid-cols-4 auto-rows-[160px] md:auto-rows-[200px] gap-2 grid-flow-dense px-4 md:px-8">
           {products.map((product, i) => {
@@ -207,8 +211,8 @@ export default function Products({ products, primaryColor, layout }: ProductsPro
   // === Atelier / default — editorial y espaciado, mucho aire. ===
   const isAtelier = layout === "atelier";
   return (
-    <section id="catalogo" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-      <Reveal>{eyebrowAndTitle("Productos")}</Reveal>
+    <section id="catalogo" className="mx-auto max-w-5xl px-4 section-y">
+      {sectionHeader("Productos")}
       <div
         className={`mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 ${
           isAtelier ? "lg:grid-cols-2" : "lg:grid-cols-3"

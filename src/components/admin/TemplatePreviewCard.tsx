@@ -44,14 +44,14 @@ export default function TemplatePreviewCard({
 
   return (
     <div
-      className={`border rounded-sm overflow-hidden flex flex-col ${
+      className={`border radius-sm overflow-hidden flex flex-col ${
         selected ? "border-brass" : "border-ink-line"
       }`}
     >
       <div className="relative" style={{ background: bg }}>
         {badge ? (
           <span
-            className={`absolute top-2 left-2 z-10 section-eyebrow text-[9px] px-2 py-0.5 rounded-sm ${
+            className={`absolute top-2 left-2 z-10 section-eyebrow text-[9px] px-2 py-0.5 radius-sm ${
               badge === "oficial" ? "bg-brass text-ink" : "bg-bone text-ink"
             }`}
           >
@@ -71,12 +71,12 @@ export default function TemplatePreviewCard({
           <div className="h-1.5 w-10 rounded-full" style={{ background: accent }} />
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-8 flex-1 rounded-sm" style={{ background: surface }} />
+              <div key={i} className="h-8 flex-1 radius-sm" style={{ background: surface }} />
             ))}
           </div>
           <div className="grid grid-cols-3 gap-1">
-            <div className="aspect-square rounded-sm col-span-2" style={{ background: border }} />
-            <div className="aspect-square rounded-sm" style={{ background: border }} />
+            <div className="aspect-square radius-sm col-span-2" style={{ background: border }} />
+            <div className="aspect-square radius-sm" style={{ background: border }} />
           </div>
         </div>
         <div className="h-3" style={{ background: surface }} />

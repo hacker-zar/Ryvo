@@ -4,6 +4,7 @@ import { Business, Service, TemplateLayoutId } from "@/types/business";
 import { formatDuration, formatPrice, readableTextColor } from "@/lib/format";
 import { useBookingModal } from "@/lib/booking-modal-context";
 import Reveal from "@/components/Reveal";
+import SectionHeader from "@/components/SectionHeader";
 
 interface ServicesProps {
   services: Service[];
@@ -35,15 +36,13 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
   if (layout === "noir" || layout === "studio") {
     const dark = layout === "noir";
     return (
-      <section id="servicios" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-        <Reveal>
-          <h2
-            className="section-eyebrow text-xl sm:text-2xl md:text-3xl"
-            style={{ color: primaryColor }}
-          >
-            Carta de servicios
-          </h2>
-        </Reveal>
+      <section id="servicios" className="mx-auto max-w-5xl px-4 section-y">
+        <SectionHeader
+          eyebrow="Carta"
+          title="Servicios"
+          primaryColor={primaryColor}
+          layout={layout}
+        />
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
           {services.map((service, i) => (
@@ -54,7 +53,7 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
                 className={
                   dark
                     ? "bg-ink-elevated border border-ink-line p-6 h-full"
-                    : "border border-ink-line p-6 h-full rounded-sm"
+                    : "border border-ink-line p-6 h-full radius-sm"
                 }
               >
                 <div className="flex items-start justify-between gap-4">
@@ -86,12 +85,13 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
   // === BOLD — lista numerada enorme, tipo "01 CORTE / 02 BARBA...". ===
   if (layout === "bold") {
     return (
-      <section id="servicios" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-        <Reveal>
-          <p className="section-eyebrow" style={{ color: primaryColor }}>
-            Carta de servicios
-          </p>
-        </Reveal>
+      <section id="servicios" className="mx-auto max-w-5xl px-4 section-y">
+        <SectionHeader
+          eyebrow="Carta"
+          title="Servicios"
+          primaryColor={primaryColor}
+          layout={layout}
+        />
 
         <div className="mt-6 border-t border-ink-line">
           {services.map((service, i) => (
@@ -145,15 +145,13 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
   const [featured, ...rest] = services;
 
   return (
-    <section id="servicios" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-      <Reveal>
-        <h2
-          className="section-eyebrow text-xl sm:text-2xl md:text-3xl"
-          style={{ color: primaryColor }}
-        >
-          Carta de servicios
-        </h2>
-      </Reveal>
+    <section id="servicios" className="mx-auto max-w-5xl px-4 section-y">
+      <SectionHeader
+        eyebrow="Carta"
+        title="Servicios"
+        primaryColor={primaryColor}
+        layout={layout}
+      />
 
       <div className="mt-10">
         <Reveal delay={staggerDelay(0)}>

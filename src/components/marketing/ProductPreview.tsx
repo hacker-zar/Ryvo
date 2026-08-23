@@ -8,7 +8,7 @@
 export default function ProductPreview() {
   return (
     <section id="producto" className="mx-auto max-w-3xl px-4 pb-24 md:pb-32">
-      <div className="rounded-2xl border border-graphite-line bg-graphite-elevated shadow-[0_40px_80px_-40px_rgba(0,0,0,0.6)] overflow-hidden animate-[slideUp_0.25s_ease-out]">
+      <div className="rounded-2xl border border-graphite-line bg-graphite-elevated shadow-[0_40px_80px_-40px_rgba(0,0,0,0.6)] overflow-hidden anim-slide-up">
         {/* Barra de navegador */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-graphite-line">
           <span className="h-2.5 w-2.5 rounded-full bg-graphite-line" />

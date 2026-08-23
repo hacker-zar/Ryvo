@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useState } from "react";
 import { Business, ProfessionalWithServices } from "@/types/business";
 
@@ -57,7 +58,7 @@ export default function StepProfessional({
         <button
           type="button"
           onClick={() => handleSelect("any")}
-          className={`text-left rounded-sm border px-4 py-3.5 transition-colors flex items-center gap-3.5 ${
+          className={`text-left radius-sm border px-4 py-3.5 transition-colors flex items-center gap-3.5 ${
             pulsingId === "any" ? "select-pulse" : ""
           }`}
           style={{
@@ -76,7 +77,7 @@ export default function StepProfessional({
               color: primaryColor,
             }}
           >
-            ★
+            <Icon name="star-filled" size={16} />
           </span>
           <div>
             <p className="text-bone font-medium text-sm">Cualquiera disponible</p>
@@ -93,7 +94,7 @@ export default function StepProfessional({
               key={professional.id}
               type="button"
               onClick={() => handleSelect(professional.id)}
-              className={`text-left rounded-sm border px-4 py-3.5 transition-colors flex items-center gap-3.5 ${
+              className={`text-left radius-sm border px-4 py-3.5 transition-colors flex items-center gap-3.5 ${
                 pulsingId === professional.id ? "select-pulse" : ""
               }`}
               style={{

@@ -16,6 +16,11 @@ interface AgendaDayProps {
   professionals: ProfessionalWithServices[];
   locations: Location[];
   selectedDate: string;
+  /** Fecha de hoy y hora actual del servidor. Solo se usan para decidir
+   *  si dibujar la línea de "ahora" — el modelo temporal del timeline
+   *  (openMin/closeMin/PX_PER_MIN) no cambia por esto. */
+  today: string;
+  nowTime: string;
   onSelectBooking: (bookingId: string) => void;
 }
 
@@ -41,12 +46,21 @@ interface Column {
  * que algo se puede reservar ahí es trabajo exclusivo del motor real
  * (getAvailableSlots), que corre recién en el panel de reprogramación/
  * "+ Nuevo turno" — nunca acá.
+ *
+ * Línea de "ahora": solo cuando el día mostrado es hoy Y la hora actual
+ * cae dentro del horario del local. Sin ella, el dueño tenía que ubicar
+ * mentalmente en qué punto del día está antes de poder leer nada — es
+ * la referencia que convierte el timeline en algo que se entiende de un
+ * vistazo. Se dibuja sobre las columnas (no dentro de una), con
+ * `pointer-events-none` para no bloquear el click de ningún turno.
  */
 export default function AgendaDay({
   bookings,
   professionals,
   locations,
   selectedDate,
+  today,
+  nowTime,
   onSelectBooking,
 }: AgendaDayProps) {
   const location = locations[0];
@@ -65,6 +79,14 @@ export default function AgendaDay({
   const openMin = timeToMinutes(dayConfig.open);
   const closeMin = timeToMinutes(dayConfig.close);
   const totalHeight = (closeMin - openMin) * PX_PER_MIN;
+
+  // `null` = no corresponde dibujarla: otro día, o hoy pero fuera del
+  // horario del local (antes de abrir / después de cerrar).
+  const nowMin = timeToMinutes(nowTime.slice(0, 5));
+  const nowOffset =
+    selectedDate === today && nowMin >= openMin && nowMin <= closeMin
+      ? (nowMin - openMin) * PX_PER_MIN
+      : null;
 
   const hourMarks: { min: number; label: string }[] = [];
   for (let m = Math.ceil(openMin / HOUR_STEP_MIN) * HOUR_STEP_MIN; m < closeMin; m += HOUR_STEP_MIN) {
@@ -123,12 +145,20 @@ export default function AgendaDay({
           {hourMarks.map((h) => (
             <span
               key={h.min}
-              className="ticket-number absolute right-2 -translate-y-1/2 text-[10px] text-bone-muted"
+              className="ticket-number absolute right-2 -translate-y-1/2 text-[11px] text-bone-muted"
               style={{ top: (h.min - openMin) * PX_PER_MIN }}
             >
               {h.label}
             </span>
           ))}
+          {nowOffset !== null ? (
+            <span
+              className="ticket-number absolute right-2 -translate-y-1/2 text-[11px] font-semibold text-brass bg-ink px-0.5"
+              style={{ top: nowOffset }}
+            >
+              {nowTime.slice(0, 5)}
+            </span>
+          ) : null}
         </div>
 
         {columns.map((col) => {
@@ -144,6 +174,13 @@ export default function AgendaDay({
               className="relative border-l border-ink-line"
               style={{ height: totalHeight }}
             >
+              {nowOffset !== null ? (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-0 right-0 z-10 border-t border-brass"
+                  style={{ top: nowOffset }}
+                />
+              ) : null}
               {hourMarks.map((h) => (
                 <div
                   key={h.min}
@@ -156,7 +193,7 @@ export default function AgendaDay({
                 <div
                   key={i}
                   aria-hidden="true"
-                  className="absolute left-1 right-1 flex items-center justify-center rounded-sm text-[9px] text-bone-muted/40"
+                  className="absolute left-1 right-1 flex items-center justify-center radius-sm text-[9px] text-bone-muted/40"
                   style={{
                     top: (gap.start - openMin) * PX_PER_MIN,
                     height: (gap.end - gap.start) * PX_PER_MIN,

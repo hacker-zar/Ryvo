@@ -12,6 +12,7 @@ import AgendaWeek from "./agenda-week";
 import DaySummary from "./day-summary";
 import ProfessionalFilter from "./professional-filter";
 import BookingDetailPanel from "./booking-detail-panel";
+import Icon from "@/components/ui/Icon";
 
 export type AgendaMode = "day" | "week";
 
@@ -48,7 +49,7 @@ function NewBookingButton({ primaryColor }: { primaryColor: string }) {
     <button
       type="button"
       onClick={open}
-      className="section-eyebrow text-xs px-4 py-2.5 rounded-sm font-semibold shrink-0 hover:opacity-90 transition-opacity"
+      className="section-eyebrow text-xs px-4 py-2.5 radius-sm font-semibold shrink-0 hover:opacity-90 transition-opacity"
       style={{ backgroundColor: primaryColor, color: "var(--ink)" }}
     >
       + Nuevo turno
@@ -167,14 +168,14 @@ export default function AgendaView({
               type="button"
               onClick={goPrev}
               aria-label={mode === "week" ? "Semana anterior" : "Día anterior"}
-              className="h-8 w-8 rounded-sm border border-ink-line text-bone-muted hover:border-brass hover:text-bone transition-colors flex items-center justify-center"
+              className="h-11 w-11 radius-sm border border-ink-line text-bone-muted hover:border-brass hover:text-bone transition-colors flex items-center justify-center"
             >
-              ‹
+              <Icon name="chevron" size={20} rotate={90} />
             </button>
             <button
               type="button"
               onClick={() => goToDate(today)}
-              className="section-eyebrow text-xs px-3 py-1.5 rounded-sm border border-ink-line text-bone-muted hover:border-brass hover:text-bone transition-colors"
+              className="section-eyebrow text-xs px-3 py-1.5 radius-sm border border-ink-line text-bone-muted hover:border-brass hover:text-bone transition-colors"
             >
               Hoy
             </button>
@@ -182,9 +183,9 @@ export default function AgendaView({
               type="button"
               onClick={goNext}
               aria-label={mode === "week" ? "Semana siguiente" : "Día siguiente"}
-              className="h-8 w-8 rounded-sm border border-ink-line text-bone-muted hover:border-brass hover:text-bone transition-colors flex items-center justify-center"
+              className="h-11 w-11 radius-sm border border-ink-line text-bone-muted hover:border-brass hover:text-bone transition-colors flex items-center justify-center"
             >
-              ›
+              <Icon name="chevron" size={20} rotate={270} />
             </button>
             <p className="text-sm text-bone-muted capitalize">
               {mode === "day"
@@ -198,7 +199,7 @@ export default function AgendaView({
               <button
                 type="button"
                 onClick={() => navigate({ mode: undefined })}
-                className="section-eyebrow text-xs px-3 py-1.5 rounded-sm border transition-colors"
+                className="section-eyebrow text-xs px-3 py-1.5 radius-sm border transition-colors"
                 style={{
                   borderColor: mode === "day" ? "var(--brass)" : "var(--ink-line)",
                   color: mode === "day" ? "var(--brass)" : "var(--bone-muted)",
@@ -209,7 +210,7 @@ export default function AgendaView({
               <button
                 type="button"
                 onClick={() => navigate({ mode: "week" })}
-                className="section-eyebrow text-xs px-3 py-1.5 rounded-sm border transition-colors"
+                className="section-eyebrow text-xs px-3 py-1.5 radius-sm border transition-colors"
                 style={{
                   borderColor: mode === "week" ? "var(--brass)" : "var(--ink-line)",
                   color: mode === "week" ? "var(--brass)" : "var(--bone-muted)",
@@ -241,6 +242,8 @@ export default function AgendaView({
         <div className="mt-6">
           {mode === "day" ? (
             <AgendaDay
+              today={today}
+              nowTime={nowTime}
               bookings={filteredBookings}
               professionals={
                 selectedProfessionalId && selectedProfessionalId !== "all"

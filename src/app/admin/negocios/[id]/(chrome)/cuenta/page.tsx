@@ -68,7 +68,7 @@ export default async function AccountPage({ params }: PageProps) {
         <form action={logoutAdmin} className="mt-4">
           <button
             type="submit"
-            className="section-eyebrow text-xs px-4 py-2 rounded-sm border border-ink-line text-bone hover:border-brass hover:text-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+            className="section-eyebrow text-xs px-4 py-2 radius-sm border border-ink-line text-bone hover:border-brass hover:text-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
           >
             Cerrar sesión
           </button>

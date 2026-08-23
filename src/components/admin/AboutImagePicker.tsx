@@ -77,7 +77,7 @@ export default function AboutImagePicker({
                 onClick={() => persist(src)}
                 aria-label='Usar esta foto para "Quiénes somos"'
                 aria-pressed={selected === src}
-                className={`relative aspect-square overflow-hidden rounded-sm border transition-colors disabled:opacity-50 ${
+                className={`relative aspect-square overflow-hidden radius-sm border transition-colors disabled:opacity-50 ${
                   selected === src
                     ? "border-brass ring-2 ring-brass/50"
                     : "border-ink-line hover:border-bone-muted"

@@ -22,7 +22,7 @@ export default function ProfessionalFilter({
       <button
         type="button"
         onClick={() => onSelect("all")}
-        className="section-eyebrow text-xs px-3 py-1.5 rounded-sm border shrink-0 transition-colors"
+        className="section-eyebrow text-xs px-3 py-1.5 radius-sm border shrink-0 transition-colors"
         style={{
           borderColor: selectedId === "all" ? "var(--brass)" : "var(--ink-line)",
           color: selectedId === "all" ? "var(--brass)" : "var(--bone-muted)",
@@ -35,7 +35,7 @@ export default function ProfessionalFilter({
           key={professional.id}
           type="button"
           onClick={() => onSelect(professional.id)}
-          className="section-eyebrow text-xs px-3 py-1.5 rounded-sm border shrink-0 transition-colors"
+          className="section-eyebrow text-xs px-3 py-1.5 radius-sm border shrink-0 transition-colors"
           style={{
             borderColor:
               selectedId === professional.id ? "var(--brass)" : "var(--ink-line)",

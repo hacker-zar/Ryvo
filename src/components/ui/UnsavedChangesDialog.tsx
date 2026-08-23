@@ -45,10 +45,10 @@ export default function UnsavedChangesDialog({
         type="button"
         aria-label="Cancelar"
         onClick={saving ? undefined : onCancel}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm anim-fade"
       />
 
-      <div className="relative w-full sm:max-w-sm sm:mx-4 bg-ink border border-ink-line sm:rounded-sm flex flex-col animate-[slideUp_0.25s_ease-out] rounded-t-2xl sm:rounded-t-sm px-5 py-6">
+      <div className="relative w-full sm:max-w-sm sm:mx-4 bg-ink border border-ink-line sheet-radius flex flex-col anim-slide-up px-5 py-6">
         <p className="section-eyebrow text-brass">Atención</p>
         <h2
           id="unsaved-changes-title"
@@ -72,7 +72,7 @@ export default function UnsavedChangesDialog({
               type="button"
               onClick={onSaveAndContinue}
               disabled={saving}
-              className="section-eyebrow text-xs px-4 py-2.5 rounded-sm bg-brass text-ink hover:opacity-90 disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+              className="section-eyebrow text-xs px-4 py-2.5 radius-sm bg-brass text-ink hover:opacity-90 disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
             >
               {saving ? "Guardando..." : "Guardar y continuar"}
             </button>
@@ -81,7 +81,7 @@ export default function UnsavedChangesDialog({
             type="button"
             onClick={onDiscard}
             disabled={saving}
-            className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-red-400 hover:text-red-400 disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+            className="section-eyebrow text-xs px-4 py-2.5 radius-sm border border-ink-line text-bone hover:border-red-400 hover:text-red-400 disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
           >
             Descartar cambios
           </button>
@@ -89,7 +89,7 @@ export default function UnsavedChangesDialog({
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="section-eyebrow text-xs px-4 py-2.5 rounded-sm text-bone-muted hover:text-bone disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+            className="section-eyebrow text-xs px-4 py-2.5 radius-sm text-bone-muted hover:text-bone disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
           >
             Cancelar
           </button>

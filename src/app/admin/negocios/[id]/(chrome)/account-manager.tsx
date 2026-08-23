@@ -151,7 +151,7 @@ function CreateAccountForm({
       <button
         type="submit"
         disabled={isPending || (role === "worker" && professionals.length === 0)}
-        className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
+        className="section-eyebrow text-xs px-5 py-3 radius-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
       >
         {isPending ? "Creando..." : "Crear cuenta"}
       </button>
@@ -180,7 +180,7 @@ function ExistingAccount({
   return (
     <div className="grid gap-4 max-w-sm border-t border-ink-line pt-6 first:border-t-0 first:pt-0">
       <div>
-        <span className="section-eyebrow text-[10px] px-2 py-0.5 rounded-sm border border-ink-line text-bone-muted">
+        <span className="section-eyebrow text-[10px] px-2 py-0.5 radius-sm border border-ink-line text-bone-muted">
           {ROLE_LABELS[account.role]}
         </span>
         {linkedProfessional ? (
@@ -224,7 +224,7 @@ function ExistingAccount({
         <button
           type="submit"
           disabled={isPending}
-          className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
+          className="section-eyebrow text-xs px-5 py-3 radius-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
         >
           {isPending ? "Guardando..." : "Guardar cuenta"}
         </button>
@@ -296,7 +296,7 @@ function ChangePasswordForm({
       <button
         type="submit"
         disabled={isPending}
-        className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
+        className="section-eyebrow text-xs px-5 py-3 radius-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50 w-fit"
       >
         {isPending ? "Guardando..." : "Cambiar contraseña"}
       </button>

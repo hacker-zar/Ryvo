@@ -87,7 +87,7 @@ export default function TemplatePicker({
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className={`text-left border rounded-sm p-4 flex items-center justify-between gap-4 transition-colors ${
+          className={`text-left border radius-sm p-4 flex items-center justify-between gap-4 transition-colors ${
             currentTemplateId === null
               ? "border-brass"
               : "border-ink-line hover:border-bone-muted"

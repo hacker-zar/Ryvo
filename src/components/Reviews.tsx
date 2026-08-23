@@ -1,5 +1,7 @@
 import { Business, Review, TemplateLayoutId } from "@/types/business";
 import Reveal from "@/components/Reveal";
+import SectionHeader from "@/components/SectionHeader";
+import Icon from "@/components/ui/Icon";
 
 interface ReviewsProps {
   reviews: Review[];
@@ -7,15 +9,19 @@ interface ReviewsProps {
   layout?: TemplateLayoutId;
 }
 
+/** Estrellas del set propio (antes: los glifos ★/☆, que se dibujan
+ *  distinto en cada sistema operativo y cambian de peso según la
+ *  tipografía que eligió el negocio). */
 function Stars({ rating, color }: { rating: number; color: string }) {
   return (
     <div
-      className="flex gap-0.5 text-sm"
+      className="flex gap-0.5"
       style={{ color }}
+      role="img"
       aria-label={`${rating} de 5 estrellas`}
     >
       {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i}>{i < rating ? "★" : "☆"}</span>
+        <Icon key={i} name={i < rating ? "star-filled" : "star"} size={16} />
       ))}
     </div>
   );
@@ -27,25 +33,16 @@ export default function Reviews({ reviews, primaryColor, layout }: ReviewsProps)
   const average =
     reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
-  // Editorial/Bold piden títulos más grandes y de mayor impacto en todas
-  // las secciones — acá es lo único que cambia, la lista de reseñas en sí
-  // no tiene un tratamiento distinto especificado por plantilla.
-  const bigTitle = layout === "editorial" || layout === "bold";
-
   return (
-    <section id="resenas" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-      <Reveal>
-        <p className="section-eyebrow" style={{ color: primaryColor }}>
-          Clientes
-        </p>
-        <h2
-          className={`display-title mt-2 text-bone ${
-            bigTitle ? "text-4xl md:text-6xl" : "text-3xl md:text-5xl"
-          }`}
-        >
-          Reseñas
-        </h2>
+    <section id="resenas" className="mx-auto max-w-5xl px-4 section-y">
+      <SectionHeader
+        eyebrow="Clientes"
+        title="Reseñas"
+        primaryColor={primaryColor}
+        layout={layout}
+      />
 
+      <Reveal delay={80}>
         <div className="mt-8 flex items-center gap-3">
           <span className="ticket-number text-2xl text-bone">
             {average.toFixed(1)}

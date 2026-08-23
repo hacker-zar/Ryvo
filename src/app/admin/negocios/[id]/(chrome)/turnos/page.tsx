@@ -66,7 +66,7 @@ export default async function AdminBookingsPage({
       <div className="flex gap-2 mt-2">
         <Link
           href={`/admin/negocios/${id}/turnos`}
-          className="section-eyebrow text-xs px-3 py-1.5 rounded-sm border transition-colors"
+          className="section-eyebrow text-xs px-3 py-1.5 radius-sm border transition-colors"
           style={{
             borderColor: view === "agenda" ? "var(--brass)" : "var(--ink-line)",
             color: view === "agenda" ? "var(--brass)" : "var(--bone-muted)",
@@ -76,7 +76,7 @@ export default async function AdminBookingsPage({
         </Link>
         <Link
           href={`/admin/negocios/${id}/turnos?view=lista`}
-          className="section-eyebrow text-xs px-3 py-1.5 rounded-sm border transition-colors"
+          className="section-eyebrow text-xs px-3 py-1.5 radius-sm border transition-colors"
           style={{
             borderColor: view === "lista" ? "var(--brass)" : "var(--ink-line)",
             color: view === "lista" ? "var(--brass)" : "var(--bone-muted)",

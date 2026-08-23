@@ -169,14 +169,14 @@ export default function LocationsManager({
                     type="button"
                     disabled={updateStatus.isPending}
                     onClick={() => handleUpdate(location.id)}
-                    className="section-eyebrow text-xs px-4 py-2 rounded-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50"
+                    className="section-eyebrow text-xs px-4 py-2 radius-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50"
                   >
                     {updateStatus.isPending ? "Guardando..." : "Guardar"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingId(null)}
-                    className="section-eyebrow text-xs px-4 py-2 rounded-sm border border-ink-line text-bone-muted w-fit"
+                    className="section-eyebrow text-xs px-4 py-2 radius-sm border border-ink-line text-bone-muted w-fit"
                   >
                     Cancelar
                   </button>
@@ -267,7 +267,7 @@ export default function LocationsManager({
           type="button"
           disabled={createStatus.isPending || !newForm.name.trim()}
           onClick={handleCreate}
-          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit disabled:opacity-50"
+          className="section-eyebrow text-xs px-4 py-2.5 radius-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit disabled:opacity-50"
         >
           {createStatus.isPending ? "Agregando..." : "+ Agregar local"}
         </button>

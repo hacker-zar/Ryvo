@@ -46,7 +46,7 @@ export default function StepService({
               key={service.id}
               type="button"
               onClick={() => handleSelect(service)}
-              className={`text-left rounded-sm border px-4 py-3.5 transition-colors flex items-center justify-between gap-4 ${
+              className={`text-left radius-sm border px-4 py-3.5 transition-colors flex items-center justify-between gap-4 ${
                 pulsingId === service.id ? "select-pulse" : ""
               }`}
               style={{
