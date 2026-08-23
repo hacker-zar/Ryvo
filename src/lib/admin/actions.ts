@@ -49,6 +49,7 @@ import {
 } from "@/lib/data/business-repository";
 import {
   createAccount,
+  deleteAccount,
   isUsernameTaken,
   updateAccount,
   updateAccountPassword,
@@ -69,7 +70,7 @@ function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
 
 /**
  * Crear negocios nuevos es exclusivo de RYVO (superadmin) o de un Partner
- * — un dueño/admin/worker de un negocio puntual no debería poder crear
+ * — un dueño/Barber de un negocio puntual no debería poder crear
  * otros negocios desde su propia sesión. Si quien crea es un Partner, el
  * negocio nuevo queda auto-asignado a él (ver assignBusinessToPartner) —
  * igual que en la jerarquía del pedido, un negocio creado por un Partner
@@ -494,7 +495,7 @@ export async function adminUpdateBookingStatus(
 
 /**
  * Reprogramar desde la Agenda (a diferencia del flujo público de
- * "Gestionar mi turno", acá el dueño/admin puede además cambiar de
+ * "Gestionar mi turno", acá el dueño puede además cambiar de
  * profesional) — mismo `rescheduleBookingById` de siempre, extendido con
  * un parámetro opcional. `professionalId` solo se pasa cuando el panel
  * de reprogramación lo cambió explícitamente; si no, `undefined` deja el
@@ -708,7 +709,7 @@ export async function adminUpdateNotificationSettings(
  * hacerlo para cualquier negocio; el dueño solo para el suyo —
  * requireAdminFor ya cubre ambos casos.
  */
-const ACCOUNT_ROLES = new Set<AccountRole>(["owner", "admin", "worker"]);
+const ACCOUNT_ROLES = new Set<AccountRole>(["owner", "worker"]);
 
 /**
  * "worker" es una cuenta de Editor rápido — vinculada a UN profesional
@@ -878,6 +879,38 @@ export async function adminAssignBusinessToPartner(
 export async function adminUnassignBusinessFromPartner(businessId: string) {
   await requireSuperAdmin();
   const result = await unassignBusinessFromPartner(businessId);
+  if (result.success) {
+    revalidatePath("/admin/usuarios");
+    revalidatePath("/admin");
+  }
+  return result;
+}
+
+/**
+ * Pausar/reactivar CUALQUIER cuenta de RYVO (dueño, Barber o Partner) —
+ * exclusivo de superadmin, desde el panel global. Una cuenta pausada
+ * (`active: false`) no puede volver a loguearse (ver getAccountAuthByUsername/
+ * loginAdmin), pero una sesión YA abierta no se corta en el acto: expira
+ * sola a las 8hs, mismo comportamiento que ya tenía pausar una cuenta
+ * desde "Cuenta" de un negocio puntual (adminUpdateAccount), esto no lo
+ * cambia, solo lo habilita también para Partners y desde el panel global.
+ */
+export async function adminSetAccountActive(accountId: string, active: boolean) {
+  await requireSuperAdmin();
+  const result = await updateAccount(accountId, { active });
+  if (result.success) revalidatePath("/admin/usuarios");
+  return result;
+}
+
+/**
+ * Elimina una cuenta permanentemente — exclusivo de superadmin. Distinto
+ * de pausar: no hay vuelta atrás (la cuenta hay que volver a crearla de
+ * cero, con nueva contraseña). Si era un Partner, sus negocios quedan sin
+ * asignar (no se borran, ver deleteAccount en accounts-repository.ts).
+ */
+export async function adminDeleteAccount(accountId: string) {
+  await requireSuperAdmin();
+  const result = await deleteAccount(accountId);
   if (result.success) {
     revalidatePath("/admin/usuarios");
     revalidatePath("/admin");

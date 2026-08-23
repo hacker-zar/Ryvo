@@ -29,9 +29,8 @@ export default async function UsersPage() {
         Usuarios y partners
       </h1>
       <p className="text-xs text-bone-muted mt-1 mb-8 max-w-md">
-        Todas las cuentas de la plataforma: dueños/administradores y Barbers
-        de cada negocio, más los Partners y los negocios que tienen
-        asignados.
+        Todas las cuentas de la plataforma: dueños y Barbers de cada
+        negocio, más los Partners y los negocios que tienen asignados.
       </p>
 
       <UsersPanel accounts={accounts} businesses={businesses} />

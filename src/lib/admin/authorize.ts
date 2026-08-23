@@ -7,7 +7,7 @@ import { AdminSession, canManageBusiness, getAdminSession } from "@/lib/admin/se
  * tocar cualquier negocio. Ahora cada acción que recibe un `businessId`
  * debe pasar por acá primero.
  *
- * Exclusiva de dueño/admin/superadmin/partner — una cuenta "worker"
+ * Exclusiva de dueño/superadmin/partner — una cuenta "worker"
  * (Barber, Editor rápido de solo lectura de turnos propios, ver
  * getMyBookings en actions.ts) SIEMPRE es rechazada acá, aunque
  * `canManageBusiness` la dejaría pasar (esa función solo mira

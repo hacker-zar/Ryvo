@@ -12,7 +12,7 @@ import AdminChrome from "@/components/admin/AdminChrome";
 import NewBusinessForm from "./new-business-form";
 
 // El listado de negocios (y "crear negocio") es de superadmin/partner — un
-// dueño/admin/worker de un negocio puntual (sesión "owner") no debe poder
+// dueño/Barber de un negocio puntual (sesión "owner") no debe poder
 // ver ni el nombre de otros negocios, así que va directo al suyo. Super ve
 // TODOS los negocios; partner ve solo los que tiene asignados
 // (businesses.partner_id) — mismo componente, distinto dataset.

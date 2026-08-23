@@ -1,31 +1,43 @@
 import { notFound, redirect } from "next/navigation";
-import { getAdminSession } from "@/lib/admin/session";
+import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
 import {
   getBusinessById,
   listProfessionalsByBusiness,
 } from "@/lib/data/business-repository";
 import { getMyBookings } from "@/lib/admin/actions";
 import MyBookingsList from "./my-bookings-list";
+import QuickChangesHub from "./quick-changes-hub";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 /**
- * Página única del Editor rápido — el layout (`rapido/layout.tsx`) ya
- * garantizó que la sesión es "worker" (Barber) para este negocio. Acá
- * solo se resuelve a QUÉ profesional (siempre `session.professionalId`,
- * nunca algo de la URL) y se muestran sus propios turnos — de solo
- * lectura, filtrados en el server (ver getMyBookings en actions.ts). Un
- * Barber no tiene ninguna otra herramienta acá: ni servicios, ni
- * galería, ni catálogo, ni su propio perfil (ver plan RBAC).
+ * Página única de `/rapido` — el layout (`rapido/layout.tsx`) ya
+ * garantizó que la sesión puede gestionar este negocio; acá se decide QUÉ
+ * mostrar según el rol dentro de él:
+ *
+ * - "worker" (Barber): "Mis turnos" — solo lectura, filtrada en el server
+ *   por `session.professionalId` (nunca algo de la URL). Sin ninguna otra
+ *   herramienta: ni servicios, ni fotos, ni catálogo (ver plan RBAC).
+ * - Cualquier otra sesión autorizada (dueño, partner con este negocio
+ *   asignado, superadmin): "Cambios rápidos" — el hub de tarjetas hacia
+ *   las 6 sub-rutas (ver quick-changes-hub.tsx), cada una re-chequeando
+ *   por su cuenta que no sea "worker" (ver require-quick-access.ts).
  */
 export default async function QuickEditorPage({ params }: PageProps) {
   const { id } = await params;
   const session = await getAdminSession();
-  if (!session || session.role !== "owner" || !session.professionalId) {
-    redirect("/admin/login");
+  if (!session) redirect("/admin/login");
+  if (!(await canManageBusiness(session, id))) redirect("/admin");
+
+  const isWorker = session.role === "owner" && session.accountRole === "worker";
+
+  if (!isWorker) {
+    return <QuickChangesHub businessId={id} />;
   }
+
+  if (!session.professionalId) redirect("/admin/login");
 
   const [business, professionals, bookings] = await Promise.all([
     getBusinessById(id),

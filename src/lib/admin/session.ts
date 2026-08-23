@@ -38,7 +38,7 @@ const ORIGIN_COOKIE_TTL_SECONDS = 60 * 60 * 24; // 1 día
  *
  * `accountRole` (distinto de `role` acá arriba, que es el nivel de
  * autenticación) es el rol de la cuenta DENTRO del negocio
- * (dueño/administrador/trabajador — ver `AccountRole` en types/business.ts).
+ * (dueño/Barber — ver `AccountRole` en types/business.ts).
  * `accountRole === "worker"` es lo que separa al Editor rápido (solo
  * lectura de turnos propios) del editor completo — ver
  * requireAdminFor/requireBusinessMember en authorize.ts.

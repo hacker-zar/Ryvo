@@ -6,6 +6,8 @@ import { Account, AccountRole, Business } from "@/types/business";
 import {
   adminAssignBusinessToPartner,
   adminCreatePartner,
+  adminDeleteAccount,
+  adminSetAccountActive,
   adminUnassignBusinessFromPartner,
 } from "@/lib/admin/actions";
 import { useAsyncStatus } from "@/lib/useAsyncStatus";
@@ -19,7 +21,6 @@ interface UsersPanelProps {
 
 const ROLE_LABELS: Record<AccountRole, string> = {
   owner: "Dueño",
-  admin: "Administrador",
   worker: "Barber",
   partner: "Partner",
 };
@@ -28,7 +29,6 @@ const ROLE_FILTERS: { value: AccountRole | "todos"; label: string }[] = [
   { value: "todos", label: "Todos los roles" },
   { value: "partner", label: ROLE_LABELS.partner },
   { value: "owner", label: ROLE_LABELS.owner },
-  { value: "admin", label: ROLE_LABELS.admin },
   { value: "worker", label: ROLE_LABELS.worker },
 ];
 
@@ -113,6 +113,7 @@ export default function UsersPanel({ accounts, businesses }: UsersPanelProps) {
               <th className="py-2 pr-4 font-normal">Negocio(s)</th>
               <th className="py-2 pr-4 font-normal">Estado</th>
               <th className="py-2 pr-4 font-normal">Alta</th>
+              <th className="py-2 pr-4 font-normal">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink-line">
@@ -156,17 +157,20 @@ export default function UsersPanel({ accounts, businesses }: UsersPanelProps) {
                     )}
                   </td>
                   <td className="py-3 pr-4 text-bone-muted">
-                    {account.active ? "Activa" : "Desactivada"}
+                    {account.active ? "Activa" : "Pausada"}
                   </td>
                   <td className="py-3 pr-4 text-bone-muted">
                     {new Date(account.created_at).toLocaleDateString("es-AR")}
+                  </td>
+                  <td className="py-3 pr-4">
+                    <AccountRowActions account={account} />
                   </td>
                 </tr>
               );
             })}
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-6 text-center text-bone-muted">
+                <td colSpan={7} className="py-6 text-center text-bone-muted">
                   Ninguna cuenta coincide con este filtro.
                 </td>
               </tr>
@@ -182,6 +186,56 @@ export default function UsersPanel({ accounts, businesses }: UsersPanelProps) {
           partners={accounts.filter((a) => a.role === "partner")}
         />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Pausar/reactivar y eliminar una cuenta, desde el panel global — exclusivo
+ * de superadmin (adminSetAccountActive/adminDeleteAccount ya lo exigen en
+ * el server, esto es solo la UI). Pausar es reversible (vuelve a activarse
+ * con el mismo botón); eliminar no, por eso pide confirmación explícita
+ * con el nombre de la cuenta, mismo patrón `confirm()` nativo que ya usa
+ * el resto del admin (ver ServicesManager/ProfessionalsManager).
+ */
+function AccountRowActions({ account }: { account: Account }) {
+  const { run, isPending } = useAsyncStatus();
+
+  async function handleToggleActive() {
+    await run(() => adminSetAccountActive(account.id, !account.active));
+    window.location.reload();
+  }
+
+  async function handleDelete() {
+    if (
+      !confirm(
+        `¿Eliminar la cuenta "${account.name}" (${account.username})?\n\nEsta acción no se puede deshacer.`
+      )
+    ) {
+      return;
+    }
+    await run(() => adminDeleteAccount(account.id));
+    window.location.reload();
+  }
+
+  return (
+    <div className="flex gap-3">
+      <button
+        type="button"
+        onClick={handleToggleActive}
+        disabled={isPending}
+        className="text-xs text-bone-muted hover:text-brass transition-colors disabled:opacity-50"
+      >
+        {account.active ? "Pausar" : "Activar"}
+      </button>
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={isPending}
+        className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
+      >
+        Eliminar
+      </button>
     </div>
   );
 }

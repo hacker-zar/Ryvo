@@ -40,7 +40,7 @@ export async function loginAdmin(formData: FormData) {
     // Una cuenta "partner" no tiene un único negocio (business_id null) —
     // aterriza en /admin, que para sesión "partner" lista solo sus
     // negocios asignados (ver admin/page.tsx). Distinto de "worker"
-    // (Barber) y "owner"/"admin", que sí están atadas a un business_id.
+    // (Barber) y "owner", que sí están atadas a un business_id.
     if (account.role === "partner") {
       await createPartnerSession(account.id);
       redirect("/admin");

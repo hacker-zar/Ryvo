@@ -137,6 +137,28 @@ export async function updateAccount(
   return { success: true };
 }
 
+/**
+ * Elimina una cuenta permanentemente (a diferencia de `active: false`,
+ * que solo la pausa — ver updateAccount arriba). Si era una cuenta
+ * `partner`, `businesses.partner_id` de sus negocios asignados y las
+ * filas de `partner_businesses` quedan limpias solas (`on delete set
+ * null`/`on delete cascade`, ver supabase/schema.sql) — no hace falta
+ * desasignar nada a mano antes de borrar.
+ */
+export async function deleteAccount(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY.",
+    };
+  }
+  const { error } = await supabaseAdmin.from("accounts").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 /** Todas las cuentas de RYVO (todos los negocios + partners) — exclusivo
  *  del panel global del superadmin (`/admin/usuarios`). Dataset chico hoy
  *  (un puñado de negocios/cuentas): un solo `select *` sin paginar, igual

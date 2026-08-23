@@ -367,12 +367,19 @@ export interface ProfessionalWithServices extends Professional {
 
 // Rol dentro del negocio (distinto del `role` de sesión "super"/"owner"/
 // "partner" de AdminSession, que es el nivel de autenticación, no el
-// permiso dentro del negocio). "owner"/"admin" = editor completo de UN
-// negocio; "worker" = Barber, solo lectura de sus propios turnos en
-// /rapido (ver requireBusinessMember en authorize.ts); "partner" = cuenta
-// multi-negocio (ver Account.business_id más abajo), nunca atada a un
-// solo negocio.
-export type AccountRole = "owner" | "admin" | "worker" | "partner";
+// permiso dentro del negocio). "owner" = editor completo de UN negocio;
+// "worker" = Barber, solo lectura de sus propios turnos en /rapido (ver
+// requireBusinessMember en authorize.ts); "partner" = cuenta multi-negocio
+// (ver Account.business_id más abajo), nunca atada a un solo negocio.
+//
+// NO existe un rol "admin" separado de "owner" — el pedido de RBAC de
+// RYVO fue explícito en esto (el rol administrativo/comercial es
+// PARTNER). Hubo un valor 'admin' en el código antes de este sistema de
+// roles (scaffolding sin UI para crearlo ni ninguna diferencia de
+// comportamiento respecto a "owner") — se retiró del tipo y del
+// constraint de la base (accounts_role_check) por confuso: parecía un
+// tercer nivel real y no lo era.
+export type AccountRole = "owner" | "worker" | "partner";
 
 // Cuenta de acceso al panel (usuario + contraseña). NUNCA incluye
 // password_hash acá — ese campo solo existe en las funciones de

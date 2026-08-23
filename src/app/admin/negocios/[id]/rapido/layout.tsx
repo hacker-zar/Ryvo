@@ -1,6 +1,5 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { canManageBusiness, getAdminSession } from "@/lib/admin/session";
-import { getBusinessById } from "@/lib/data/business-repository";
 import AdminChrome from "@/components/admin/AdminChrome";
 
 interface LayoutProps {
@@ -9,12 +8,18 @@ interface LayoutProps {
 }
 
 /**
- * Boundary de acceso del Editor rápido — exclusivo de cuentas "worker"
- * (Editor rápido, un profesional puntual). Dueño/admin/superadmin que
- * lleguen acá (por link viejo, favorito, etc.) van directo al editor
- * completo — el espejo exacto del redirect que agregamos en
- * `(chrome)/layout.tsx` para el caso inverso. Ninguna página de acá
- * abajo vuelve a chequear esto: es el único lugar.
+ * Boundary de acceso de `/rapido` — cualquier sesión que pueda gestionar
+ * ESTE negocio (dueño, partner con el negocio asignado, o superadmin)
+ * entra. Ninguna cuenta ajena al negocio llega más allá de acá.
+ *
+ * Qué se muestra adentro varía por rol, no acá sino en cada page.tsx:
+ * una cuenta "worker" (Barber) ve "Mis turnos" (solo lectura, ver
+ * page.tsx); el resto ve "Cambios rápidos" (accesos directos a Servicios/
+ * Profesionales/Locales/Fotos/Catálogo/Información, cada uno en su propia
+ * sub-ruta — ver quick-changes-hub.tsx). Las 6 sub-rutas de Cambios
+ * rápidos vuelven a chequear por su cuenta que la sesión NO sea "worker"
+ * (ver require-quick-access.ts) — este layout no alcanza para eso solo,
+ * porque no sabe a qué sub-ruta puntual se está entrando.
  */
 export default async function QuickEditorLayout({
   children,
@@ -26,13 +31,6 @@ export default async function QuickEditorLayout({
   const { id } = await params;
 
   if (!(await canManageBusiness(session, id))) redirect("/admin");
-
-  if (!(session.role === "owner" && session.accountRole === "worker")) {
-    redirect(`/admin/negocios/${id}`);
-  }
-
-  const business = await getBusinessById(id);
-  if (!business) notFound();
 
   return <AdminChrome>{children}</AdminChrome>;
 }

@@ -19,11 +19,9 @@ interface AccountManagerProps {
 
 // Nombre visible del rol — "worker" sigue siendo el valor interno
 // (AccountRole, DB), pero de cara al usuario siempre se muestra como
-// "Profesional". "admin" no tiene UI todavía (ver roles.ts) — no se
-// ofrece como opción al crear una cuenta.
+// "Barbero".
 const ROLE_LABELS: Record<AccountRole, string> = {
   owner: "Dueño",
-  admin: "Administrador",
   worker: "Barbero",
   // No se ofrece como opción en este form (ver ACCOUNT_ROLES en
   // actions.ts) — una cuenta "partner" nunca está atada a un solo

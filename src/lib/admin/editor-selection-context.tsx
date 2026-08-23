@@ -20,10 +20,11 @@ import UnsavedChangesDialog from "@/components/ui/UnsavedChangesDialog";
 // también son la clave que usa el puente de postMessage con la preview en
 // vivo (ver data-editable-category en los componentes públicos) — se
 // renombraron ahí también, en el mismo cambio.
-// "perfil"/"galeria" son exclusivas del Editor rápido (ver
-// app/admin/negocios/[id]/rapido/) — "servicios"/"productos" ya
-// existían y se reutilizan tal cual ahí, con datos acotados al
-// profesional en vez de al negocio entero.
+//
+// Cambios rápidos (app/admin/negocios/[id]/rapido/) reutiliza estas MISMAS
+// categorías, cada página con su propio <EditorSelectionProvider> (nunca
+// compartido con el editor completo) — no hace falta ningún valor nuevo
+// acá para eso.
 export type EditorCategory =
   | "apariencia"
   | "pagina"
@@ -32,9 +33,7 @@ export type EditorCategory =
   | "productos"
   | "reservas"
   | "automatizaciones"
-  | "plantilla"
-  | "perfil"
-  | "galeria";
+  | "plantilla";
 
 export interface EditorTarget {
   category: EditorCategory;

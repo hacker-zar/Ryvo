@@ -490,3 +490,13 @@ create index if not exists partner_businesses_business_idx on partner_businesses
 alter table partner_businesses enable row level security;
 -- Sin políticas públicas a propósito, mismo criterio que `accounts`: solo
 -- supabaseAdmin (service role) puede leer/escribir esta tabla.
+
+-- === RBAC: se retira 'admin' del rol dentro de un negocio. Era
+-- scaffolding previo a este sistema de roles, sin UI para crearlo y sin
+-- ninguna diferencia de comportamiento respecto a 'owner' — confirmado
+-- 0 filas con role='admin' antes de este cambio. El pedido de RBAC de
+-- RYVO fue explícito en que el rol administrativo/comercial es Partner,
+-- no un "admin" separado. Ver AccountRole en types/business.ts. ===
+alter table accounts drop constraint accounts_role_check;
+alter table accounts add constraint accounts_role_check
+  check (role in ('owner','worker','partner'));

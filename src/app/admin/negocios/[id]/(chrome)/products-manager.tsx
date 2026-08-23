@@ -20,11 +20,6 @@ import ImageUploadField from "@/components/admin/ImageUploadField";
 interface ProductsManagerProps {
   businessId: string;
   products: Product[];
-  /** false en el Editor rápido (profesional): el catálogo es compartido
-   *  (ver actions.ts), así que un profesional puede crear/editar, pero
-   *  el pedido de Editor rápido no incluye eliminar productos — se oculta
-   *  el botón acá; el editor completo (dueño) no cambia (default true). */
-  canDelete?: boolean;
 }
 
 const buttonPrimary =
@@ -44,7 +39,6 @@ const buttonSecondary =
 export default function ProductsManager({
   businessId,
   products,
-  canDelete = true,
 }: ProductsManagerProps) {
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
@@ -257,15 +251,13 @@ export default function ProductsManager({
                       >
                         Editar
                       </button>
-                      {canDelete ? (
-                        <button
-                          disabled={deletingId === product.id}
-                          onClick={() => handleDelete(product.id)}
-                          className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
-                        >
-                          {deletingId === product.id ? "Eliminando..." : "Eliminar"}
-                        </button>
-                      ) : null}
+                      <button
+                        disabled={deletingId === product.id}
+                        onClick={() => handleDelete(product.id)}
+                        className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
+                      >
+                        {deletingId === product.id ? "Eliminando..." : "Eliminar"}
+                      </button>
                     </div>
                   </div>
                 </div>
