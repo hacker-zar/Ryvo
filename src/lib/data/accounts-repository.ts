@@ -21,7 +21,7 @@ function normalizeUsername(username: string): string {
 
 export async function getAccountAuthByUsername(username: string): Promise<{
   id: string;
-  business_id: string;
+  business_id: string | null;
   password_hash: string;
   role: AccountRole;
   professional_id: string | null;
@@ -63,13 +63,15 @@ export async function isUsernameTaken(username: string): Promise<boolean> {
 }
 
 export interface CreateAccountInput {
-  business_id: string;
+  // null únicamente para role === "partner" — ver Account.business_id en
+  // types/business.ts.
+  business_id: string | null;
   name: string;
   username: string;
   password_hash: string;
   role?: AccountRole;
   // Requerido cuando role === "worker" — a qué profesional queda atada
-  // la cuenta (ver Editor rápido). Ignorado/null para owner/admin.
+  // la cuenta (ver Editor rápido). Ignorado/null para el resto.
   professional_id?: string | null;
   active?: boolean;
 }
@@ -87,7 +89,7 @@ export async function createAccount(
   const { data, error } = await supabaseAdmin
     .from("accounts")
     .insert({
-      business_id: input.business_id,
+      business_id: role === "partner" ? null : input.business_id,
       name: input.name,
       username: normalizeUsername(input.username),
       password_hash: input.password_hash,
@@ -133,6 +135,31 @@ export async function updateAccount(
     return { success: false, error: error.message };
   }
   return { success: true };
+}
+
+/** Todas las cuentas de RYVO (todos los negocios + partners) — exclusivo
+ *  del panel global del superadmin (`/admin/usuarios`). Dataset chico hoy
+ *  (un puñado de negocios/cuentas): un solo `select *` sin paginar, igual
+ *  criterio que `listBusinesses`. */
+export async function listAllAccounts(): Promise<Account[]> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return [];
+  const { data } = await supabaseAdmin
+    .from("accounts")
+    .select(ACCOUNT_PUBLIC_COLUMNS)
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+/** Solo las cuentas `role: "partner"` — usado para el selector "asignar a
+ *  Partner" al crear/editar un negocio. */
+export async function listPartnerAccounts(): Promise<Account[]> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return [];
+  const { data } = await supabaseAdmin
+    .from("accounts")
+    .select(ACCOUNT_PUBLIC_COLUMNS)
+    .eq("role", "partner")
+    .order("created_at", { ascending: false });
+  return data ?? [];
 }
 
 export async function updateAccountPassword(

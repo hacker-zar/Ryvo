@@ -5,6 +5,7 @@ import {
   checkSuperAdminPassword,
   clearAdminOrigin,
   createOwnerSession,
+  createPartnerSession,
   createSuperAdminSession,
   destroyAdminSession,
   getAdminOrigin,
@@ -36,15 +37,24 @@ export async function loginAdmin(formData: FormData) {
       return { success: false, error: ACCOUNT_LOGIN_ERROR };
     }
 
+    // Una cuenta "partner" no tiene un único negocio (business_id null) —
+    // aterriza en /admin, que para sesión "partner" lista solo sus
+    // negocios asignados (ver admin/page.tsx). Distinto de "worker"
+    // (Barber) y "owner"/"admin", que sí están atadas a un business_id.
+    if (account.role === "partner") {
+      await createPartnerSession(account.id);
+      redirect("/admin");
+    }
+
     await createOwnerSession(
       account.id,
-      account.business_id,
+      account.business_id!,
       account.role,
       account.professional_id
     );
-    // Una cuenta "worker" (Editor rápido) nunca aterriza en el editor
-    // completo — ver también el redirect inverso en (chrome)/layout.tsx,
-    // que cubre a quien intente llegar ahí más tarde por URL directa.
+    // Una cuenta "worker" (Barber) nunca aterriza en el editor completo —
+    // ver también el redirect inverso en (chrome)/layout.tsx, que cubre a
+    // quien intente llegar ahí más tarde por URL directa.
     redirect(
       account.role === "worker"
         ? `/admin/negocios/${account.business_id}/rapido`

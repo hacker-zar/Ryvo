@@ -2,11 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin/session";
 import {
   getBusinessById,
-  listProductsByBusiness,
   listProfessionalsByBusiness,
-  listServicesForProfessional,
 } from "@/lib/data/business-repository";
-import QuickEditorShell from "./quick-editor-shell";
+import { getMyBookings } from "@/lib/admin/actions";
+import MyBookingsList from "./my-bookings-list";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -14,9 +13,12 @@ interface PageProps {
 
 /**
  * Página única del Editor rápido — el layout (`rapido/layout.tsx`) ya
- * garantizó que la sesión es "worker" para este negocio; acá solo se
- * resuelve a QUÉ profesional (siempre `session.professionalId`, nunca
- * algo de la URL) y se cargan los datos que ese profesional puede tocar.
+ * garantizó que la sesión es "worker" (Barber) para este negocio. Acá
+ * solo se resuelve a QUÉ profesional (siempre `session.professionalId`,
+ * nunca algo de la URL) y se muestran sus propios turnos — de solo
+ * lectura, filtrados en el server (ver getMyBookings en actions.ts). Un
+ * Barber no tiene ninguna otra herramienta acá: ni servicios, ni
+ * galería, ni catálogo, ni su propio perfil (ver plan RBAC).
  */
 export default async function QuickEditorPage({ params }: PageProps) {
   const { id } = await params;
@@ -25,11 +27,10 @@ export default async function QuickEditorPage({ params }: PageProps) {
     redirect("/admin/login");
   }
 
-  const [business, professionals, services, products] = await Promise.all([
+  const [business, professionals, bookings] = await Promise.all([
     getBusinessById(id),
     listProfessionalsByBusiness(id),
-    listServicesForProfessional(id, session.professionalId),
-    listProductsByBusiness(id),
+    getMyBookings(id),
   ]);
   if (!business) notFound();
 
@@ -37,11 +38,14 @@ export default async function QuickEditorPage({ params }: PageProps) {
   if (!professional) notFound();
 
   return (
-    <QuickEditorShell
-      business={business}
-      professional={professional}
-      services={services}
-      products={products}
-    />
+    <div>
+      <p className="section-eyebrow text-brass">Mis turnos</p>
+      <h1 className="section-title mt-2 text-2xl text-bone">{professional.name}</h1>
+      <p className="text-xs text-bone-muted mt-1 mb-8 max-w-sm">
+        Turnos asignados a vos en {business.name}.
+      </p>
+
+      <MyBookingsList bookings={bookings} />
+    </div>
   );
 }

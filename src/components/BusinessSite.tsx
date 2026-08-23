@@ -3,6 +3,7 @@ import { BusinessProfile, SectionId } from "@/types/business";
 import { BookingModalProvider } from "@/lib/booking-modal-context";
 import { sanitizeSectionOrder } from "@/lib/section-order";
 import { LAYOUT_BLUEPRINTS, BlueprintSlot } from "@/lib/templates/blueprints";
+import { getPublicSiteUrl } from "@/lib/site-url";
 import AppearanceScope from "@/components/AppearanceScope";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
@@ -17,6 +18,7 @@ import About from "@/components/About";
 import Reviews from "@/components/Reviews";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
+import SiteQrBlock from "@/components/SiteQrBlock";
 import Marquee from "@/components/Marquee";
 import Statement from "@/components/Statement";
 import BeforeAfter from "@/components/BeforeAfter";
@@ -42,8 +44,9 @@ interface BusinessSiteProps {
  * reordenables de siempre — el sistema de orden/activación
  * (sanitizeSectionOrder/SectionsManager) no cambia en absoluto.
  */
-export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
+export default async function BusinessSite({ profile, slug }: BusinessSiteProps) {
   const { business, services, reviews, locations, professionals, products } = profile;
+  const publicSiteUrl = await getPublicSiteUrl(slug);
   const layout = business.template_layout ?? undefined;
 
   // "hero" queda fuera de este registro a propósito — es estructural
@@ -226,6 +229,7 @@ export default function BusinessSite({ profile, slug }: BusinessSiteProps) {
         {blueprint
           ? blueprint.slots.map((slot, i) => renderSlot(slot, i))
           : renderCoreSections()}
+        <SiteQrBlock url={publicSiteUrl} />
         <Footer business={{ name: business.name, slug: business.slug }} layout={layout} />
 
         <BookingModal

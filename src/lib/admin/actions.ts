@@ -2,7 +2,12 @@
 
 import { STORED_ANIMATION_PRESETS } from "@/lib/appearance-presets";
 import { revalidatePath } from "next/cache";
-import { requireAdminFor, requireBusinessMember, requireSuperAdmin } from "@/lib/admin/authorize";
+import {
+  requireAdminFor,
+  requireBusinessMember,
+  requireSuperAdmin,
+  requireSuperAdminOrPartner,
+} from "@/lib/admin/authorize";
 import { hashPassword } from "@/lib/admin/session";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 import {
@@ -12,6 +17,7 @@ import {
   ProfessionalInput,
   ServiceInput,
   TemplateInput,
+  assignBusinessToPartner,
   countBusinessesUsingTemplate,
   createBusiness,
   createLocation,
@@ -28,10 +34,11 @@ import {
   getClientProfile,
   getOfficialTemplateById,
   getTemplateById,
-  isProfessionalQualifiedForService,
+  listBookingsByBusiness,
   listProfessionalsByBusiness,
   reorderProfessional,
   rescheduleBookingById,
+  unassignBusinessFromPartner,
   updateBookingStatus,
   updateBusiness,
   updateClientNotes,
@@ -61,8 +68,12 @@ function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
 }
 
 /**
- * Crear negocios nuevos es exclusivo de RYVO (superadmin) — un dueño no
- * debería poder crear otros negocios desde su propia sesión.
+ * Crear negocios nuevos es exclusivo de RYVO (superadmin) o de un Partner
+ * — un dueño/admin/worker de un negocio puntual no debería poder crear
+ * otros negocios desde su propia sesión. Si quien crea es un Partner, el
+ * negocio nuevo queda auto-asignado a él (ver assignBusinessToPartner) —
+ * igual que en la jerarquía del pedido, un negocio creado por un Partner
+ * es suyo de entrada, sin paso manual aparte.
  *
  * Crea el negocio Y la cuenta inicial del propietario juntas: sin cuenta,
  * el negocio queda sin forma de que su dueño entre al editor. Si el
@@ -72,7 +83,7 @@ function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
  * (sección "Cuenta"), que ya contempla el caso de negocio sin cuenta.
  */
 export async function adminCreateBusiness(formData: FormData) {
-  await requireSuperAdmin();
+  const session = await requireSuperAdminOrPartner();
 
   const name = String(formData.get("name") || "").trim();
   const slugRaw = String(formData.get("slug") || "").trim();
@@ -136,6 +147,10 @@ export async function adminCreateBusiness(formData: FormData) {
 
   const businessResult = await createBusiness(input);
   if (!businessResult.success || !businessResult.id) return businessResult;
+
+  if (session.role === "partner") {
+    await assignBusinessToPartner(businessResult.id, session.accountId);
+  }
 
   const passwordHash = await hashPassword(password);
   const accountResult = await createAccount({
@@ -274,22 +289,10 @@ export async function adminUpdateService(
   serviceId: string,
   formData: FormData
 ) {
-  // requireBusinessMember (no requireAdminFor): una cuenta "worker"
-  // (Editor rápido) puede editar un servicio, pero SOLO si está
-  // calificada para él — se verifica contra professional_services acá
-  // abajo, nunca confiando en qué le mostró la UI. Crear/borrar
-  // servicios sigue siendo exclusivo de dueño/admin (ver
-  // adminCreateService/adminDeleteService, que no cambiaron).
-  const access = await requireBusinessMember(businessId);
-  if (access.scope === "worker") {
-    const qualified = await isProfessionalQualifiedForService(
-      access.professionalId,
-      serviceId
-    );
-    if (!qualified) {
-      throw new Error("No autorizado para editar este servicio.");
-    }
-  }
+  // requireAdminFor: Barber (cuenta "worker") no tiene ninguna Server
+  // Action de escritura sobre recursos del negocio — su único acceso es
+  // getMyBookings, de solo lectura (ver más abajo).
+  await requireAdminFor(businessId);
 
   const input: Partial<ServiceInput> = {
     name: String(formData.get("name") || "").trim(),
@@ -314,17 +317,11 @@ export async function adminDeleteService(
   return result;
 }
 
-// Catálogo: recurso COMPARTIDO del negocio (no hay noción de "producto de
-// tal profesional" en el modelo, confirmado antes de construir el Editor
-// rápido) — cualquier cuenta que pueda gestionar el negocio, dueño o
-// profesional, tiene el mismo poder sobre él. requireBusinessMember en
-// vez de requireAdminFor, sin chequeo adicional en la rama "worker".
-
 export async function adminCreateProduct(
   businessId: string,
   formData: FormData
 ) {
-  await requireBusinessMember(businessId);
+  await requireAdminFor(businessId);
 
   const input: ProductInput = {
     business_id: businessId,
@@ -347,7 +344,7 @@ export async function adminUpdateProduct(
   productId: string,
   formData: FormData
 ) {
-  await requireBusinessMember(businessId);
+  await requireAdminFor(businessId);
 
   const input: Partial<ProductInput> = {
     name: String(formData.get("name") || "").trim(),
@@ -401,13 +398,10 @@ export async function adminUpdateProfessional(
   professionalId: string,
   formData: FormData
 ) {
-  // requireBusinessMember: una cuenta "worker" (Editor rápido, "Mi
-  // perfil") solo puede editarse a SÍ MISMA — el id de sesión, nunca el
-  // que mande la request, decide si coincide con `professionalId`.
-  const access = await requireBusinessMember(businessId);
-  if (access.scope === "worker" && access.professionalId !== professionalId) {
-    throw new Error("No autorizado para editar este profesional.");
-  }
+  // requireAdminFor: gestionar profesionales (propios o ajenos) es
+  // exclusivo del editor completo — Barber no tiene ningún acceso de
+  // escritura, ni siquiera sobre su propio perfil (ver plan RBAC).
+  await requireAdminFor(businessId);
 
   const input: Partial<ProfessionalInput> = {
     name: String(formData.get("name") || "").trim(),
@@ -421,17 +415,12 @@ export async function adminUpdateProfessional(
   // Ojo acá: `formData.getAll("service_ids")` da `[]` (no `undefined`)
   // cuando el form no tiene esos checkboxes — y `updateProfessional`
   // trata cualquier array, incluso vacío, como "reemplazar las
-  // asignaciones". Antes esto nunca se notaba porque el único form que
-  // llamaba a esta acción (ProfessionalsManager, dueño) siempre los
-  // manda. "Mi perfil" (Editor rápido) no los muestra a propósito —
-  // asignar especialidades queda exclusivo del dueño, ver el plan — así
-  // que acá se gatea por `formData.has(...)` para no borrar
-  // silenciosamente las asignaciones de un profesional que edita su
-  // propio perfil, y nunca se tocan en absoluto si la sesión es "worker".
-  const serviceIds =
-    access.scope === "full" && formData.has("service_ids_present")
-      ? formData.getAll("service_ids").map(String)
-      : undefined;
+  // asignaciones". Se gatea por `formData.has(...)` para que solo
+  // ProfessionalsManager (que siempre manda `service_ids_present`)
+  // pueda tocar las asignaciones.
+  const serviceIds = formData.has("service_ids_present")
+    ? formData.getAll("service_ids").map(String)
+    : undefined;
 
   const result = await updateProfessional(professionalId, input, serviceIds);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
@@ -828,6 +817,89 @@ export async function adminChangeAccountPassword(
   return result;
 }
 
+// ---------------------------------------------------------------------
+// Partners — panel global del superadmin (/admin/usuarios). Un Partner es
+// una cuenta `role: "partner"`, `business_id: null` (ver Account en
+// types/business.ts) — se crea suelta, sin negocio, y se asigna a
+// negocios después vía adminAssignBusinessToPartner.
+// ---------------------------------------------------------------------
+
+export async function adminCreatePartner(formData: FormData) {
+  await requireSuperAdmin();
+
+  const name = String(formData.get("name") || "").trim();
+  const username = String(formData.get("username") || "").trim();
+  const password = String(formData.get("password") || "");
+
+  if (!name || !username || !password) {
+    return {
+      success: false,
+      error: "Nombre, usuario y contraseña son obligatorios.",
+    };
+  }
+  if (password.length < 8) {
+    return {
+      success: false,
+      error: "La contraseña debe tener al menos 8 caracteres.",
+    };
+  }
+  if (await isUsernameTaken(username)) {
+    return { success: false, error: "Ese usuario ya está en uso." };
+  }
+
+  const passwordHash = await hashPassword(password);
+  const result = await createAccount({
+    business_id: null,
+    name,
+    username,
+    password_hash: passwordHash,
+    role: "partner",
+  });
+  if (result.success) revalidatePath("/admin/usuarios");
+  return result;
+}
+
+/** Asigna (o reasigna) un negocio existente a un Partner — reemplaza
+ *  cualquier asignación previa de ese negocio (ver assignBusinessToPartner,
+ *  un negocio tiene a lo sumo 1 partner). */
+export async function adminAssignBusinessToPartner(
+  businessId: string,
+  partnerAccountId: string
+) {
+  await requireSuperAdmin();
+  const result = await assignBusinessToPartner(businessId, partnerAccountId);
+  if (result.success) {
+    revalidatePath("/admin/usuarios");
+    revalidatePath("/admin");
+  }
+  return result;
+}
+
+export async function adminUnassignBusinessFromPartner(businessId: string) {
+  await requireSuperAdmin();
+  const result = await unassignBusinessFromPartner(businessId);
+  if (result.success) {
+    revalidatePath("/admin/usuarios");
+    revalidatePath("/admin");
+  }
+  return result;
+}
+
+/**
+ * Único dato al que accede una cuenta "worker" (Barber): sus propios
+ * turnos, filtrados en el SERVER (nunca trayendo todos los del negocio y
+ * filtrando en el cliente) — `professionalId` sale de la sesión firmada,
+ * nunca de un parámetro de la request. Sin ninguna acción de escritura
+ * asociada: Barber ve, no modifica (ver plan RBAC).
+ */
+export async function getMyBookings(businessId: string) {
+  const access = await requireBusinessMember(businessId);
+  if (access.scope !== "worker") {
+    throw new Error("Esta vista es exclusiva de cuentas Barber.");
+  }
+  return listBookingsByBusiness(businessId, undefined, access.professionalId);
+}
+
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -852,14 +924,11 @@ export async function adminUploadImage(
   formData: FormData
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   if (folder === "new") {
-    await requireSuperAdmin();
+    await requireSuperAdminOrPartner();
   } else {
-    // requireBusinessMember (no requireAdminFor): subir un archivo no
-    // toca ninguna fila puntual — lo usan tanto ImageUploadField/
-    // GalleryUploadField del editor completo como los mismos
-    // componentes reutilizados en el Editor rápido (foto de perfil,
-    // galería). No hace falta distinguir "worker" acá adentro.
-    await requireBusinessMember(folder);
+    // requireAdminFor: subir imágenes es parte del editor completo —
+    // Barber no tiene ningún acceso de escritura (ver plan RBAC).
+    await requireAdminFor(folder);
   }
 
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {

@@ -24,7 +24,12 @@ interface AccountManagerProps {
 const ROLE_LABELS: Record<AccountRole, string> = {
   owner: "Dueño",
   admin: "Administrador",
-  worker: "Profesional",
+  worker: "Barbero",
+  // No se ofrece como opción en este form (ver ACCOUNT_ROLES en
+  // actions.ts) — una cuenta "partner" nunca está atada a un solo
+  // negocio, se crea desde el panel global del superadmin
+  // (/admin/usuarios). Solo acá para que el Record quede exhaustivo.
+  partner: "Partner",
 };
 
 /**
@@ -109,7 +114,7 @@ function CreateAccountForm({
           className={adminInputClasses}
         >
           <option value="owner">{ROLE_LABELS.owner} — editor completo</option>
-          <option value="worker">{ROLE_LABELS.worker} — Editor rápido</option>
+          <option value="worker">{ROLE_LABELS.worker} — solo sus turnos</option>
         </select>
       </div>
       {role === "worker" ? (
@@ -140,9 +145,9 @@ function CreateAccountForm({
               ))}
             </select>
             <p className="text-[11px] text-bone-muted/70">
-              Esta cuenta solo va a poder editar el perfil, los servicios
-              asignados, la galería y el catálogo de este negocio — nunca
-              la apariencia, la plantilla ni la configuración general.
+              Esta cuenta solo va a poder ver sus propios turnos en
+              /rapido — no puede editar servicios, precios, fotos,
+              profesionales, locales ni ningún otro dato del negocio.
             </p>
           </div>
         )

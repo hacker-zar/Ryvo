@@ -49,7 +49,7 @@ import { detectOpportunities } from "@/lib/opportunities";
 // funciones de autenticación de más abajo, porque el hash terminaría
 // serializado en el HTML/RSC payload aunque ningún componente lo muestre.
 const BUSINESS_PUBLIC_COLUMNS =
-  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, gallery_layout, about_image, opening_hours, background_color, text_color, typography_preset, button_style, image_radius, image_shadow, image_treatment, density, hero_kicker, hero_headline, notify_whatsapp_enabled, notify_reminder_24h_enabled, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, template_id, template_layout, palette_id, created_at";
+  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, gallery_layout, about_image, opening_hours, background_color, text_color, typography_preset, button_style, image_radius, image_shadow, image_treatment, density, hero_kicker, hero_headline, notify_whatsapp_enabled, notify_reminder_24h_enabled, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, template_id, template_layout, palette_id, partner_id, created_at";
 
 /**
  * Punto único de acceso a datos de negocio.
@@ -811,6 +811,46 @@ export async function listBusinesses(): Promise<Business[]> {
   return [demoBusiness];
 }
 
+/** Negocios asignados a UN partner puntual (`businesses.partner_id`) —
+ *  usado por `/admin` cuando la sesión es "partner" (ve solo los suyos,
+ *  nunca la lista completa que ve "super"). */
+export async function listBusinessesForPartner(
+  partnerAccountId: string
+): Promise<Business[]> {
+  if (isSupabaseConfigured && supabase) {
+    const { data } = await supabase
+      .from("businesses")
+      .select(BUSINESS_PUBLIC_COLUMNS)
+      .eq("partner_id", partnerAccountId)
+      .order("created_at", { ascending: false });
+    return data ?? [];
+  }
+  return [];
+}
+
+/**
+ * Chequeo de autorización real (no de UI): ¿este negocio está asignado a
+ * este partner AHORA MISMO? Usado por `canManageBusiness` (session.ts) en
+ * cada request de una sesión "partner" — a diferencia de `businessId` en
+ * una sesión "owner" (fijo, firmado en la cookie), la asignación de un
+ * partner puede cambiar en cualquier momento, así que no alcanza con algo
+ * cacheado en la sesión. Usa supabaseAdmin (no el cliente público) porque
+ * es la base de una decisión de autorización, no una lectura de vitrina.
+ */
+export async function isBusinessAssignedToPartner(
+  partnerAccountId: string,
+  businessId: string
+): Promise<boolean> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return false;
+  const { data } = await supabaseAdmin
+    .from("businesses")
+    .select("id")
+    .eq("id", businessId)
+    .eq("partner_id", partnerAccountId)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 // cache() dedupea llamadas con el mismo id dentro de un mismo request —
 // el layout de /admin/negocios/[id] y cada page.tsx debajo llaman a esta
 // misma función; sin el wrapper, cada navegación pagaba esta consulta
@@ -885,6 +925,53 @@ export async function createBusiness(
     .single();
   if (error) return { success: false, error: error.message };
   return { success: true, id: data.id };
+}
+
+/**
+ * Asigna un negocio a un Partner: `businesses.partner_id` es la fuente de
+ * verdad rápida (ver BUSINESS_PUBLIC_COLUMNS/isBusinessAssignedToPartner);
+ * `partner_businesses` es la tabla de unión que la acompaña (mismo dato,
+ * forma normalizada, para no tener que rediseñar el esquema si algún día
+ * hace falta más de un partner por negocio). Reasignar un negocio que ya
+ * tenía otro partner reemplaza la fila vieja de `partner_businesses` —
+ * nunca deja 2 partners activos para el mismo negocio.
+ */
+export async function assignBusinessToPartner(
+  businessId: string,
+  partnerAccountId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return { success: false, error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY." };
+  }
+  const { error: businessError } = await supabaseAdmin
+    .from("businesses")
+    .update({ partner_id: partnerAccountId })
+    .eq("id", businessId);
+  if (businessError) return { success: false, error: businessError.message };
+
+  await supabaseAdmin.from("partner_businesses").delete().eq("business_id", businessId);
+  const { error: linkError } = await supabaseAdmin
+    .from("partner_businesses")
+    .insert({ partner_account_id: partnerAccountId, business_id: businessId });
+  if (linkError) return { success: false, error: linkError.message };
+
+  return { success: true };
+}
+
+export async function unassignBusinessFromPartner(
+  businessId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return { success: false, error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY." };
+  }
+  const { error } = await supabaseAdmin
+    .from("businesses")
+    .update({ partner_id: null })
+    .eq("id", businessId);
+  if (error) return { success: false, error: error.message };
+
+  await supabaseAdmin.from("partner_businesses").delete().eq("business_id", businessId);
+  return { success: true };
 }
 
 export async function updateBusiness(
@@ -1294,7 +1381,8 @@ export type BookingDateFilter = string | { from: string; to: string };
 
 export async function listBookingsByBusiness(
   businessId: string,
-  date?: BookingDateFilter
+  date?: BookingDateFilter,
+  professionalId?: string
 ): Promise<BookingWithDetails[]> {
   const matchesDate = (bookingDate: string): boolean => {
     if (!date) return true;
@@ -1310,6 +1398,7 @@ export async function listBookingsByBusiness(
     const professionalNames = new Map(demoProfessionals.map((p) => [p.id, p.name]));
     return demoBookings
       .filter((b) => matchesDate(b.date))
+      .filter((b) => !professionalId || b.professional_id === professionalId)
       .map((b) => ({
         ...b,
         service_name: serviceNames.get(b.service_id) ?? "Servicio eliminado",
@@ -1334,6 +1423,12 @@ export async function listBookingsByBusiness(
     query = query.eq("date", date);
   } else if (date) {
     query = query.gte("date", date.from).lte("date", date.to);
+  }
+  // Filtro server-side (nunca "traer todo y filtrar en React") — usado por
+  // el Editor rápido (Barber): una cuenta "worker" solo puede ver sus
+  // propios turnos, ver getMyBookings en actions.ts.
+  if (professionalId) {
+    query = query.eq("professional_id", professionalId);
   }
 
   const { data: bookings } = await query;

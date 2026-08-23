@@ -28,7 +28,7 @@ export default async function BusinessLayout({ children, params }: LayoutProps) 
   // Un dueño solo puede ver/editar SU negocio — si el id no es el suyo, lo
   // mandamos a /admin (que a un dueño lo rebota directo a su propia
   // página), en vez de mostrar un error que confirme si ese id existe.
-  if (!canManageBusiness(session, id)) redirect("/admin");
+  if (!(await canManageBusiness(session, id))) redirect("/admin");
 
   // Ninguna de las 6 pantallas de acá abajo (Editor completo, Turnos,
   // Clientes, Estadísticas, Oportunidades, Configuración) es alcanzable

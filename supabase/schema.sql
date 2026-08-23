@@ -453,3 +453,40 @@ alter table businesses add constraint businesses_animation_preset_check
 alter table templates drop constraint templates_animation_preset_check;
 alter table templates add constraint templates_animation_preset_check
   check (animation_preset in ('ninguna','sutil','dinamica','revelado','escalonada'));
+
+-- === RBAC: rol "partner" (multi-negocio), aplicado directo contra Supabase
+-- vía apply_migration; documentación posterior, no fuente de verdad. No
+-- destructivo: las cuentas existentes (role business-scoped, business_id no
+-- nulo) siguen pasando el nuevo constraint tal cual. Ver AccountRole en
+-- types/business.ts, session.ts (AdminSession variante "partner") y
+-- authorize.ts. ===
+alter table accounts alter column business_id drop not null;
+
+alter table accounts drop constraint accounts_role_check;
+alter table accounts add constraint accounts_role_check
+  check (role in ('owner','admin','worker','partner'));
+
+-- Una fila es business-scoped XOR partner-scoped, nunca las dos cosas.
+alter table accounts add constraint accounts_partner_business_shape
+  check ((role = 'partner') = (business_id is null));
+
+-- Atajo de lectura en businesses (evita joinear partner_businesses en cada
+-- listado) — cada negocio tiene a lo sumo 1 partner asignado.
+alter table businesses add column if not exists partner_id uuid
+  references accounts(id) on delete set null;
+create index if not exists businesses_partner_id_idx on businesses(partner_id);
+
+-- Tabla de unión (mismo patrón que professional_services) — soporta multi-
+-- partner-por-negocio a futuro sin volver a tocar el esquema, aunque hoy en
+-- la práctica queda en sync 1:1 con businesses.partner_id.
+create table if not exists partner_businesses (
+  partner_account_id uuid not null references accounts(id) on delete cascade,
+  business_id uuid not null references businesses(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (partner_account_id, business_id)
+);
+create index if not exists partner_businesses_business_idx on partner_businesses(business_id);
+
+alter table partner_businesses enable row level security;
+-- Sin políticas públicas a propósito, mismo criterio que `accounts`: solo
+-- supabaseAdmin (service role) puede leer/escribir esta tabla.

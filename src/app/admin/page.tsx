@@ -3,20 +3,28 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getAdminSession } from "@/lib/admin/session";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { listBusinesses, listOfficialTemplates } from "@/lib/data/business-repository";
+import {
+  listBusinesses,
+  listBusinessesForPartner,
+  listOfficialTemplates,
+} from "@/lib/data/business-repository";
 import AdminChrome from "@/components/admin/AdminChrome";
 import NewBusinessForm from "./new-business-form";
 
-// El listado de TODOS los negocios (y "crear negocio") es exclusivo del
-// superadmin (RYVO) — un dueño autenticado con la contraseña de su propio
-// negocio no debe poder ver ni el nombre de otros negocios.
+// El listado de negocios (y "crear negocio") es de superadmin/partner — un
+// dueño/admin/worker de un negocio puntual (sesión "owner") no debe poder
+// ver ni el nombre de otros negocios, así que va directo al suyo. Super ve
+// TODOS los negocios; partner ve solo los que tiene asignados
+// (businesses.partner_id) — mismo componente, distinto dataset.
 export default async function AdminHomePage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
   if (session.role === "owner") redirect(`/admin/negocios/${session.businessId}`);
 
   const [businesses, officialTemplates] = await Promise.all([
-    listBusinesses(),
+    session.role === "partner"
+      ? listBusinessesForPartner(session.accountId)
+      : listBusinesses(),
     listOfficialTemplates(),
   ]);
 
@@ -32,9 +40,19 @@ export default async function AdminHomePage() {
         </div>
       ) : null}
 
+      {session.role === "super" ? (
+        <Link
+          href="/admin/usuarios"
+          className="mb-6 inline-flex items-center gap-1.5 text-xs text-bone-muted hover:text-brass transition-colors"
+        >
+          Ver todos los usuarios y partners de RYVO
+          <Icon name="arrow" size={16} className="shrink-0" />
+        </Link>
+      ) : null}
+
       <p className="section-eyebrow text-brass">Negocios</p>
       <h1 className="section-title mt-2 text-2xl text-bone">
-        Tus peluquerías y barberías
+        {session.role === "partner" ? "Tus negocios asignados" : "Tus peluquerías y barberías"}
       </h1>
 
       <div className="mt-8 divide-y divide-ink-line border-t border-b border-ink-line">

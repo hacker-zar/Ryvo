@@ -29,11 +29,12 @@ const BUSINESS_TYPES = new Set([
  * estructuralmente imposible que esta acción toque un negocio que no
  * acaba de crear ella misma.
  *
- * Crea negocio y cuenta juntos (mismo orden que adminCreateBusiness):
- * accounts.business_id es NOT NULL, así que la cuenta no puede existir
- * antes que el negocio. Termina autenticado (createOwnerSession) y
- * redirige directo al negocio recién creado — sin volver a pasar por
- * login.
+ * Crea negocio y cuenta juntos (mismo orden que adminCreateBusiness): esta
+ * cuenta siempre queda con `business_id` seteado (role "owner", nunca
+ * "partner" — ver Account.business_id en types/business.ts), así que no
+ * puede existir antes que el negocio. Termina autenticado
+ * (createOwnerSession) y redirige directo al negocio recién creado — sin
+ * volver a pasar por login.
  */
 export async function registerBusiness(formData: FormData) {
   const ownerName = String(formData.get("owner_name") || "").trim();

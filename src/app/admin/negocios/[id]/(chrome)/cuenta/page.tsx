@@ -47,8 +47,8 @@ export default async function AccountPage({ params }: PageProps) {
       <p className="section-eyebrow text-bone-muted">Acceso</p>
       <p className="text-xs text-bone-muted mt-2 max-w-md">
         Cuentas de acceso a {business.name} — el dueño entra directo al
-        editor completo; un profesional vinculado entra al Editor rápido,
-        limitado a su propio contenido.
+        editor completo; un Barbero vinculado entra a /rapido, donde solo
+        puede ver sus propios turnos.
       </p>
 
       <div className="mt-6">
