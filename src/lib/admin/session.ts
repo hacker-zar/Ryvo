@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { promisify } from "util";
 import { AccountRole } from "@/types/business";
+import { isBusinessAssignedToPartner } from "@/lib/data/business-repository";
 
 const scryptAsync = promisify(crypto.scrypt);
 
@@ -17,21 +18,30 @@ const ORIGIN_COOKIE_NAME = "admin_origin";
 const ORIGIN_COOKIE_TTL_SECONDS = 60 * 60 * 24; // 1 día
 
 /**
- * Dos formas de tener sesión de admin:
+ * Tres formas de tener sesión de admin:
  * - "super": RYVO (contraseña compartida ADMIN_PASSWORD) — puede gestionar
- *   cualquier negocio, y es la única que puede crear negocios nuevos.
+ *   cualquier negocio, y es la única que puede crear negocios nuevos sin
+ *   asignarse un negocio (ver requireSuperAdminOrPartner en authorize.ts).
  *   Independiente del sistema de cuentas: no tiene fila en `accounts`.
  * - "owner": una cuenta real (tabla `accounts`, usuario + contraseña)
  *   vinculada a UN negocio puntual. `businessId` viene de la cuenta
  *   autenticada en el momento del login (`accounts.business_id`), nunca de
  *   un parámetro que mande el cliente — por eso alcanza con leerlo de acá
  *   para autorizar, sin volver a consultar la base en cada request.
+ * - "partner": una cuenta real (`accounts`, `role: "partner"`,
+ *   `business_id: null`) NO atada a un solo negocio — administra el
+ *   conjunto de negocios que tenga asignados (`businesses.partner_id`).
+ *   A diferencia de "owner", acá SÍ hace falta consultar la base en cada
+ *   autorización (`isBusinessAssignedToPartner`, ver `canManageBusiness`
+ *   abajo): la asignación puede cambiar en cualquier momento y la sesión
+ *   no debe quedar desactualizada hasta que expire.
  *
  * `accountRole` (distinto de `role` acá arriba, que es el nivel de
  * autenticación) es el rol de la cuenta DENTRO del negocio
  * (dueño/administrador/trabajador — ver `AccountRole` en types/business.ts).
- * `accountRole === "worker"` es lo que separa al Editor rápido del editor
- * completo — ver requireAdminFor/requireBusinessMember en authorize.ts.
+ * `accountRole === "worker"` es lo que separa al Editor rápido (solo
+ * lectura de turnos propios) del editor completo — ver
+ * requireAdminFor/requireBusinessMember en authorize.ts.
  *
  * `professionalId` solo tiene valor cuando `accountRole === "worker"`
  * (viene de `accounts.professional_id`, nunca de algo que mande el
@@ -40,6 +50,7 @@ const ORIGIN_COOKIE_TTL_SECONDS = 60 * 60 * 24; // 1 día
  */
 export type AdminSession =
   | { role: "super" }
+  | { role: "partner"; accountId: string }
   | {
       role: "owner";
       accountId: string;
@@ -101,7 +112,7 @@ export async function verifyPassword(
 
 function encodeSession(session: AdminSession, issuedAt: string): string {
   const businessId = session.role === "owner" ? session.businessId : "";
-  const accountId = session.role === "owner" ? session.accountId : "";
+  const accountId = session.role !== "super" ? session.accountId : "";
   const accountRole = session.role === "owner" ? session.accountRole : "";
   const professionalId =
     session.role === "owner" ? session.professionalId ?? "" : "";
@@ -123,6 +134,10 @@ async function setSessionCookie(session: AdminSession) {
 
 export async function createSuperAdminSession() {
   await setSessionCookie({ role: "super" });
+}
+
+export async function createPartnerSession(accountId: string) {
+  await setSessionCookie({ role: "partner", accountId });
 }
 
 export async function createOwnerSession(
@@ -163,6 +178,9 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   if (!(age >= 0 && age <= SESSION_TTL_SECONDS)) return null;
 
   if (role === "super") return { role: "super" };
+  if (role === "partner" && accountId) {
+    return { role: "partner", accountId };
+  }
   if (role === "owner" && businessId && accountId) {
     return {
       role: "owner",
@@ -175,13 +193,25 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   return null;
 }
 
-/** true si la sesión (super, o dueño de ESE negocio puntual) puede gestionar `businessId`. */
-export function canManageBusiness(
+/**
+ * true si la sesión puede gestionar `businessId`: super siempre, owner
+ * solo si es SU negocio, partner solo si el negocio está entre los suyos
+ * asignados (`businesses.partner_id` — ver isBusinessAssignedToPartner en
+ * business-repository.ts). Async a partir del rol "partner": a diferencia
+ * de owner (el business_id ya viene fijo y firmado en la cookie), la
+ * asignación de un partner puede cambiar en cualquier momento, así que
+ * hace falta una consulta real en vez de confiar en algo cacheado en la
+ * sesión.
+ */
+export async function canManageBusiness(
   session: AdminSession | null,
   businessId: string
-): boolean {
+): Promise<boolean> {
   if (!session) return false;
   if (session.role === "super") return true;
+  if (session.role === "partner") {
+    return isBusinessAssignedToPartner(session.accountId, businessId);
+  }
   return session.businessId === businessId;
 }
 

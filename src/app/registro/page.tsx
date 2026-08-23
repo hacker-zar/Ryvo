@@ -21,7 +21,7 @@ export default async function RegistroPage() {
   if (session?.role === "owner") {
     redirect(`/admin/negocios/${session.businessId}`);
   }
-  if (session?.role === "super") {
+  if (session?.role === "super" || session?.role === "partner") {
     redirect("/admin");
   }
 

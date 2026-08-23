@@ -25,7 +25,7 @@ export default async function QuickEditorLayout({
 
   const { id } = await params;
 
-  if (!canManageBusiness(session, id)) redirect("/admin");
+  if (!(await canManageBusiness(session, id))) redirect("/admin");
 
   if (!(session.role === "owner" && session.accountRole === "worker")) {
     redirect(`/admin/negocios/${id}`);

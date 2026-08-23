@@ -1,20 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireBusinessMember } from "@/lib/admin/authorize";
+import { requireAdminFor } from "@/lib/admin/authorize";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 
-// La galería es un recurso COMPARTIDO del negocio (un solo array, sin
-// noción de "de qué profesional es esta foto" — confirmado antes de
-// construir el Editor rápido), así que cualquier cuenta que pueda
-// gestionar el negocio, dueño o profesional, tiene el mismo poder sobre
-// ella. requireBusinessMember en vez de requireAdminFor, sin chequeo
-// adicional en la rama "worker".
+// requireAdminFor: gestionar la galería es exclusivo del editor completo
+// — Barber no tiene ningún acceso de escritura sobre recursos del
+// negocio (ver plan RBAC).
 export async function adminUpdateGallery(
   businessId: string,
   gallery: string[]
 ): Promise<{ success: boolean; error?: string }> {
-  await requireBusinessMember(businessId);
+  await requireAdminFor(businessId);
 
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {

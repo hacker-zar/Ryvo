@@ -29,7 +29,7 @@ export default async function BusinessPreviewPage({ params }: PageProps) {
   if (!session) redirect("/admin/login");
 
   const { id } = await params;
-  if (!canManageBusiness(session, id)) redirect("/admin");
+  if (!(await canManageBusiness(session, id))) redirect("/admin");
 
   const business = await getBusinessById(id);
   if (!business) notFound();

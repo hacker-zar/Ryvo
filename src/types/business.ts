@@ -179,6 +179,11 @@ export interface Business {
   template_id?: string | null;
   template_layout?: TemplateLayoutId | null;
   palette_id?: string | null;
+  // RBAC: Partner asignado a este negocio (Account.id de una cuenta
+  // role === "partner"), o null si lo administra directo el superadmin /
+  // una cuenta owner/admin propia de este negocio. Ver
+  // src/lib/admin/authorize.ts.
+  partner_id?: string | null;
   created_at: string;
 }
 
@@ -360,27 +365,31 @@ export interface ProfessionalWithServices extends Professional {
   service_ids: string[];
 }
 
-// Rol dentro del negocio (distinto del `role` de sesión "super"/"owner"
-// de AdminSession, que es el nivel de autenticación, no el permiso
-// dentro del negocio). Hoy toda cuenta es "owner" — no hay UI todavía
-// para crear "admin"/"worker" — pero la estructura ya existe para
-// cuando se construya gestión de equipo (ver src/lib/admin/roles.ts).
-export type AccountRole = "owner" | "admin" | "worker";
+// Rol dentro del negocio (distinto del `role` de sesión "super"/"owner"/
+// "partner" de AdminSession, que es el nivel de autenticación, no el
+// permiso dentro del negocio). "owner"/"admin" = editor completo de UN
+// negocio; "worker" = Barber, solo lectura de sus propios turnos en
+// /rapido (ver requireBusinessMember en authorize.ts); "partner" = cuenta
+// multi-negocio (ver Account.business_id más abajo), nunca atada a un
+// solo negocio.
+export type AccountRole = "owner" | "admin" | "worker" | "partner";
 
-// Cuenta de acceso al panel (usuario + contraseña) de un negocio. NUNCA
-// incluye password_hash acá — ese campo solo existe en las funciones de
+// Cuenta de acceso al panel (usuario + contraseña). NUNCA incluye
+// password_hash acá — ese campo solo existe en las funciones de
 // autenticación de accounts-repository.ts, igual que admin_password_hash
-// en Business antes. Hoy 1 cuenta → 1 negocio, pero business_id no es
-// único: el modelo ya tolera varias cuentas por negocio a futuro.
+// en Business antes.
 export interface Account {
   id: string;
-  business_id: string;
+  // null únicamente para role === "partner" (una cuenta partner no tiene
+  // un solo negocio — sus negocios asignados viven en `businesses.partner_id`
+  // / `partner_businesses`). Para el resto de los roles, siempre un uuid.
+  business_id: string | null;
   name: string;
   username: string;
   role: AccountRole;
   // Solo seteado cuando role === "worker" — vincula la cuenta a UN
   // profesional puntual de este negocio (ver Editor rápido). null para
-  // cuentas owner/admin, que no están atadas a ningún profesional.
+  // el resto de los roles.
   professional_id: string | null;
   active: boolean;
   created_at: string;

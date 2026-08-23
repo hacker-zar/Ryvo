@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const business = await getBusinessIdBySlug(from);
     const session = await getAdminSession();
 
-    if (business && canManageBusiness(session, business.id)) {
+    if (business && (await canManageBusiness(session, business.id))) {
       return NextResponse.redirect(
         new URL(`/admin/negocios/${business.id}`, request.url)
       );
@@ -40,8 +40,10 @@ export async function GET(request: NextRequest) {
   }
 
   // Sin slug de origen (se entró directo a /admin/entrar): solo tiene
-  // sentido para el superadmin de RYVO.
+  // sentido para sesiones sin un negocio único (super/partner) — van al
+  // listado de negocios; el resto, a loguearse.
   const session = await getAdminSession();
-  const destination = session?.role === "super" ? "/admin" : "/admin/login";
+  const destination =
+    session?.role === "super" || session?.role === "partner" ? "/admin" : "/admin/login";
   return NextResponse.redirect(new URL(destination, request.url));
 }

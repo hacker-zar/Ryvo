@@ -51,7 +51,7 @@ export default async function BusinessPage({ params }: PageProps) {
   // otro negocio, la página se comporta exactamente igual que para
   // cualquier visitante (ni se consulta canManageBusiness de más).
   const session = await getAdminSession();
-  const isAuthorized = canManageBusiness(session, profile.business.id);
+  const isAuthorized = await canManageBusiness(session, profile.business.id);
 
   const adminBar = isAuthorized ? (
     <PublicSiteAdminBar

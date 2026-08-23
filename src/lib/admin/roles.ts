@@ -1,18 +1,21 @@
 import { AccountRole } from "@/types/business";
 
 /**
- * Capacidades por rol dentro de un negocio (dueño/administrador/
- * trabajador) — estructura para cuando se construya gestión de equipo,
- * sin tener que rediseñar sesión ni el menú de administración. Hoy no la
- * llama nada todavía: no existe ninguna forma de crear una cuenta que no
- * sea "owner", así que esto no tiene ningún efecto observable — es
- * puramente organización de código, no un sistema de permisos aplicado.
- * "*" = acceso total.
+ * Capacidades por rol dentro de un negocio (dueño/administrador/Barber) —
+ * estructura organizativa, sin efecto propio: la autorización real vive
+ * en requireAdminFor/requireBusinessMember (authorize.ts), que no
+ * consultan esto. "worker" (Barber) hoy solo ve sus propios turnos, de
+ * solo lectura (ver getMyBookings en actions.ts) — "turnos" acá refleja
+ * eso, no un permiso de escritura. "partner" no es un rol dentro de un
+ * negocio puntual (administra el conjunto de negocios asignados, ver
+ * AdminSession en session.ts) — mismo nivel que "owner" en cada uno de
+ * esos negocios. "*" = acceso total.
  */
 export const ROLE_CAPABILITIES: Record<AccountRole, string[] | "*"> = {
   owner: "*",
   admin: ["editor", "turnos", "clientes", "estadisticas", "oportunidades", "cuenta"],
-  worker: ["turnos", "clientes"],
+  worker: ["turnos"],
+  partner: "*",
 };
 
 export function roleCanAccess(role: AccountRole, capability: string): boolean {

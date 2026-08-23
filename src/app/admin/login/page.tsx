@@ -18,12 +18,12 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
 
   if (session) {
     if (business) {
-      if (canManageBusiness(session, business.id)) {
+      if (await canManageBusiness(session, business.id)) {
         redirect(`/admin/negocios/${business.id}`);
       }
       // Sesión válida pero de otra cuenta/negocio: se queda en el form para
       // loguearse de nuevo con la cuenta correcta.
-    } else if (session.role === "super") {
+    } else if (session.role === "super" || session.role === "partner") {
       redirect("/admin");
     }
   }
