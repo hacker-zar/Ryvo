@@ -34,7 +34,9 @@ export default async function QuickEditorPage({ params }: PageProps) {
   const isWorker = session.role === "owner" && session.accountRole === "worker";
 
   if (!isWorker) {
-    return <QuickChangesHub businessId={id} />;
+    const business = await getBusinessById(id);
+    if (!business) notFound();
+    return <QuickChangesHub businessId={id} slug={business.slug} />;
   }
 
   if (!session.professionalId) redirect("/admin/login");

@@ -8,6 +8,7 @@ export const DEFAULT_SECTION_ORDER: SectionConfig[] = [
   { id: "services", enabled: true },
   { id: "products", enabled: true },
   { id: "professionals", enabled: true },
+  { id: "academy", enabled: true },
   { id: "gallery", enabled: true },
   { id: "about", enabled: true },
   { id: "reviews", enabled: true },

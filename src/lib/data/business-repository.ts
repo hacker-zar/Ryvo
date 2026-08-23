@@ -6,6 +6,12 @@ import {
   supabaseAdmin,
 } from "@/lib/supabase";
 import {
+  Academy,
+  AcademyCategory,
+  AcademyCategoryWithRelations,
+  AcademyInterest,
+  AcademyInterestStatus,
+  AcademyInterestWithCategory,
   Booking,
   Business,
   BusinessProfile,
@@ -77,6 +83,8 @@ export async function getBusinessProfile(
       { data: locations },
       { data: professionals },
       { data: products },
+      { data: academy },
+      { data: academyCategories },
     ] = await Promise.all([
       supabase
         .from("services")
@@ -114,6 +122,17 @@ export async function getBusinessProfile(
         .eq("business_id", business.id)
         .eq("active", true)
         .order("created_at", { ascending: true }),
+      // maybeSingle: la mayoría de los negocios todavía no activó
+      // Academia — 0 filas es un caso normal, no un error.
+      supabase.from("academies").select("*").eq("business_id", business.id).maybeSingle(),
+      // Mismo criterio de embed que professionals de arriba: nombre de
+      // sede/profesor resuelto en la misma consulta.
+      supabase
+        .from("academy_categories")
+        .select("*, locations(name), professionals(name)")
+        .eq("business_id", business.id)
+        .eq("active", true)
+        .order("created_at", { ascending: true }),
     ]);
 
     return {
@@ -129,10 +148,14 @@ export async function getBusinessProfile(
           : [virtualLocationFromBusiness(business)],
       professionals: mapProfessionalsWithServices(professionals ?? []),
       products: products ?? [],
+      academy: academy ?? null,
+      academyCategories: mapAcademyCategoriesWithRelations(academyCategories ?? []),
     };
   }
 
-  // Modo demo: solo respondemos para el slug de demostración.
+  // Modo demo: solo respondemos para el slug de demostración. Academia no
+  // tiene datos de demo todavía — queda desactivada (comportamiento
+  // idéntico al de cualquier negocio real que nunca la activó).
   if (slug === demoBusiness.slug) {
     return {
       business: demoBusiness,
@@ -144,6 +167,8 @@ export async function getBusinessProfile(
         service_ids: demoProfessionalServiceIds[p.id] ?? [],
       })),
       products: demoProducts,
+      academy: null,
+      academyCategories: [],
     };
   }
 
@@ -163,6 +188,29 @@ function mapProfessionalsWithServices(
     return {
       ...professional,
       service_ids: (professional_services ?? []).map((link) => link.service_id),
+    };
+  });
+}
+
+/** Mismo criterio que mapProfessionalsWithServices — resuelve el nombre
+ *  de sede/profesor embebido en la misma consulta (`select("*,
+ *  locations(name), professionals(name))")`), sin round-trip aparte.
+ *  Ambas relaciones son FK simples (many-to-one), pero se acepta también
+ *  la forma array por si el driver de Supabase la devuelve así. */
+function mapAcademyCategoriesWithRelations(
+  rows: (AcademyCategory & {
+    locations?: { name: string } | { name: string }[] | null;
+    professionals?: { name: string } | { name: string }[] | null;
+  })[]
+): AcademyCategoryWithRelations[] {
+  return rows.map((row) => {
+    const { locations, professionals: instructor, ...category } = row;
+    const location = Array.isArray(locations) ? locations[0] : locations;
+    const instructorRow = Array.isArray(instructor) ? instructor[0] : instructor;
+    return {
+      ...category,
+      location_name: location?.name ?? null,
+      instructor_name: instructorRow?.name ?? null,
     };
   });
 }
@@ -2061,4 +2109,227 @@ export async function countBusinessesUsingTemplate(
     .select("id", { count: "exact", head: true })
     .eq("template_id", templateId);
   return count ?? 0;
+}
+
+// ---------------------------------------------------------------------
+// Academia — funcionalidad nativa reutilizable de RYVO (no específica de
+// ningún negocio puntual). `academies` es 1:1 por negocio; el admin usa
+// supabaseAdmin (mismo criterio que el resto de /admin), la lectura
+// pública ya está cubierta por getBusinessProfile arriba.
+// ---------------------------------------------------------------------
+
+/** Config de Academia para el panel admin — a diferencia de
+ *  getBusinessProfile, se trae exista o no `enabled`, porque el dueño
+ *  tiene que poder verla/editarla incluso apagada. null = todavía nunca
+ *  se activó Academia para este negocio (caso normal, no un error). */
+export async function getAcademyForAdmin(businessId: string): Promise<Academy | null> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
+  const { data } = await supabaseAdmin
+    .from("academies")
+    .select("*")
+    .eq("business_id", businessId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+export type AcademyInput = Omit<Academy, "id" | "business_id" | "created_at" | "updated_at">;
+
+/** "Activar Academia" — crea la única fila de configuración de este
+ *  negocio. Falla con un mensaje claro si ya existe (usar updateAcademy
+ *  para editar una ya activada), en vez de dejar que el constraint
+ *  `unique(business_id)` de la base devuelva un error crudo. */
+export async function createAcademy(
+  businessId: string,
+  input: Partial<AcademyInput>
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return { success: false, error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY." };
+  }
+  const { data, error } = await supabaseAdmin
+    .from("academies")
+    .insert({ business_id: businessId, ...input })
+    .select("id")
+    .single();
+  if (error) {
+    if (error.code === "23505") {
+      return { success: false, error: "Este negocio ya tiene una Academia activada." };
+    }
+    return { success: false, error: error.message };
+  }
+  return { success: true, id: data.id };
+}
+
+export async function updateAcademy(
+  businessId: string,
+  input: Partial<AcademyInput>
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return { success: false, error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY." };
+  }
+  const { error } = await supabaseAdmin
+    .from("academies")
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq("business_id", businessId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+/** A diferencia de la lectura pública (getBusinessProfile), trae TODAS
+ *  las categorías (activas e inactivas) — el admin necesita poder
+ *  reactivarlas. Mismo embed de sede/profesor que la versión pública. */
+export async function listAcademyCategoriesForAdmin(
+  businessId: string
+): Promise<AcademyCategoryWithRelations[]> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return [];
+  const { data } = await supabaseAdmin
+    .from("academy_categories")
+    .select("*, locations(name), professionals(name)")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: true });
+  return mapAcademyCategoriesWithRelations(data ?? []);
+}
+
+export type AcademyCategoryInput = Omit<
+  AcademyCategory,
+  "id" | "business_id" | "created_at" | "updated_at"
+>;
+
+export async function createAcademyCategory(
+  businessId: string,
+  input: AcademyCategoryInput
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return { success: false, error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY." };
+  }
+  const { data, error } = await supabaseAdmin
+    .from("academy_categories")
+    .insert({ business_id: businessId, ...input })
+    .select("id")
+    .single();
+  if (error) return { success: false, error: error.message };
+  return { success: true, id: data.id };
+}
+
+export async function updateAcademyCategory(
+  id: string,
+  input: Partial<AcademyCategoryInput>
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return { success: false, error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY." };
+  }
+  const { error } = await supabaseAdmin
+    .from("academy_categories")
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function deleteAcademyCategory(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return { success: false, error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY." };
+  }
+  const { error } = await supabaseAdmin.from("academy_categories").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+/** Interesados de Academia, más nuevos primero — con el nombre de la
+ *  categoría ya resuelto (o "Categoría eliminada" si se borró, mismo
+ *  fallback que service_name en BookingWithDetails). */
+export async function listAcademyInterests(
+  businessId: string
+): Promise<AcademyInterestWithCategory[]> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return [];
+  const { data } = await supabaseAdmin
+    .from("academy_interests")
+    .select("*, academy_categories(name)")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false });
+  return (data ?? []).map((row) => {
+    const { academy_categories, ...interest } = row as AcademyInterest & {
+      academy_categories?: { name: string } | { name: string }[] | null;
+    };
+    const category = Array.isArray(academy_categories)
+      ? academy_categories[0]
+      : academy_categories;
+    return {
+      ...interest,
+      category_name: category?.name ?? null,
+    };
+  });
+}
+
+export async function getAcademyInterestById(
+  id: string
+): Promise<AcademyInterestWithCategory | null> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
+  const { data } = await supabaseAdmin
+    .from("academy_interests")
+    .select("*, academy_categories(name)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  const { academy_categories, ...interest } = data as AcademyInterest & {
+    academy_categories?: { name: string } | { name: string }[] | null;
+  };
+  const category = Array.isArray(academy_categories) ? academy_categories[0] : academy_categories;
+  return { ...interest, category_name: category?.name ?? null };
+}
+
+export async function updateAcademyInterestStatus(
+  id: string,
+  status: AcademyInterestStatus
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return { success: false, error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY." };
+  }
+  const { error } = await supabaseAdmin
+    .from("academy_interests")
+    .update({ status })
+    .eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export interface AcademySummary {
+  interests_new: number;
+  interests_total: number;
+  categories_active: number;
+  recent_interests: AcademyInterestWithCategory[];
+}
+
+/** Resumen liviano para la pantalla "Academia" del admin — unos pocos
+ *  counts + los últimos 5 interesados, nada de analytics complejo (no
+ *  hace falta todavía, ver el pedido). */
+export async function getAcademySummary(businessId: string): Promise<AcademySummary> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return { interests_new: 0, interests_total: 0, categories_active: 0, recent_interests: [] };
+  }
+  const [{ count: interestsNew }, { count: interestsTotal }, { count: categoriesActive }, recent] =
+    await Promise.all([
+      supabaseAdmin
+        .from("academy_interests")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
+        .eq("status", "new"),
+      supabaseAdmin
+        .from("academy_interests")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId),
+      supabaseAdmin
+        .from("academy_categories")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
+        .eq("active", true),
+      listAcademyInterests(businessId),
+    ]);
+  return {
+    interests_new: interestsNew ?? 0,
+    interests_total: interestsTotal ?? 0,
+    categories_active: categoriesActive ?? 0,
+    recent_interests: recent.slice(0, 5),
+  };
 }

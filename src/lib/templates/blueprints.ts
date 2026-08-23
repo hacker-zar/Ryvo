@@ -71,7 +71,7 @@ export const LAYOUT_BLUEPRINTS: Record<TemplateLayoutId, LayoutBlueprint> = {
   editorial: {
     slots: [
       { type: "statement" },
-      { type: "core", ids: ["services", "products", "gallery", "professionals"] },
+      { type: "core", ids: ["services", "products", "academy", "gallery", "professionals"] },
       { type: "beforeafter" },
       { type: "core", ids: ["reviews", "contact"] },
     ],
@@ -83,7 +83,7 @@ export const LAYOUT_BLUEPRINTS: Record<TemplateLayoutId, LayoutBlueprint> = {
     slots: [
       { type: "core", ids: ["services", "products"] },
       { type: "marquee" },
-      { type: "core", ids: ["professionals", "gallery", "reviews"] },
+      { type: "core", ids: ["professionals", "academy", "gallery", "reviews"] },
       { type: "social" },
       { type: "core", ids: ["contact"] },
     ],

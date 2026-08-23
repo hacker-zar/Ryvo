@@ -47,7 +47,8 @@ export type SectionId =
   | "about"
   | "reviews"
   | "contact"
-  | "products";
+  | "products"
+  | "academy";
 
 export interface SectionConfig {
   id: SectionId;
@@ -402,6 +403,77 @@ export interface Account {
   created_at: string;
 }
 
+// === Academia — funcionalidad nativa reutilizable (no específica de
+// ningún negocio puntual, ver Academy.tsx). `Academy` es la config 1:1
+// del negocio (nombre/headline/descripción/imagen/CTA/contacto/tipo de
+// actividad + el toggle activar/desactivar). ===
+export interface Academy {
+  id: string;
+  business_id: string;
+  enabled: boolean;
+  name: string;
+  headline: string;
+  description: string;
+  image: string;
+  logo: string;
+  cta_text: string;
+  // Vacío = usa business.whatsapp como fallback (ver whatsappLink en
+  // StepSuccess del modal de interés).
+  contact_phone: string;
+  // Libre a propósito ("Fútbol"/"Danza"/"Otro"/lo que sea) — Academia no
+  // está limitada a deportes.
+  activity_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AcademyCategory {
+  id: string;
+  business_id: string;
+  name: string;
+  age_level: string;
+  description: string;
+  // Mismos códigos que OpeningHours.day — reutiliza dayLabel() tal cual.
+  days: OpeningHours["day"][];
+  // Texto libre ("18:00 hs") — sin motor de turnos real, es una
+  // solicitud de interés, no una reserva de horario.
+  schedule_time: string;
+  location_id: string | null;
+  instructor_id: string | null;
+  capacity: number | null;
+  image: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Categoría + nombre de sede/profesor ya resueltos — mismo patrón que
+// ProfessionalWithServices (evita que cada consumidor tenga que
+// resolver el join a mano).
+export interface AcademyCategoryWithRelations extends AcademyCategory {
+  location_name: string | null;
+  instructor_name: string | null;
+}
+
+export type AcademyInterestStatus = "new" | "contacted" | "enrolled" | "discarded";
+
+export interface AcademyInterest {
+  id: string;
+  business_id: string;
+  academy_category_id: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  status: AcademyInterestStatus;
+  created_at: string;
+}
+
+export interface AcademyInterestWithCategory extends AcademyInterest {
+  // null si la categoría fue borrada — se muestra "Categoría eliminada"
+  // en el admin, mismo fallback que service_name en BookingWithDetails.
+  category_name: string | null;
+}
+
 // Vista completa de un negocio, tal como la consumen los componentes de la
 // plantilla. Se arma combinando las tablas anteriores.
 export interface BusinessProfile {
@@ -411,6 +483,10 @@ export interface BusinessProfile {
   locations: Location[];
   professionals: ProfessionalWithServices[];
   products: Product[];
+  // null = Academia nunca se activó para este negocio (no es lo mismo
+  // que enabled=false, aunque ambos casos ocultan la sección igual).
+  academy: Academy | null;
+  academyCategories: AcademyCategoryWithRelations[];
 }
 
 // === CRM de clientes ===

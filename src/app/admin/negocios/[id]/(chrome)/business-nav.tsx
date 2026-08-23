@@ -4,6 +4,7 @@ type NavKey =
   | "editor"
   | "turnos"
   | "clientes"
+  | "academia"
   | "estadisticas"
   | "oportunidades"
   | "cuenta";
@@ -17,15 +18,16 @@ const TABS: { key: NavKey; label: string; suffix: string }[] = [
   { key: "editor", label: "Editor", suffix: "" },
   { key: "turnos", label: "Agenda", suffix: "/turnos" },
   { key: "clientes", label: "Clientes", suffix: "/clientes" },
+  { key: "academia", label: "Academia", suffix: "/academia" },
   { key: "estadisticas", label: "Estadísticas", suffix: "/estadisticas" },
   { key: "oportunidades", label: "Oportunidades", suffix: "/oportunidades" },
   { key: "cuenta", label: "Configuración", suffix: "/cuenta" },
 ];
 
 /**
- * Tabs compartidos entre las 6 páginas del negocio (Editor/Turnos/
- * Clientes/Estadísticas/Oportunidades/Configuración) — reemplaza los
- * links sueltos "Turnos →"/"Cuenta →" que antes solo existían en el
+ * Tabs compartidos entre las 7 páginas del negocio (Editor/Turnos/
+ * Clientes/Academia/Estadísticas/Oportunidades/Configuración) — reemplaza
+ * los links sueltos "Turnos →"/"Cuenta →" que antes solo existían en el
  * editor. Mismos destinos que el menú desplegable del sitio público (ver
  * PublicSiteAdminBar).
  */

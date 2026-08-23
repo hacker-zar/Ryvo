@@ -500,3 +500,82 @@ alter table partner_businesses enable row level security;
 alter table accounts drop constraint accounts_role_check;
 alter table accounts add constraint accounts_role_check
   check (role in ('owner','worker','partner'));
+
+-- === Academia: funcionalidad nativa reutilizable de RYVO (aplicado
+-- directo contra Supabase vía apply_migration; documentación posterior,
+-- no fuente de verdad). NO específica de ningún negocio — Barbers Rosario
+-- es solo el primer cliente que la usa, cero lógica atada a su id/slug
+-- en ningún lado. Ver SectionId en types/business.ts (nuevo valor
+-- "academy") y Academy.tsx.
+--
+-- `academies` es 1:1 por negocio (como templates/accounts) — no
+-- embebida en `businesses` porque son ~9 campos propios de un módulo
+-- opcional, no atributos generales del negocio. `academy_categories`
+-- reutiliza Sedes/Profesionales vía FK simple (location_id/instructor_id,
+-- on delete set null) en vez de duplicar esos datos. `academy_interests`
+-- reutiliza el patrón "insert público, sin ninguna política de lectura"
+-- ya usado por `accounts`/`notification_events`: nadie externo puede
+-- consultar solicitudes ajenas, ni siquiera las propias. ===
+create table if not exists academies (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null unique references businesses(id) on delete cascade,
+  enabled boolean not null default true,
+  name text not null default '',
+  headline text not null default '',
+  description text not null default '',
+  image text not null default '',
+  logo text not null default '',
+  cta_text text not null default 'Quiero inscribirme',
+  contact_phone text not null default '',
+  activity_type text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists academy_categories (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  name text not null,
+  age_level text not null default '',
+  description text not null default '',
+  -- Mismos códigos que OpeningHours.day (lun/mar/.../dom) — reutiliza
+  -- dayLabel() de format.ts tal cual para mostrarlo.
+  days text[] not null default '{}',
+  -- Texto libre ("18:00 hs") a propósito: Academia no tiene motor de
+  -- turnos real (sin detección de choques ni slots) — es una solicitud
+  -- de interés, no una reserva de horario.
+  schedule_time text not null default '',
+  location_id uuid references locations(id) on delete set null,
+  instructor_id uuid references professionals(id) on delete set null,
+  capacity integer check (capacity is null or capacity >= 0),
+  image text not null default '',
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists academy_categories_business_id_idx on academy_categories(business_id);
+
+create table if not exists academy_interests (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references businesses(id) on delete cascade,
+  -- Nullable + on delete set null (no cascade): si la categoría se borra
+  -- de verdad, el lead histórico se conserva (se muestra "Categoría
+  -- eliminada" en el admin, mismo fallback que ya usa
+  -- listBookingsByBusiness para service_name).
+  academy_category_id uuid references academy_categories(id) on delete set null,
+  name text not null,
+  phone text not null,
+  email text,
+  status text not null default 'new' check (status in ('new','contacted','enrolled','discarded')),
+  created_at timestamptz not null default now()
+);
+create index if not exists academy_interests_business_id_idx on academy_interests(business_id);
+create index if not exists academy_interests_status_idx on academy_interests(business_id, status);
+
+alter table academies enable row level security;
+alter table academy_categories enable row level security;
+alter table academy_interests enable row level security;
+
+create policy "public read academies" on academies for select using (true);
+create policy "public read academy categories" on academy_categories for select using (true);
+create policy "public insert academy interests" on academy_interests for insert with check (true);

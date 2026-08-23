@@ -1,6 +1,7 @@
 import { Fragment, ReactNode } from "react";
 import { BusinessProfile, SectionId } from "@/types/business";
 import { BookingModalProvider } from "@/lib/booking-modal-context";
+import { AcademyInterestModalProvider } from "@/lib/academy-interest-modal-context";
 import { sanitizeSectionOrder } from "@/lib/section-order";
 import { LAYOUT_BLUEPRINTS, BlueprintSlot } from "@/lib/templates/blueprints";
 import { getPublicSiteUrl } from "@/lib/site-url";
@@ -14,6 +15,8 @@ import MobileBookingBar from "@/components/booking/MobileBookingBar";
 import Gallery from "@/components/Gallery";
 import Products from "@/components/Products";
 import Professionals from "@/components/Professionals";
+import Academy from "@/components/Academy";
+import AcademyInterestModal from "@/components/academy/AcademyInterestModalLazy";
 import About from "@/components/About";
 import Reviews from "@/components/Reviews";
 import Contact from "@/components/Contact";
@@ -44,7 +47,8 @@ interface BusinessSiteProps {
  * (sanitizeSectionOrder/SectionsManager) no cambia en absoluto.
  */
 export default async function BusinessSite({ profile, slug }: BusinessSiteProps) {
-  const { business, services, reviews, locations, professionals, products } = profile;
+  const { business, services, reviews, locations, professionals, products, academy, academyCategories } =
+    profile;
   const publicSiteUrl = await getPublicSiteUrl(slug);
   const layout = business.template_layout ?? undefined;
 
@@ -75,6 +79,17 @@ export default async function BusinessSite({ profile, slug }: BusinessSiteProps)
     ),
     products: () => (
       <Products products={products} primaryColor={business.primary_color} layout={layout} />
+    ),
+    academy: () => (
+      <Academy
+        academy={academy}
+        categories={academyCategories}
+        professionals={professionals}
+        locations={locations}
+        gallery={business.gallery ?? []}
+        primaryColor={business.primary_color}
+        layout={layout}
+      />
     ),
     about: () => (
       <About
@@ -131,6 +146,7 @@ export default async function BusinessSite({ profile, slug }: BusinessSiteProps)
     services: services.length > 0,
     products: products.length > 0,
     professionals: professionals.length > 0,
+    academy: academy?.enabled === true,
     gallery: (business.gallery ?? []).length > 0,
     reviews: reviews.length > 0,
   };
@@ -202,49 +218,62 @@ export default async function BusinessSite({ profile, slug }: BusinessSiteProps)
       }}
     >
       <BookingModalProvider>
-        <Header
-          business={{
-            name: business.name,
-            logo: business.logo,
-            primary_color: business.primary_color,
-            slug: business.slug,
-          }}
-          enabledSectionIds={enabledSectionIds}
-          layout={layout}
-        />
-        <Hero
-          business={{
-            name: business.name,
-            description: business.description,
-            hero_image: business.hero_image,
-            primary_color: business.primary_color,
-            hero_video: business.hero_video,
-            hero_video_enabled: business.hero_video_enabled,
-            hero_video_position: business.hero_video_position,
-            hero_kicker: business.hero_kicker,
-            hero_headline: business.hero_headline,
-          }}
-          layout={layout}
-        />
-        {blueprint
-          ? blueprint.slots.map((slot, i) => renderSlot(slot, i))
-          : renderCoreSections()}
-        <Footer business={{ name: business.name, slug: business.slug }} layout={layout} />
+        <AcademyInterestModalProvider>
+          <Header
+            business={{
+              name: business.name,
+              logo: business.logo,
+              primary_color: business.primary_color,
+              slug: business.slug,
+            }}
+            enabledSectionIds={enabledSectionIds}
+            layout={layout}
+          />
+          <Hero
+            business={{
+              name: business.name,
+              description: business.description,
+              hero_image: business.hero_image,
+              primary_color: business.primary_color,
+              hero_video: business.hero_video,
+              hero_video_enabled: business.hero_video_enabled,
+              hero_video_position: business.hero_video_position,
+              hero_kicker: business.hero_kicker,
+              hero_headline: business.hero_headline,
+            }}
+            layout={layout}
+          />
+          {blueprint
+            ? blueprint.slots.map((slot, i) => renderSlot(slot, i))
+            : renderCoreSections()}
+          <Footer business={{ name: business.name, slug: business.slug }} layout={layout} />
 
-        <BookingModal
-          business={{
-            id: business.id,
-            name: business.name,
-            primary_color: business.primary_color,
-            whatsapp: business.whatsapp,
-          }}
-          slug={slug}
-          services={services}
-          locations={locations}
-          professionals={professionals}
-        />
-        <BookingQueryParamTrigger />
-        <MobileBookingBar business={{ primary_color: business.primary_color }} />
+          <BookingModal
+            business={{
+              id: business.id,
+              name: business.name,
+              primary_color: business.primary_color,
+              whatsapp: business.whatsapp,
+            }}
+            slug={slug}
+            services={services}
+            locations={locations}
+            professionals={professionals}
+          />
+          <BookingQueryParamTrigger />
+          <MobileBookingBar business={{ primary_color: business.primary_color }} />
+          {academy?.enabled ? (
+            <AcademyInterestModal
+              business={{
+                name: business.name,
+                primary_color: business.primary_color,
+                whatsapp: business.whatsapp,
+              }}
+              academy={academy}
+              categories={academyCategories}
+            />
+          ) : null}
+        </AcademyInterestModalProvider>
       </BookingModalProvider>
     </AppearanceScope>
   );

@@ -11,6 +11,8 @@ import {
 import { hashPassword } from "@/lib/admin/session";
 import { isSupabaseAdminConfigured, supabaseAdmin } from "@/lib/supabase";
 import {
+  AcademyCategoryInput,
+  AcademyInput,
   BusinessInput,
   LocationInput,
   ProductInput,
@@ -19,12 +21,15 @@ import {
   TemplateInput,
   assignBusinessToPartner,
   countBusinessesUsingTemplate,
+  createAcademy,
+  createAcademyCategory,
   createBusiness,
   createLocation,
   createProduct,
   createProfessional,
   createService,
   createTemplate,
+  deleteAcademyCategory,
   deleteLocation,
   deleteProduct,
   deleteProfessional,
@@ -39,6 +44,9 @@ import {
   reorderProfessional,
   rescheduleBookingById,
   unassignBusinessFromPartner,
+  updateAcademy,
+  updateAcademyCategory,
+  updateAcademyInterestStatus,
   updateBookingStatus,
   updateBusiness,
   updateClientNotes,
@@ -54,7 +62,7 @@ import {
   updateAccount,
   updateAccountPassword,
 } from "@/lib/data/accounts-repository";
-import { AccountRole, OpeningHours, SectionConfig } from "@/types/business";
+import { AcademyInterestStatus, AccountRole, OpeningHours, SectionConfig } from "@/types/business";
 import { slugify } from "@/lib/slug";
 import { sanitizeSectionOrder } from "@/lib/section-order";
 import { dispatchDueNotificationsForBooking } from "@/lib/notifications/dispatch";
@@ -1245,4 +1253,111 @@ export async function adminGetTemplateUsageCount(
 ) {
   await requireAdminFor(businessId);
   return countBusinessesUsingTemplate(templateId);
+}
+
+// ---------------------------------------------------------------------
+// Academia — funcionalidad nativa reutilizable de RYVO (no específica de
+// ningún negocio). Mismo gate que el resto de /admin: requireAdminFor ya
+// cubre el RBAC pedido (owner de su negocio, partner solo si asignado,
+// worker rechazado, superadmin siempre) sin código nuevo de autorización.
+// ---------------------------------------------------------------------
+
+function parseAcademyInput(formData: FormData): Partial<AcademyInput> {
+  return {
+    name: String(formData.get("name") || "").trim(),
+    headline: String(formData.get("headline") || "").trim(),
+    description: String(formData.get("description") || ""),
+    image: String(formData.get("image") || ""),
+    logo: String(formData.get("logo") || ""),
+    cta_text: String(formData.get("cta_text") || "").trim() || "Quiero inscribirme",
+    contact_phone: String(formData.get("contact_phone") || "").trim(),
+    activity_type: String(formData.get("activity_type") || "").trim(),
+  };
+}
+
+/** "Activar Academia" — crea la fila de configuración (con los datos
+ *  básicos ya completados en el mismo form) o, si ya existe, no hace
+ *  nada raro: adminUpdateAcademy es quien edita una ya activada. */
+export async function adminCreateAcademy(businessId: string, formData: FormData) {
+  await requireAdminFor(businessId);
+  const input = parseAcademyInput(formData);
+  if (!input.name) return { success: false, error: "El nombre es obligatorio." };
+  const result = await createAcademy(businessId, { enabled: true, ...input });
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}/academia`);
+  return result;
+}
+
+export async function adminUpdateAcademy(businessId: string, formData: FormData) {
+  await requireAdminFor(businessId);
+  const input = parseAcademyInput(formData);
+  if (!input.name) return { success: false, error: "El nombre es obligatorio." };
+  const result = await updateAcademy(businessId, input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}/academia`);
+  return result;
+}
+
+export async function adminSetAcademyEnabled(businessId: string, enabled: boolean) {
+  await requireAdminFor(businessId);
+  const result = await updateAcademy(businessId, { enabled });
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}/academia`);
+  return result;
+}
+
+function parseAcademyCategoryInput(formData: FormData): AcademyCategoryInput {
+  return {
+    name: String(formData.get("name") || "").trim(),
+    age_level: String(formData.get("age_level") || "").trim(),
+    description: String(formData.get("description") || ""),
+    days: formData.getAll("days").map(String),
+    schedule_time: String(formData.get("schedule_time") || "").trim(),
+    location_id: String(formData.get("location_id") || "").trim() || null,
+    instructor_id: String(formData.get("instructor_id") || "").trim() || null,
+    capacity: parseOptionalNumber(formData.get("capacity")),
+    image: String(formData.get("image") || ""),
+    active: formData.get("active") === "on",
+  } as AcademyCategoryInput;
+}
+
+export async function adminCreateAcademyCategory(businessId: string, formData: FormData) {
+  await requireAdminFor(businessId);
+  const input = parseAcademyCategoryInput(formData);
+  if (!input.name) return { success: false, error: "El nombre es obligatorio." };
+  const result = await createAcademyCategory(businessId, input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}/academia/configuracion`);
+  return result;
+}
+
+export async function adminUpdateAcademyCategory(
+  businessId: string,
+  categoryId: string,
+  formData: FormData
+) {
+  await requireAdminFor(businessId);
+  const input = parseAcademyCategoryInput(formData);
+  if (!input.name) return { success: false, error: "El nombre es obligatorio." };
+  const result = await updateAcademyCategory(categoryId, input);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}/academia/configuracion`);
+  return result;
+}
+
+export async function adminDeleteAcademyCategory(businessId: string, categoryId: string) {
+  await requireAdminFor(businessId);
+  const result = await deleteAcademyCategory(categoryId);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}/academia/configuracion`);
+  return result;
+}
+
+export async function adminUpdateAcademyInterestStatus(
+  businessId: string,
+  interestId: string,
+  status: AcademyInterestStatus
+) {
+  await requireAdminFor(businessId);
+  const result = await updateAcademyInterestStatus(interestId, status);
+  if (result.success) {
+    revalidatePath(`/admin/negocios/${businessId}/academia/interesados`);
+    revalidatePath(`/admin/negocios/${businessId}/academia/interesados/${interestId}`);
+    revalidatePath(`/admin/negocios/${businessId}/academia`);
+  }
+  return result;
 }

@@ -3,6 +3,7 @@ import Icon from "@/components/ui/Icon";
 
 interface QuickChangesHubProps {
   businessId: string;
+  slug: string;
 }
 
 interface QuickChangeCard {
@@ -24,6 +25,7 @@ function cardsFor(businessId: string): QuickChangeCard[] {
     { label: "Fotos", hint: "Subir, borrar y reordenar la galería", href: `${base}/fotos` },
     { label: "Catálogo", hint: "Productos, precio, descripción y foto", href: `${base}/catalogo` },
     { label: "Turnos", hint: "Ver y gestionar los turnos del negocio", href: `/admin/negocios/${businessId}/turnos` },
+    { label: "Academia", hint: "Configuración, categorías e interesados", href: `/admin/negocios/${businessId}/academia` },
     { label: "Información del negocio", hint: "Nombre, descripción, dirección y redes", href: `${base}/informacion` },
   ];
 }
@@ -35,13 +37,22 @@ function cardsFor(businessId: string): QuickChangeCard[] {
  * el editor completo (ServicesManager, ProfessionalsManager, etc.), sin
  * segunda implementación.
  */
-export default function QuickChangesHub({ businessId }: QuickChangesHubProps) {
+export default function QuickChangesHub({ businessId, slug }: QuickChangesHubProps) {
   return (
     <div>
       <p className="section-eyebrow text-brass">Cambios rápidos</p>
       <h1 className="section-title mt-2 text-2xl text-bone">
         Modificá lo que necesités sin entrar al editor completo
       </h1>
+      <a
+        href={`/${slug}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-1 inline-flex items-center gap-1.5 text-xs text-bone-muted hover:text-brass transition-colors"
+      >
+        Ver sitio público
+        <Icon name="arrow" size={16} className="shrink-0" />
+      </a>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
         {cardsFor(businessId).map((card) => (

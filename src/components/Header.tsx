@@ -29,6 +29,7 @@ const NAV_LINKS: { href: string; label: string; section: SectionId }[] = [
   { href: "#servicios", label: "Servicios", section: "services" },
   { href: "#catalogo", label: "Catálogo", section: "products" },
   { href: "#profesionales", label: "Profesionales", section: "professionals" },
+  { href: "#academia", label: "Academia", section: "academy" },
   { href: "#galeria", label: "Galería", section: "gallery" },
   { href: "#resenas", label: "Reseñas", section: "reviews" },
   { href: "#contacto", label: "Contacto", section: "contact" },

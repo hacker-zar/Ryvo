@@ -17,6 +17,7 @@ const SECTION_LABELS: Record<SectionId, string> = {
   services: "Servicios",
   products: "Catálogo",
   professionals: "Profesionales",
+  academy: "Academia",
   gallery: "Galería",
   about: "Sobre nosotros",
   reviews: "Reseñas",
