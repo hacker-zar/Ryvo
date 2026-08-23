@@ -1,3 +1,4 @@
+import Icon from "@/components/ui/Icon";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getAdminSession } from "@/lib/admin/session";
@@ -22,7 +23,7 @@ export default async function AdminHomePage() {
   return (
     <AdminChrome>
       {!isSupabaseConfigured ? (
-        <div className="mb-8 rounded-sm border border-brass/40 bg-ink-elevated p-4 text-sm text-bone-muted">
+        <div className="mb-8 radius-sm border border-brass/40 bg-ink-elevated p-4 text-sm text-bone-muted">
           Supabase no está configurado: estás viendo el negocio demo en modo
           solo lectura. Para crear o editar negocios, completá{" "}
           <code className="text-brass">NEXT_PUBLIC_SUPABASE_URL</code> y{" "}
@@ -56,7 +57,10 @@ export default async function AdminHomePage() {
                   /{business.slug}
                 </p>
               </div>
-              <span className="text-bone-muted text-sm">Editar →</span>
+              <span className="text-bone-muted text-sm inline-flex items-center gap-1.5">
+                Editar
+                <Icon name="arrow" size={16} className="shrink-0" />
+              </span>
             </Link>
           ))
         )}

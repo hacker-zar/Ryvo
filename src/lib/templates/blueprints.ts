@@ -1,4 +1,4 @@
-import { SectionId, TemplateLayoutId } from "@/types/business";
+import { Density, SectionId, TemplateLayoutId } from "@/types/business";
 
 // "Blueprint" = cómo compone cada plantilla las secciones exclusivas
 // (Marquee/Statement/BeforeAfter/Social) alrededor de las secciones
@@ -32,6 +32,19 @@ export interface LayoutBlueprint {
   // el picker) + variable CSS que expone next/font (ver src/app/layout.tsx).
   headingFont: { name: string; cssVar: string };
   bodyFont: { name: string; cssVar: string };
+  /**
+   * Densidad propia de la plantilla. Vive acá y no en la base porque es
+   * parte de su carácter, igual que su pareja tipográfica: elegir
+   * "Atelier" ya debería traer el aire que la define, sin que el dueño
+   * tenga que configurarlo aparte.
+   *
+   * Es además lo que resuelve un problema concreto del sistema de
+   * plantillas: Atelier y Studio tienen el MISMO blueprint de slots
+   * (`[{ type: "core" }]`), así que hasta ahora se diferenciaban solo
+   * por la fuente — eran la misma página con otra tipografía. Con el
+   * espacio negativo como eje, pasan a ser dos direcciones distintas.
+   */
+  density: Density;
 }
 
 export const LAYOUT_BLUEPRINTS: Record<TemplateLayoutId, LayoutBlueprint> = {
@@ -39,16 +52,21 @@ export const LAYOUT_BLUEPRINTS: Record<TemplateLayoutId, LayoutBlueprint> = {
     slots: [{ type: "core" }],
     headingFont: { name: "Cormorant Garamond", cssVar: "--font-cormorant" },
     bodyFont: { name: "Inter", cssVar: "--font-inter" },
+    // Lujo discreto: el aire ES la plantilla.
+    density: "amplia",
   },
   noir: {
     slots: [{ type: "marquee" }, { type: "core" }],
     headingFont: { name: "Bebas Neue", cssVar: "--font-bebas" },
     bodyFont: { name: "Inter", cssVar: "--font-inter" },
+    // Urbana y densa: el contenido apretado es parte del tono.
+    density: "compacta",
   },
   studio: {
     slots: [{ type: "core" }],
     headingFont: { name: "DM Sans", cssVar: "--font-dm-sans" },
     bodyFont: { name: "Inter", cssVar: "--font-inter" },
+    density: "estandar",
   },
   editorial: {
     slots: [
@@ -59,6 +77,7 @@ export const LAYOUT_BLUEPRINTS: Record<TemplateLayoutId, LayoutBlueprint> = {
     ],
     headingFont: { name: "Playfair Display", cssVar: "--font-playfair" },
     bodyFont: { name: "Manrope", cssVar: "--font-manrope" },
+    density: "amplia",
   },
   bold: {
     slots: [
@@ -70,6 +89,7 @@ export const LAYOUT_BLUEPRINTS: Record<TemplateLayoutId, LayoutBlueprint> = {
     ],
     headingFont: { name: "Space Grotesk", cssVar: "--font-space-grotesk" },
     bodyFont: { name: "DM Sans", cssVar: "--font-dm-sans" },
+    density: "compacta",
   },
 };
 

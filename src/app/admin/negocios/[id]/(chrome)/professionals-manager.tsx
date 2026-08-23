@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ProfessionalWithServices, Service } from "@/types/business";
@@ -236,14 +237,14 @@ export default function ProfessionalsManager({
                   <button
                     type="submit"
                     disabled={updateStatus.isPending}
-                    className="section-eyebrow text-xs px-4 py-2 rounded-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50"
+                    className="section-eyebrow text-xs px-4 py-2 radius-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50"
                   >
                     {updateStatus.isPending ? "Guardando..." : "Guardar"}
                   </button>
                   <button
                     type="button"
                     onClick={() => select({ category: "profesionales" })}
-                    className="section-eyebrow text-xs px-4 py-2 rounded-sm border border-ink-line text-bone-muted w-fit"
+                    className="section-eyebrow text-xs px-4 py-2 radius-sm border border-ink-line text-bone-muted w-fit"
                   >
                     Cancelar
                   </button>
@@ -263,8 +264,8 @@ export default function ProfessionalsManager({
                       aria-label="Subir"
                       className="text-bone-muted hover:text-brass disabled:opacity-30 transition-colors text-[10px] leading-none"
                     >
-                      ▲
-                    </button>
+                <Icon name="chevron" size={16} rotate={180} />
+              </button>
                     <button
                       type="button"
                       disabled={index === items.length - 1 || reorderingId === professional.id}
@@ -272,8 +273,8 @@ export default function ProfessionalsManager({
                       aria-label="Bajar"
                       className="text-bone-muted hover:text-brass disabled:opacity-30 transition-colors text-[10px] leading-none"
                     >
-                      ▼
-                    </button>
+                <Icon name="chevron" size={16} />
+              </button>
                   </div>
                   <div>
                     <p className="text-bone font-medium">
@@ -382,7 +383,7 @@ export default function ProfessionalsManager({
         <button
           type="submit"
           disabled={createStatus.isPending}
-          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit disabled:opacity-50"
+          className="section-eyebrow text-xs px-4 py-2.5 radius-sm border border-ink-line text-bone hover:border-brass transition-colors w-fit disabled:opacity-50"
         >
           {createStatus.isPending ? "Agregando..." : "+ Agregar"}
         </button>

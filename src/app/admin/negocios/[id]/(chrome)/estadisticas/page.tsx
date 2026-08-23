@@ -55,7 +55,7 @@ export default async function EstadisticasPage({
             <Link
               key={days}
               href={`/admin/negocios/${id}/estadisticas?range=${days}`}
-              className="section-eyebrow text-xs px-3 py-1.5 rounded-sm border transition-colors"
+              className="section-eyebrow text-xs px-3 py-1.5 radius-sm border transition-colors"
               style={{
                 borderColor: rangeDays === days ? "var(--brass)" : "var(--ink-line)",
                 color: rangeDays === days ? "var(--brass)" : "var(--bone-muted)",

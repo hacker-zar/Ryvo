@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -56,7 +57,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`section-eyebrow text-xs px-4 py-2.5 rounded-sm border transition-colors disabled:opacity-50 ${
+      className={`section-eyebrow text-xs px-4 py-2.5 radius-sm border transition-colors disabled:opacity-50 ${
         danger
           ? "border-ink-line text-bone-muted hover:text-red-400 hover:border-red-400"
           : "border-ink-line text-bone hover:border-brass"
@@ -146,17 +147,17 @@ export default function BookingDetailPanel({
         type="button"
         aria-label="Cerrar"
         onClick={onClose}
-        className="absolute inset-0 bg-black/60 animate-[fadeIn_0.2s_ease-out]"
+        className="absolute inset-0 bg-black/60 anim-fade"
       />
 
-      <div className="relative w-full sm:max-w-sm h-full bg-ink border-l border-ink-line overflow-y-auto p-5 animate-[slideUp_0.25s_ease-out]">
+      <div className="relative w-full sm:max-w-sm h-full bg-ink border-l border-ink-line overflow-y-auto p-5 anim-slide-up">
         <button
           type="button"
           onClick={onClose}
           aria-label="Cerrar"
-          className="text-bone-muted hover:text-bone transition-colors text-lg leading-none float-right"
+          className="text-bone-muted hover:text-bone transition-colors float-right"
         >
-          ✕
+          <Icon name="close" size={20} />
         </button>
 
         {showReschedule ? (
@@ -198,7 +199,7 @@ export default function BookingDetailPanel({
             </dl>
 
             {booking.client_id ? (
-              <div className="mt-5 rounded-sm border border-ink-line p-3">
+              <div className="mt-5 radius-sm border border-ink-line p-3">
                 {loadingClient ? (
                   <p className="text-xs text-bone-muted">Buscando cliente...</p>
                 ) : clientProfile ? (
@@ -218,7 +219,8 @@ export default function BookingDetailPanel({
                   href={`/admin/negocios/${businessId}/clientes/${booking.client_id}`}
                   className="section-eyebrow text-xs text-brass mt-2 inline-block hover:opacity-80 transition-opacity"
                 >
-                  Ver cliente →
+                  Ver cliente
+                  <Icon name="arrow" size={16} className="shrink-0" />
                 </Link>
               </div>
             ) : null}
@@ -256,7 +258,7 @@ export default function BookingDetailPanel({
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone-muted hover:text-brass hover:border-brass transition-colors text-center"
+                className="section-eyebrow text-xs px-4 py-2.5 radius-sm border border-ink-line text-bone-muted hover:text-brass hover:border-brass transition-colors text-center"
               >
                 Contactar por WhatsApp
               </a>

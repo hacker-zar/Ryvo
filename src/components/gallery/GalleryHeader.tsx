@@ -1,5 +1,5 @@
 import { Business } from "@/types/business";
-import Reveal from "@/components/Reveal";
+import SectionHeader from "@/components/SectionHeader";
 
 interface GalleryHeaderProps {
   primaryColor: Business["primary_color"];
@@ -18,14 +18,15 @@ interface GalleryHeaderProps {
 export default function GalleryHeader({ primaryColor }: GalleryHeaderProps) {
   return (
     <div className="mx-auto max-w-5xl px-4">
-      <Reveal>
-        <div data-editable-category="apariencia" data-editable-field="galeria">
-          <p className="section-eyebrow" style={{ color: primaryColor }}>
-            Trabajos
-          </p>
-          <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">Galería</h2>
-        </div>
-      </Reveal>
+      {/* Sin `layout`: estas 4 variantes son su propio diseño, consistente
+          sin importar la plantilla del negocio (ver Gallery.tsx). */}
+      <SectionHeader
+        eyebrow="Trabajos"
+        title="Galería"
+        primaryColor={primaryColor}
+        editableCategory="apariencia"
+        editableField="galeria"
+      />
     </div>
   );
 }

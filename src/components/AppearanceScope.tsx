@@ -17,6 +17,8 @@ interface AppearanceScopeProps {
     | "palette_id"
     | "image_radius"
     | "image_shadow"
+    | "image_treatment"
+    | "density"
   >;
   children: React.ReactNode;
 }
@@ -65,6 +67,20 @@ export default function AppearanceScope({
     ? LAYOUT_BLUEPRINTS[business.template_layout]
     : null;
 
+  /**
+   * Densidad efectiva, en tres escalones de prioridad:
+   *   1. lo que el dueño eligió explícitamente (`business.density`)
+   *   2. si no eligió nada, la densidad de su plantilla
+   *   3. sin plantilla, "estandar" — los valores históricos (64/96px)
+   *
+   * Guardar "" en vez de "estandar" cuando el dueño no elige es
+   * deliberado: así, si mañana cambia de plantilla, el aire de la web
+   * lo sigue. Con "estandar" guardado, quedaría clavado en el ritmo de
+   * la plantilla vieja sin que nada lo explique.
+   */
+  const density =
+    business.density || layoutFonts?.density || "estandar";
+
   const background = business.background_color || DEFAULT_BACKGROUND_COLOR;
   // Mezclar hacia blanco "eleva" un fondo oscuro; mezclar hacia negro
   // "eleva" uno claro — así cualquier color libre elegido por el negocio
@@ -104,6 +120,8 @@ export default function AppearanceScope({
       data-layout={business.template_layout ?? undefined}
       data-image-radius={business.image_radius ?? "recto"}
       data-image-shadow={business.image_shadow ?? "ninguna"}
+      data-image-treatment={business.image_treatment ?? "natural"}
+      data-density={density}
       // Pinta el fondo acá explícitamente: <body> usa --background/
       // --foreground definidos en :root (siempre el default oscuro), y
       // las variables de acá abajo solo alcanzan a los descendientes de

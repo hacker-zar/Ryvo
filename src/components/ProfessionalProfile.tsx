@@ -35,7 +35,7 @@ export default function ProfessionalProfile({
   const firstName = professional.name.split(" ")[0];
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-16 md:py-24">
+    <section className="mx-auto max-w-3xl px-4 section-y">
       <Reveal>
         <div className="grid md:grid-cols-[220px_1fr] gap-8 items-start">
           <div className="image-frame relative aspect-square overflow-hidden bg-ink-elevated">

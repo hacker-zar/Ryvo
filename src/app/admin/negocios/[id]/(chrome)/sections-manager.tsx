@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SectionConfig, SectionId } from "@/types/business";
@@ -113,7 +114,7 @@ export default function SectionsManager({
         Orden de secciones
       </p>
       <p className="text-[11px] text-bone-muted/70 mb-3">
-        Arrastrá (☰) o usá las flechas para reordenar, y el interruptor
+        Arrastrá desde la manija o usá las flechas para reordenar, y el interruptor
         para mostrar u ocultar cada sección. Una sección activada pero sin
         contenido (ej. Reseñas sin ninguna cargada) simplemente no se
         muestra en la web — no es un error.
@@ -124,9 +125,7 @@ export default function SectionsManager({
 
       <div className="divide-y divide-ink-line border-t border-b border-ink-line">
         <div className="py-3 flex items-center gap-3 opacity-60">
-          <span className="text-bone-muted text-xs w-4 text-center" aria-hidden="true">
-            ☰
-          </span>
+          <Icon name="drag" size={16} className="text-bone-muted shrink-0" />
           <span className="flex-1 text-sm text-bone">Inicio</span>
           <span className="text-[11px] text-bone-muted/70">Fija</span>
         </div>
@@ -143,12 +142,11 @@ export default function SectionsManager({
               dragOverIndex === index ? "bg-ink-elevated" : ""
             }`}
           >
-            <span
-              className="text-bone-muted text-xs w-4 text-center cursor-grab active:cursor-grabbing"
-              aria-hidden="true"
-            >
-              ☰
-            </span>
+            <Icon
+              name="drag"
+              size={16}
+              className="text-bone-muted shrink-0 cursor-grab active:cursor-grabbing"
+            />
             <span className="flex-1 text-sm text-bone">
               {SECTION_LABELS[section.id]}
             </span>
@@ -160,7 +158,7 @@ export default function SectionsManager({
                 aria-label="Subir"
                 className="text-bone-muted hover:text-brass disabled:opacity-30 transition-colors text-[10px] leading-none"
               >
-                ▲
+                <Icon name="chevron" size={16} rotate={180} />
               </button>
               <button
                 type="button"
@@ -169,7 +167,7 @@ export default function SectionsManager({
                 aria-label="Bajar"
                 className="text-bone-muted hover:text-brass disabled:opacity-30 transition-colors text-[10px] leading-none"
               >
-                ▼
+                <Icon name="chevron" size={16} />
               </button>
             </div>
             <button

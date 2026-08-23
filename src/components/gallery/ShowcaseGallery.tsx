@@ -28,7 +28,7 @@ export default function ShowcaseGallery({
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="galeria" className="py-16 md:py-24">
+    <section id="galeria" className="section-y">
       <GalleryHeader primaryColor={primaryColor} />
 
       <div className="mx-auto mt-10 max-w-4xl px-4">
@@ -44,7 +44,7 @@ export default function ShowcaseGallery({
             alt={`${businessName} - foto ${activeIndex + 1}`}
             fill
             sizes="(min-width: 768px) 60vw, 90vw"
-            className="object-cover animate-[fadeIn_0.35s_ease-out]"
+            className="object-cover anim-fade"
           />
         </button>
 

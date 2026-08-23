@@ -33,7 +33,7 @@ export default function TwoColumnLayout({ left, right }: TwoColumnLayoutProps) {
             key={tab.key}
             type="button"
             onClick={() => setMobileTab(tab.key)}
-            className="section-eyebrow text-xs px-4 py-2 rounded-sm border transition-colors"
+            className="section-eyebrow text-xs px-4 py-2 radius-sm border transition-colors"
             style={{
               borderColor:
                 mobileTab === tab.key ? "var(--brass)" : "var(--ink-line)",

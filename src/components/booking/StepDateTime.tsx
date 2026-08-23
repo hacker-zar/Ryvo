@@ -138,7 +138,7 @@ export default function StepDateTime({
       <h3 className="section-title mt-1 text-xl text-bone">Fecha y hora</h3>
 
       {conflictMessage ? (
-        <p className="mt-3 rounded-sm border border-red-400/40 bg-red-400/10 px-3 py-2.5 text-sm text-red-400">
+        <p className="mt-3 radius-sm border border-red-400/40 bg-red-400/10 px-3 py-2.5 text-sm text-red-400">
           {conflictMessage}
         </p>
       ) : null}
@@ -167,7 +167,7 @@ export default function StepDateTime({
                   key={loc.id}
                   type="button"
                   onClick={() => handleSelectLocation(loc.id)}
-                  className={`rounded-sm border px-3.5 py-2.5 text-xs transition-colors ${
+                  className={`radius-sm border px-3.5 py-2.5 text-xs transition-colors ${
                     pulsingLocationId === loc.id ? "select-pulse" : ""
                   }`}
                   style={{
@@ -198,7 +198,7 @@ export default function StepDateTime({
               <button
                 type="button"
                 onClick={() => setRetryCount((c) => c + 1)}
-                className="section-eyebrow mt-2 text-xs px-4 py-2 rounded-sm border border-ink-line text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+                className="section-eyebrow mt-2 text-xs px-4 py-2 radius-sm border border-ink-line text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
               >
                 Reintentar
               </button>
@@ -214,7 +214,7 @@ export default function StepDateTime({
                     key={slot}
                     type="button"
                     onClick={() => handleSelectTime(slot)}
-                    className={`ticket-number rounded-sm border py-2.5 text-xs transition-colors ${
+                    className={`ticket-number radius-sm border py-2.5 text-xs transition-colors ${
                       pulsingSlot === slot ? "select-pulse" : ""
                     }`}
                     style={{

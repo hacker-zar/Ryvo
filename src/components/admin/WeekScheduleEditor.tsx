@@ -18,7 +18,7 @@ const DAYS: { code: OpeningHours["day"]; label: string }[] = [
 ];
 
 const timeInputClasses =
-  "rounded-sm border border-ink-line bg-ink-elevated px-2 py-1.5 text-xs text-bone focus:outline-none focus:border-brass transition-colors disabled:opacity-40";
+  "radius-sm border border-ink-line bg-ink-elevated px-2 py-1.5 text-xs text-bone focus:outline-none focus:border-brass transition-colors disabled:opacity-40";
 
 /** Arma la lista completa de 7 días a partir de lo que haya en `value`,
  *  completando con "cerrado" los días que todavía no se cargaron. */

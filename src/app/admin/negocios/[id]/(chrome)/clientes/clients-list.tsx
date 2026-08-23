@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Client } from "@/types/business";
@@ -57,7 +58,10 @@ export default function ClientsList({ businessId, clients }: ClientsListProps) {
                   {client.email ? ` · ${client.email}` : ""}
                 </p>
               </div>
-              <span className="text-xs text-bone-muted shrink-0">Ver ficha →</span>
+              <span className="text-xs text-bone-muted shrink-0 inline-flex items-center gap-1.5">
+                Ver ficha
+                <Icon name="arrow" size={16} className="shrink-0" />
+              </span>
             </Link>
           ))
         )}

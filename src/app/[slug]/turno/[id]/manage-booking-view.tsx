@@ -121,7 +121,7 @@ export default function ManageBookingView({
             <button
               type="button"
               onClick={() => setMode("reschedule")}
-              className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass transition-colors"
+              className="section-eyebrow radius-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass transition-colors"
             >
               Reprogramar
             </button>
@@ -130,7 +130,7 @@ export default function ManageBookingView({
             type="button"
             disabled={cancelStatus.isPending}
             onClick={handleCancel}
-            className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone-muted hover:text-red-400 hover:border-red-400 transition-colors disabled:opacity-50"
+            className="section-eyebrow radius-sm border border-ink-line px-5 py-3 text-xs text-bone-muted hover:text-red-400 hover:border-red-400 transition-colors disabled:opacity-50"
           >
             {cancelStatus.isPending ? "Cancelando..." : "Cancelar turno"}
           </button>
@@ -148,7 +148,7 @@ export default function ManageBookingView({
                 professionalId: booking.professional_id ?? undefined,
               })
             }
-            className="section-eyebrow rounded-sm font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity"
+            className="section-eyebrow radius-sm font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: primaryColor, color: ctaTextColor }}
           >
             Reservar de nuevo
@@ -159,7 +159,7 @@ export default function ManageBookingView({
           <button
             type="button"
             onClick={open}
-            className="section-eyebrow rounded-sm font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity"
+            className="section-eyebrow radius-sm font-semibold text-xs px-6 py-3.5 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: primaryColor, color: ctaTextColor }}
           >
             Reservar un turno
@@ -232,7 +232,7 @@ function RescheduleForm({
         <button
           type="button"
           onClick={onCancel}
-          className="section-eyebrow text-xs px-5 py-3 rounded-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
+          className="section-eyebrow text-xs px-5 py-3 radius-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
         >
           Cancelar
         </button>
@@ -240,7 +240,7 @@ function RescheduleForm({
           type="button"
           disabled={!date || !time || submitting}
           onClick={handleConfirm}
-          className="section-eyebrow flex-1 text-xs px-5 py-3 rounded-sm font-semibold disabled:opacity-40 transition-opacity"
+          className="section-eyebrow flex-1 text-xs px-5 py-3 radius-sm font-semibold disabled:opacity-40 transition-opacity"
           style={{ backgroundColor: primaryColor, color: readableTextColor(primaryColor) }}
         >
           {submitting ? "Guardando..." : "Confirmar nuevo horario"}

@@ -19,7 +19,7 @@ interface StepDetailsProps {
 }
 
 const inputClasses =
-  "rounded-sm border border-ink-line bg-ink-elevated px-3 py-2.5 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors";
+  "radius-sm border border-ink-line bg-ink-elevated px-3 py-2.5 text-sm text-bone placeholder:text-bone-muted/60 focus:outline-none focus:border-brass transition-colors";
 
 function formatDateLong(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -144,7 +144,7 @@ export default function StepDetails({
       </div>
 
       {/* Resumen */}
-      <div className="mt-6 rounded-sm border border-ink-line bg-ink-elevated p-4">
+      <div className="mt-6 radius-sm border border-ink-line bg-ink-elevated p-4">
         <p className="section-eyebrow text-bone-muted mb-2.5">Resumen</p>
         <dl className="grid gap-1.5 text-sm">
           <div className="flex justify-between">

@@ -158,7 +158,7 @@ export default function ReschedulePanel({
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
+            className="section-eyebrow text-xs px-4 py-2.5 radius-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
           >
             Cancelar
           </button>
@@ -166,7 +166,7 @@ export default function ReschedulePanel({
             type="button"
             disabled={submitting}
             onClick={confirm}
-            className="section-eyebrow text-xs px-4 py-2.5 rounded-sm bg-brass text-ink font-semibold disabled:opacity-50"
+            className="section-eyebrow text-xs px-4 py-2.5 radius-sm bg-brass text-ink font-semibold disabled:opacity-50"
           >
             {submitting ? "Confirmando..." : "Confirmar"}
           </button>
@@ -189,7 +189,7 @@ export default function ReschedulePanel({
             {eligibleProfessionals.map((p) => (
               <label
                 key={p.id}
-                className="flex items-center gap-2 rounded-sm border px-3 py-2 text-sm text-bone cursor-pointer"
+                className="flex items-center gap-2 radius-sm border px-3 py-2 text-sm text-bone cursor-pointer"
                 style={{
                   borderColor: professionalId === p.id ? "var(--brass)" : "var(--ink-line)",
                 }}
@@ -228,7 +228,7 @@ export default function ReschedulePanel({
                 key={slot}
                 type="button"
                 onClick={() => setTime(slot)}
-                className="ticket-number rounded-sm border py-2 text-xs transition-colors"
+                className="ticket-number radius-sm border py-2 text-xs transition-colors"
                 style={{
                   borderColor: time === slot ? "var(--brass)" : "var(--ink-line)",
                   backgroundColor: time === slot ? "var(--brass)" : "transparent",
@@ -252,7 +252,7 @@ export default function ReschedulePanel({
         <button
           type="button"
           onClick={onCancel}
-          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
+          className="section-eyebrow text-xs px-4 py-2.5 radius-sm border border-ink-line text-bone-muted hover:text-bone transition-colors"
         >
           Volver
         </button>
@@ -260,7 +260,7 @@ export default function ReschedulePanel({
           type="button"
           disabled={!time}
           onClick={() => setConfirming(true)}
-          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm bg-brass text-ink font-semibold disabled:opacity-40"
+          className="section-eyebrow text-xs px-4 py-2.5 radius-sm bg-brass text-ink font-semibold disabled:opacity-40"
         >
           Continuar
         </button>

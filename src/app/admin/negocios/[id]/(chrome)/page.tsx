@@ -1,3 +1,4 @@
+import Icon from "@/components/ui/Icon";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -99,7 +100,8 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
             rel="noopener noreferrer"
             className="text-xs text-bone-muted hover:text-brass transition-colors"
           >
-            Ver sitio público →
+            Ver sitio público
+            <Icon name="arrow" size={16} className="shrink-0" />
           </a>
         </div>
       </div>

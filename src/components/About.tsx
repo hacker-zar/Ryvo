@@ -26,7 +26,7 @@ export default function About({ business, layout }: AboutProps) {
 
   return (
     <section className={isAtelier ? "bg-ink" : "bg-ink-elevated"}>
-      <div className={`mx-auto max-w-5xl px-4 ${isAtelier ? "py-20 md:py-32" : "py-16 md:py-24"}`}>
+      <div className={`mx-auto max-w-5xl px-4 ${isAtelier ? "py-20 md:py-32" : "section-y"}`}>
         <div
           className={`grid items-center gap-10 ${
             image ? "md:grid-cols-2 md:gap-16" : "max-w-2xl"

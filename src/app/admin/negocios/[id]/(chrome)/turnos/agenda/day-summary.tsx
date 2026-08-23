@@ -1,6 +1,7 @@
 import { BookingWithDetails } from "@/lib/data/business-repository";
 import { formatPrice } from "@/lib/format";
-import { STATUS_COLOR, STATUS_LABELS } from "../booking-status";
+import { STATUS_LABELS } from "../booking-status";
+import StatusDot from "@/components/ui/StatusDot";
 import { BookingStatus } from "@/types/business";
 
 interface DaySummaryProps {
@@ -54,19 +55,19 @@ export default function DaySummary({ bookings }: DaySummaryProps) {
 
       {counts.map(({ status, count }) => (
         <span key={status} className="flex items-center gap-1.5 text-xs text-bone-muted">
-          <span
-            aria-hidden="true"
-            className="h-1.5 w-1.5 rounded-full shrink-0"
-            style={{ backgroundColor: STATUS_COLOR[status] }}
-          />
+          <StatusDot status={status} />
           {count} {STATUS_LABELS[status]}
         </span>
       ))}
 
+      {/* La facturación estimada es probablemente el número que más le
+          importa al dueño — antes se veía exactamente igual que "2
+          cancelados", en el mismo text-xs apagado. Va con el mismo peso
+          tipográfico que el total de turnos. */}
       {billable.length > 0 && !hasIncompletePricing ? (
-        <span className="text-xs text-bone-muted">
-          Facturación estimada:{" "}
-          <span className="text-bone font-medium">{formatPrice(estimatedRevenue)}</span>
+        <span className="ticket-number text-2xl text-bone">
+          {formatPrice(estimatedRevenue)}{" "}
+          <span className="text-xs text-bone-muted">estimado</span>
         </span>
       ) : null}
     </div>

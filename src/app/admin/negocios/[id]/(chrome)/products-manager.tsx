@@ -28,9 +28,9 @@ interface ProductsManagerProps {
 }
 
 const buttonPrimary =
-  "section-eyebrow text-xs px-4 py-2.5 rounded-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50";
+  "section-eyebrow text-xs px-4 py-2.5 radius-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50";
 const buttonSecondary =
-  "section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone-muted w-fit";
+  "section-eyebrow text-xs px-4 py-2.5 radius-sm border border-ink-line text-bone-muted w-fit";
 
 /**
  * Catálogo — grilla visual de productos (foto/nombre/precio), NO una
@@ -102,7 +102,7 @@ export default function ProductsManager({
         <button
           type="button"
           onClick={() => setCreating((v) => !v)}
-          className="section-eyebrow text-xs px-4 py-2.5 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors shrink-0"
+          className="section-eyebrow text-xs px-4 py-2.5 radius-sm border border-ink-line text-bone hover:border-brass transition-colors shrink-0"
         >
           {creating ? "Cancelar" : "+ Agregar producto"}
         </button>
@@ -111,7 +111,7 @@ export default function ProductsManager({
       {creating ? (
         <form
           action={handleCreate}
-          className="mt-4 grid gap-3 max-w-sm border border-ink-line rounded-sm p-4"
+          className="mt-4 grid gap-3 max-w-sm border border-ink-line radius-sm p-4"
         >
           <ImageUploadField folder={businessId} label="Foto" name="image" />
           <input
@@ -159,7 +159,7 @@ export default function ProductsManager({
                 <form
                   key={product.id}
                   action={(fd) => handleUpdate(product.id, fd)}
-                  className="border border-ink-line rounded-sm p-4 grid gap-3"
+                  className="border border-ink-line radius-sm p-4 grid gap-3"
                 >
                   <ImageUploadField
                     folder={businessId}
@@ -216,7 +216,7 @@ export default function ProductsManager({
               ) : (
                 <div
                   key={product.id}
-                  className="border border-ink-line rounded-sm overflow-hidden flex flex-col"
+                  className="border border-ink-line radius-sm overflow-hidden flex flex-col"
                 >
                   <div className="relative aspect-square bg-ink-elevated">
                     {product.image ? (

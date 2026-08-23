@@ -56,7 +56,7 @@ export default function MarqueeGallery({
   // muestra estática en vez de fingir movimiento.
   if (images.length <= 1) {
     return (
-      <section id="galeria" className="py-16 md:py-24">
+      <section id="galeria" className="section-y">
         <GalleryHeader primaryColor={primaryColor} />
         <div className="mt-10 px-4">
           <button
@@ -85,7 +85,7 @@ export default function MarqueeGallery({
   const durationSeconds = Math.max(MIN_DURATION_SECONDS, sequenceLength * SECONDS_PER_TRACK_ITEM);
 
   return (
-    <section id="galeria" className="py-16 md:py-24">
+    <section id="galeria" className="section-y">
       <GalleryHeader primaryColor={primaryColor} />
 
       {/* Mobile: sin animación, scroll horizontal táctil normal. */}

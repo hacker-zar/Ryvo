@@ -1,5 +1,6 @@
 "use server";
 
+import { STORED_ANIMATION_PRESETS } from "@/lib/appearance-presets";
 import { revalidatePath } from "next/cache";
 import { requireAdminFor, requireBusinessMember, requireSuperAdmin } from "@/lib/admin/authorize";
 import { hashPassword } from "@/lib/admin/session";
@@ -175,6 +176,10 @@ const UPDATABLE_BUSINESS_FIELDS = [
   "about_image",
   "favicon",
   "hero_video",
+  // Apertura del hero. Texto libre: vacío = el texto por defecto de
+  // siempre (ver Hero.tsx), no hay preset que validar.
+  "hero_kicker",
+  "hero_headline",
 ] as const;
 
 const HERO_VIDEO_POSITIONS = new Set(["center", "top", "bottom"]);
@@ -620,9 +625,18 @@ export async function adminDeleteLocation(
 
 const TYPOGRAPHY_PRESETS = new Set(["clasica", "moderna", "elegante"]);
 const BUTTON_STYLES = new Set(["redondeado", "suave", "recto"]);
-const ANIMATION_PRESETS = new Set(["ninguna", "sutil", "dinamica"]);
+// Antes era Set(["ninguna","sutil","dinamica"]) — NO incluía `revelado`
+// ni `escalonada`, así que elegir cualquiera de esos dos en el editor se
+// descartaba en silencio acá y se guardaba "sutil". Ahora la lista sale
+// de un solo lugar y contempla todos los valores que la base acepta.
+const ANIMATION_PRESETS = new Set<string>(STORED_ANIMATION_PRESETS);
 const IMAGE_RADIUS_PRESETS = new Set(["recto", "suave", "redondeado", "muy-redondeado"]);
 const IMAGE_SHADOW_PRESETS = new Set(["ninguna", "suave", "media", "marcada"]);
+const IMAGE_TREATMENTS = new Set(["natural", "byn", "contraste", "calido"]);
+// "" incluido a propósito: es un valor válido y significa "heredar la
+// densidad de la plantilla" (ver AppearanceScope). El CHECK de la base
+// también lo acepta.
+const DENSITIES = new Set(["", "compacta", "estandar", "amplia"]);
 
 export async function adminUpdateAppearance(
   businessId: string,
@@ -635,6 +649,10 @@ export async function adminUpdateAppearance(
   const animation = String(formData.get("animation_preset") || "sutil");
   const imageRadius = String(formData.get("image_radius") || "recto");
   const imageShadow = String(formData.get("image_shadow") || "ninguna");
+  const imageTreatment = String(formData.get("image_treatment") || "natural");
+  // Sin `|| "..."`: "" es un valor con significado propio acá, y el
+  // fallback lo colapsaría contra "no vino el campo".
+  const densityRaw = String(formData.get("density") ?? "");
 
   const input: Partial<BusinessInput> = {
     primary_color: String(formData.get("primary_color") || "#c9a15a"),
@@ -656,6 +674,12 @@ export async function adminUpdateAppearance(
     image_shadow: IMAGE_SHADOW_PRESETS.has(imageShadow)
       ? (imageShadow as BusinessInput["image_shadow"])
       : "ninguna",
+    image_treatment: IMAGE_TREATMENTS.has(imageTreatment)
+      ? (imageTreatment as BusinessInput["image_treatment"])
+      : "natural",
+    density: DENSITIES.has(densityRaw)
+      ? (densityRaw as BusinessInput["density"])
+      : "",
   };
 
   const result = await updateBusiness(businessId, input);

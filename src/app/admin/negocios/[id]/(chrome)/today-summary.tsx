@@ -1,3 +1,4 @@
+import Icon from "@/components/ui/Icon";
 import Link from "next/link";
 import { BookingWithDetails } from "@/lib/data/business-repository";
 
@@ -29,7 +30,7 @@ export default function TodaySummary({
   return (
     <Link
       href={`/admin/negocios/${businessId}/turnos`}
-      className="mt-6 flex items-center justify-between gap-4 flex-wrap rounded-sm border border-ink-line bg-ink-elevated px-5 py-4 hover:border-brass transition-colors group"
+      className="mt-6 flex items-center justify-between gap-4 flex-wrap radius-sm border border-ink-line bg-ink-elevated px-5 py-4 hover:border-brass transition-colors group"
     >
       <div className="flex items-center gap-4">
         <span className="ticket-number text-3xl text-brass shrink-0">
@@ -55,7 +56,8 @@ export default function TodaySummary({
         </div>
       </div>
       <span className="section-eyebrow text-xs text-bone-muted group-hover:text-brass transition-colors shrink-0">
-        Ver turnos de hoy →
+        Ver turnos de hoy
+        <Icon name="arrow" size={16} className="shrink-0" />
       </span>
     </Link>
   );

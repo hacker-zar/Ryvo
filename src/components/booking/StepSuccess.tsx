@@ -125,7 +125,7 @@ export default function StepSuccess({
             )}
             target="_blank"
             rel="noopener noreferrer"
-            className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+            className="section-eyebrow radius-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
           >
             Confirmar por WhatsApp
           </a>
@@ -134,14 +134,14 @@ export default function StepSuccess({
           href={calendarUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+          className="section-eyebrow radius-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
         >
           Agregar al calendario
         </a>
         {bookingId ? (
           <Link
             href={`/${slug}/turno/${bookingId}`}
-            className="section-eyebrow rounded-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass active:opacity-60 focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
+            className="section-eyebrow radius-sm border border-ink-line px-5 py-3 text-xs text-bone hover:border-brass active:opacity-60 focus-visible:ring-2 focus-visible:ring-brass/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-colors"
           >
             <ManageBookingLabel />
           </Link>
@@ -151,7 +151,7 @@ export default function StepSuccess({
       <button
         type="button"
         onClick={onClose}
-        className="section-eyebrow mt-6 rounded-sm font-semibold text-xs px-7 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-opacity"
+        className="section-eyebrow mt-6 radius-sm font-semibold text-xs px-7 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink transition-opacity"
         style={{
           backgroundColor: business.primary_color,
           color: readableTextColor(business.primary_color),

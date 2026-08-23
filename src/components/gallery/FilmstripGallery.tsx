@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useState } from "react";
 import Image from "next/image";
 import { Business } from "@/types/business";
@@ -33,7 +34,7 @@ export default function FilmstripGallery({
   }
 
   return (
-    <section id="galeria" className="py-16 md:py-24">
+    <section id="galeria" className="section-y">
       <GalleryHeader primaryColor={primaryColor} />
 
       <div className="mt-10 px-4">
@@ -45,7 +46,7 @@ export default function FilmstripGallery({
               aria-label="Foto anterior"
               className="hidden shrink-0 h-10 w-10 rounded-full border border-ink-line text-bone-muted hover:border-brass hover:text-brass transition-colors sm:flex items-center justify-center"
             >
-              ‹
+              <Icon name="chevron" size={20} rotate={90} />
             </button>
           ) : null}
 
@@ -88,7 +89,7 @@ export default function FilmstripGallery({
               aria-label="Foto siguiente"
               className="hidden shrink-0 h-10 w-10 rounded-full border border-ink-line text-bone-muted hover:border-brass hover:text-brass transition-colors sm:flex items-center justify-center"
             >
-              ›
+              <Icon name="chevron" size={20} rotate={270} />
             </button>
           ) : null}
         </div>

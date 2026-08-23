@@ -30,7 +30,7 @@ export default function BeforeAfter({ images, accentColor }: BeforeAfterProps) {
   }
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-16 md:py-24">
+    <section className="mx-auto max-w-4xl px-4 section-y">
       <Reveal>
         <p className="section-eyebrow" style={{ color: accentColor }}>
           Transformaciones

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Business, TemplateLayoutId } from "@/types/business";
 import Reveal from "@/components/Reveal";
+import SectionHeader from "@/components/SectionHeader";
 import Lightbox from "@/components/Lightbox";
 
 interface EditorialGalleryProps {
@@ -38,22 +39,26 @@ export default function EditorialGallery({
 }: EditorialGalleryProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const eyebrowAndTitle = (
-    <div data-editable-category="apariencia" data-editable-field="galeria">
-      <p className="section-eyebrow" style={{ color: primaryColor }}>
-        Trabajos
-      </p>
-      <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">Galería</h2>
-    </div>
+  // Ya trae su propio <Reveal> adentro (ver SectionHeader) — los usos de
+  // abajo no lo envuelven, para no anidar dos entradas sobre el mismo bloque.
+  const sectionHeader = (
+    <SectionHeader
+      eyebrow="Trabajos"
+      title="Galería"
+      primaryColor={primaryColor}
+      layout={layout}
+      editableCategory="apariencia"
+      editableField="galeria"
+    />
   );
 
   // === NOIR — foto grande, una o dos columnas, hover marcado: la galería
   // como pieza cinematográfica, no como grilla de miniaturas. ===
   if (layout === "noir") {
     return (
-      <section id="galeria" className="py-16 md:py-24">
+      <section id="galeria" className="section-y">
         <div className="mx-auto max-w-5xl px-4">
-          <Reveal>{eyebrowAndTitle}</Reveal>
+          {sectionHeader}
         </div>
         <div className="mt-10 flex gap-2 overflow-x-auto pb-2 px-4 snap-x snap-mandatory hide-scrollbar md:hidden">
           {images.map((src, i) => (
@@ -100,9 +105,9 @@ export default function EditorialGallery({
   // === STUDIO — grilla pareja y limpia (sin mosaico asimétrico). ===
   if (layout === "studio") {
     return (
-      <section id="galeria" className="py-16 md:py-24">
+      <section id="galeria" className="section-y">
         <div className="mx-auto max-w-5xl px-4">
-          <Reveal>{eyebrowAndTitle}</Reveal>
+          {sectionHeader}
         </div>
         <div className="mt-10 flex gap-2 overflow-x-auto pb-2 px-4 snap-x snap-mandatory hide-scrollbar md:hidden">
           {images.map((src, i) => (
@@ -150,9 +155,9 @@ export default function EditorialGallery({
   const pattern = FEATURE_PATTERNS[layout ?? "default"] ?? FEATURE_PATTERNS.default;
 
   return (
-    <section id="galeria" className="py-16 md:py-24">
+    <section id="galeria" className="section-y">
       <div className="mx-auto max-w-5xl px-4">
-        <Reveal>{eyebrowAndTitle}</Reveal>
+        {sectionHeader}
       </div>
 
       <div className="mt-10 flex gap-2 overflow-x-auto pb-2 px-4 snap-x snap-mandatory hide-scrollbar md:hidden">

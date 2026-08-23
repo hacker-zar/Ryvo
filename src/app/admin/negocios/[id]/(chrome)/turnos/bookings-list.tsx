@@ -32,7 +32,7 @@ function StatusBadge({ status }: { status: BookingStatus }) {
   const color = STATUS_COLOR[status] ?? "var(--bone-muted)";
   return (
     <span
-      className="section-eyebrow text-[10px] px-2 py-0.5 rounded-sm shrink-0"
+      className="section-eyebrow text-[10px] px-2 py-0.5 radius-sm shrink-0"
       style={{ color, border: "1px solid currentColor" }}
     >
       {STATUS_LABELS[status] ?? status}
@@ -68,7 +68,7 @@ function QuickActions({
             type="button"
             disabled={disabled}
             onClick={() => onStatusChange("completed")}
-            className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50"
+            className="section-eyebrow text-[10px] px-3 py-2 radius-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50"
           >
             Completado
           </button>
@@ -76,7 +76,7 @@ function QuickActions({
             type="button"
             disabled={disabled}
             onClick={() => onStatusChange("no_show")}
-            className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone-muted hover:text-orange-400 hover:border-orange-400 transition-colors disabled:opacity-50"
+            className="section-eyebrow text-[10px] px-3 py-2 radius-sm border border-ink-line text-bone-muted hover:text-orange-400 hover:border-orange-400 transition-colors disabled:opacity-50"
           >
             No asistió
           </button>
@@ -88,7 +88,7 @@ function QuickActions({
               type="button"
               disabled={disabled}
               onClick={() => onStatusChange("confirmed")}
-              className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50"
+              className="section-eyebrow text-[10px] px-3 py-2 radius-sm border border-ink-line text-bone hover:border-brass transition-colors disabled:opacity-50"
             >
               Confirmar
             </button>
@@ -97,7 +97,7 @@ function QuickActions({
             type="button"
             disabled={disabled}
             onClick={() => onStatusChange("cancelled")}
-            className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone-muted hover:text-red-400 hover:border-red-400 transition-colors disabled:opacity-50"
+            className="section-eyebrow text-[10px] px-3 py-2 radius-sm border border-ink-line text-bone-muted hover:text-red-400 hover:border-red-400 transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -110,7 +110,7 @@ function QuickActions({
         )}
         target="_blank"
         rel="noopener noreferrer"
-        className="section-eyebrow text-[10px] px-3 py-2 rounded-sm border border-ink-line text-bone-muted hover:text-brass hover:border-brass transition-colors"
+        className="section-eyebrow text-[10px] px-3 py-2 radius-sm border border-ink-line text-bone-muted hover:text-brass hover:border-brass transition-colors"
       >
         Contactar
       </a>
@@ -161,7 +161,7 @@ export default function BookingsList({
             type="date"
             value={selectedDate ?? ""}
             onChange={(e) => goToDate(e.target.value)}
-            className="rounded-sm border border-ink-line bg-ink-elevated px-3 py-2 text-sm text-bone focus:outline-none focus:border-brass transition-colors"
+            className="radius-sm border border-ink-line bg-ink-elevated px-3 py-2 text-sm text-bone focus:outline-none focus:border-brass transition-colors"
           />
         </div>
         {selectedDate !== today ? (
@@ -240,7 +240,7 @@ export default function BookingsList({
           {bookings.map((booking) => (
             <div
               key={booking.id}
-              className="rounded-sm border border-ink-line bg-ink-elevated p-4 flex items-start justify-between gap-4 flex-wrap"
+              className="radius-sm border border-ink-line bg-ink-elevated p-4 flex items-start justify-between gap-4 flex-wrap"
             >
               <div className="flex items-start gap-4">
                 <span className="ticket-number text-2xl text-brass shrink-0">

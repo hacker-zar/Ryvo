@@ -1,17 +1,23 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useEffect, useRef, useState } from "react";
 import {
   AnimationPreset,
   Business,
   ButtonStyle,
+  Density,
   ImageRadiusPreset,
   ImageShadowPreset,
+  ImageTreatment,
   TypographyPreset,
 } from "@/types/business";
 import { adminUpdateAppearance } from "@/lib/admin/actions";
 import { contrastRatio, readableTextColor } from "@/lib/format";
-import { DEFAULT_BACKGROUND_COLOR } from "@/lib/appearance-presets";
+import {
+  DEFAULT_BACKGROUND_COLOR,
+  PUBLIC_ANIMATION_PRESETS,
+} from "@/lib/appearance-presets";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
 import { useAsyncStatus } from "@/lib/useAsyncStatus";
 
@@ -34,6 +40,8 @@ interface AppearanceFormProps {
     | "animation_preset"
     | "image_radius"
     | "image_shadow"
+    | "image_treatment"
+    | "density"
   >;
 }
 
@@ -49,12 +57,16 @@ const BUTTON_STYLE_OPTIONS: { value: ButtonStyle; label: string }[] = [
   { value: "recto", label: "Recto" },
 ];
 
+// Tres opciones, no cinco — ver PUBLIC_ANIMATION_PRESETS. "Editorial"
+// guarda el valor histórico `revelado` a propósito (el CHECK de la base
+// no acepta valores nuevos sin migración). Un negocio con `dinamica` o
+// `escalonada` guardadas de antes no aparece seleccionado en ninguna de
+// estas tres, y al guardar pasa a "Sutil" — que es exactamente cómo ya
+// se estaba viendo.
 const ANIMATION_OPTIONS: { value: AnimationPreset; label: string; hint: string }[] = [
   { value: "ninguna", label: "Ninguna", hint: "Todo visible de entrada, sin movimiento" },
   { value: "sutil", label: "Sutil", hint: "Aparición suave al hacer scroll (recomendado)" },
-  { value: "dinamica", label: "Dinámica", hint: "Un poco más de movimiento y escala" },
-  { value: "revelado", label: "Reveal", hint: "Aparece como si se descorriera una cortina" },
-  { value: "escalonada", label: "Stagger", hint: "Los elementos de una sección aparecen en cadena" },
+  { value: "revelado", label: "Editorial", hint: "El contenido se descorre como una cortina" },
 ];
 
 const IMAGE_RADIUS_OPTIONS: { value: ImageRadiusPreset; label: string; hint: string }[] = [
@@ -71,8 +83,34 @@ const IMAGE_SHADOW_OPTIONS: { value: ImageShadowPreset; label: string }[] = [
   { value: "marcada", label: "Marcada" },
 ];
 
+const IMAGE_TREATMENT_OPTIONS: { value: ImageTreatment; label: string }[] = [
+  { value: "natural", label: "Natural" },
+  { value: "byn", label: "Blanco y negro" },
+  { value: "contraste", label: "Alto contraste" },
+  { value: "calido", label: "Cálido" },
+];
+
+// "" = heredar de la plantilla. Es un valor real, no "sin valor": ver
+// AppearanceScope — guardarlo así hace que cambiar de plantilla también
+// cambie el aire, en vez de quedar clavado en el de la plantilla vieja.
+const DENSITY_OPTIONS: { value: Density | ""; label: string; hint: string }[] = [
+  { value: "", label: "Automática", hint: "según tu plantilla" },
+  { value: "compacta", label: "Compacta", hint: "más contenido a la vista" },
+  { value: "estandar", label: "Estándar", hint: "equilibrada" },
+  { value: "amplia", label: "Amplia", hint: "más aire, más editorial" },
+];
+
+/** Muestra para la vista previa de imagen: un degradado con dos matices
+ *  distintos (cálido y frío) para que Blanco y negro / Alto contraste /
+ *  Cálido se distingan entre sí. SVG inline, sin request de red. */
+const IMAGE_SAMPLE_SRC =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9a15a"/><stop offset="0.55" stop-color="#8a6b4f"/><stop offset="1" stop-color="#3f5670"/></linearGradient></defs><rect width="96" height="96" fill="url(#g)"/><circle cx="30" cy="34" r="16" fill="#f2e6d2" opacity="0.75"/></svg>`
+  );
+
 const colorInputClasses =
-  "h-10 w-full rounded-sm border border-ink-line bg-ink-elevated";
+  "h-10 w-full radius-sm border border-ink-line bg-ink-elevated";
 
 export default function AppearanceForm({ business }: AppearanceFormProps) {
   const { refreshPreview, setFormDirty, setFormSaveHandler } = useEditorSelection();
@@ -90,8 +128,16 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   const [buttonStyle, setButtonStyle] = useState<ButtonStyle>(
     business.button_style || "recto"
   );
-  const [animationPreset, setAnimationPreset] = useState<AnimationPreset>(
-    business.animation_preset || "sutil"
+  // `dinamica`/`escalonada` ya no se ofrecen: un negocio que las tenga
+  // guardadas arranca mostrando "Sutil" seleccionada, que es como ya se
+  // venía viendo su sitio (ver globals.css — esos dos valores caen en el
+  // `.reveal` base).
+  const [animationPreset, setAnimationPreset] = useState<AnimationPreset>(() =>
+    PUBLIC_ANIMATION_PRESETS.includes(
+      business.animation_preset as (typeof PUBLIC_ANIMATION_PRESETS)[number]
+    )
+      ? (business.animation_preset as AnimationPreset)
+      : "sutil"
   );
   const [imageRadius, setImageRadius] = useState<ImageRadiusPreset>(
     business.image_radius || "recto"
@@ -99,6 +145,12 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
   const [imageShadow, setImageShadow] = useState<ImageShadowPreset>(
     business.image_shadow || "ninguna"
   );
+  const [imageTreatment, setImageTreatment] = useState<ImageTreatment>(
+    business.image_treatment || "natural"
+  );
+  // `?? ""` y no `|| ""`: son equivalentes acá porque "" es el default,
+  // pero deja explícito que la cadena vacía es un valor elegible.
+  const [density, setDensity] = useState<Density | "">(business.density ?? "");
   const { run, dirty, markDirty } = useAsyncStatus();
 
   // El texto se deriva automáticamente del fondo elegido (el más legible
@@ -194,10 +246,13 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
         </div>
 
         {lowAccentContrast ? (
-          <p className="mt-3 text-xs text-red-400">
-            ⚠️ El color principal contrasta poco contra el fondo elegido (
+          <p className="mt-3 text-xs text-danger flex items-start gap-1.5">
+            <Icon name="alert" size={16} className="shrink-0 mt-px" />
+            <span>
+            El color principal contrasta poco contra el fondo elegido (
             {accentContrast?.toFixed(1)}:1) — se usa en títulos y bordes,
             puede costar verlo. Se recomienda al menos 3:1.
+            </span>
           </p>
         ) : null}
       </div>
@@ -209,7 +264,7 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
           {TYPOGRAPHY_OPTIONS.map((opt) => (
             <label
               key={opt.value}
-              className="flex items-center gap-3 rounded-sm border border-ink-line px-3 py-2.5 cursor-pointer"
+              className="flex items-center gap-3 radius-sm border border-ink-line px-3 py-2.5 cursor-pointer"
               style={{
                 borderColor:
                   typography === opt.value ? primaryColor : "var(--ink-line)",
@@ -273,7 +328,7 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
                 {IMAGE_RADIUS_OPTIONS.map((opt) => (
                   <label
                     key={opt.value}
-                    className="flex items-center gap-2 rounded-sm border px-3 py-2 text-sm text-bone cursor-pointer"
+                    className="flex items-center gap-2 radius-sm border px-3 py-2 text-sm text-bone cursor-pointer"
                     style={{
                       borderColor:
                         imageRadius === opt.value ? primaryColor : "var(--ink-line)",
@@ -299,7 +354,7 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
                 {IMAGE_SHADOW_OPTIONS.map((opt) => (
                   <label
                     key={opt.value}
-                    className="flex items-center gap-2 rounded-sm border px-3 py-2 text-sm text-bone cursor-pointer"
+                    className="flex items-center gap-2 radius-sm border px-3 py-2 text-sm text-bone cursor-pointer"
                     style={{
                       borderColor:
                         imageShadow === opt.value ? primaryColor : "var(--ink-line)",
@@ -317,23 +372,90 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
                 ))}
               </div>
             </div>
+
+            <div>
+              <p className="text-xs text-bone-muted mb-2">Tratamiento</p>
+              <div className="grid grid-cols-2 gap-2">
+                {IMAGE_TREATMENT_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex items-center gap-2 radius-sm border px-3 py-2 text-sm text-bone cursor-pointer"
+                    style={{
+                      borderColor:
+                        imageTreatment === opt.value ? primaryColor : "var(--ink-line)",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="image_treatment"
+                      value={opt.value}
+                      checked={imageTreatment === opt.value}
+                      onChange={() => setImageTreatment(opt.value)}
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div
             data-image-radius={imageRadius}
             data-image-shadow={imageShadow}
+            data-image-treatment={imageTreatment}
             className="justify-self-center sm:justify-self-start"
           >
-            <div
-              className="image-frame h-24 w-24 bg-ink-elevated bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "linear-gradient(135deg, color-mix(in srgb, var(--brass) 35%, transparent), transparent)",
-              }}
-              aria-hidden="true"
-            />
+            {/* <img> real y no un div con background-image: el filtro de
+                tratamiento se aplica sobre `.image-frame img` (ver
+                globals.css), que es exactamente el mismo selector que
+                corre en el sitio público. Así la vista previa no puede
+                mentir — usa el mismo camino de CSS, no una imitación.
+                eslint-disable porque es un data URI inline de 1 muestra,
+                no un asset que next/image pueda optimizar. */}
+            <div className="image-frame h-24 w-24 overflow-hidden bg-ink-elevated">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={IMAGE_SAMPLE_SRC}
+                alt=""
+                aria-hidden="true"
+                className="h-full w-full object-cover"
+              />
+            </div>
             <p className="mt-2 text-center text-[11px] text-bone-muted">Vista previa</p>
           </div>
+        </div>
+      </div>
+
+      {/* Densidad: el eje que más separa "lujo" de "catálogo". Es lo
+          único que hace que dos plantillas con la misma composición
+          (Atelier y Studio comparten blueprint) se lean distinto. */}
+      <div>
+        <p className="section-eyebrow text-bone-muted mb-1">Densidad</p>
+        <p className="text-[11px] text-bone-muted/70 mb-3 max-w-sm">
+          Cuánto aire hay entre secciones. Por defecto sigue a tu
+          plantilla.
+        </p>
+        <div className="grid gap-2">
+          {DENSITY_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex items-center gap-3 radius-sm border px-3 py-2.5 cursor-pointer"
+              style={{
+                borderColor:
+                  density === opt.value ? primaryColor : "var(--ink-line)",
+              }}
+            >
+              <input
+                type="radio"
+                name="density"
+                value={opt.value}
+                checked={density === opt.value}
+                onChange={() => setDensity(opt.value)}
+              />
+              <span className="text-sm text-bone">{opt.label}</span>
+              <span className="text-xs text-bone-muted">{opt.hint}</span>
+            </label>
+          ))}
         </div>
       </div>
 
@@ -346,7 +468,7 @@ export default function AppearanceForm({ business }: AppearanceFormProps) {
           {ANIMATION_OPTIONS.map((opt) => (
             <label
               key={opt.value}
-              className="flex items-center gap-3 rounded-sm border border-ink-line px-3 py-2.5 cursor-pointer"
+              className="flex items-center gap-3 radius-sm border border-ink-line px-3 py-2.5 cursor-pointer"
               style={{
                 borderColor:
                   animationPreset === opt.value ? primaryColor : "var(--ink-line)",

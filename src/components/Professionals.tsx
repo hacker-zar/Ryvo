@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Business, Professional, TemplateLayoutId } from "@/types/business";
 import Reveal from "@/components/Reveal";
+import SectionHeader from "@/components/SectionHeader";
+import Icon from "@/components/ui/Icon";
 
 interface ProfessionalsProps {
   professionals: Professional[];
@@ -43,7 +45,7 @@ export default function Professionals({
   if (singleSpecialistMode) {
     const specialist = professionals[0];
     return (
-      <section id="profesionales" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
+      <section id="profesionales" className="mx-auto max-w-5xl px-4 section-y">
         <Reveal
           className="grid gap-8 md:grid-cols-[minmax(0,280px)_1fr] md:items-center"
         >
@@ -107,15 +109,13 @@ export default function Professionals({
   }
 
   return (
-    <section id="profesionales" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-      <Reveal>
-        <p className="section-eyebrow" style={{ color: primaryColor }}>
-          El equipo
-        </p>
-        <h2 className="display-title mt-2 text-3xl md:text-5xl text-bone">
-          Profesionales
-        </h2>
-      </Reveal>
+    <section id="profesionales" className="mx-auto max-w-5xl px-4 section-y">
+      <SectionHeader
+        eyebrow="El equipo"
+        title="Profesionales"
+        primaryColor={primaryColor}
+        layout={layout}
+      />
 
       <div className="mt-10 grid gap-8 sm:grid-cols-2 md:grid-cols-3">
         {professionals.map((professional, i) => (
@@ -166,10 +166,11 @@ export default function Professionals({
               ) : null}
               <Link
                 href={`/${slug}/profesionales/${professional.id}`}
-                className="section-eyebrow mt-3 inline-block text-xs hover:opacity-80 transition-opacity"
+                className="section-eyebrow mt-3 inline-flex items-center gap-1.5 text-xs hover:opacity-80 transition-opacity"
                 style={{ color: primaryColor }}
               >
-                Ver perfil →
+                Ver perfil
+                <Icon name="arrow" size={16} className="shrink-0" />
               </Link>
             </div>
           </Reveal>

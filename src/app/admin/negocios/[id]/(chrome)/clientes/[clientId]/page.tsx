@@ -45,7 +45,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
           href={whatsappLink(client.phone)}
           target="_blank"
           rel="noopener noreferrer"
-          className="section-eyebrow text-[11px] px-3 py-1 rounded-sm border border-ink-line text-bone hover:border-brass transition-colors"
+          className="section-eyebrow text-[11px] px-3 py-1 radius-sm border border-ink-line text-bone hover:border-brass transition-colors"
         >
           WhatsApp
         </a>

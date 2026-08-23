@@ -35,7 +35,7 @@ export default function MasonryGallery({
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="galeria" className="py-16 md:py-24">
+    <section id="galeria" className="section-y">
       <GalleryHeader primaryColor={primaryColor} />
 
       <div className="mt-10 px-4 columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">

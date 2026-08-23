@@ -108,7 +108,7 @@ export default function NewBusinessForm({
             type="color"
             defaultValue="#c9a15a"
             disabled={disabled}
-            className="h-10 rounded-sm border border-ink-line bg-ink-elevated disabled:opacity-50"
+            className="h-10 radius-sm border border-ink-line bg-ink-elevated disabled:opacity-50"
           />
         </div>
         <div className="grid gap-1.5">
@@ -121,7 +121,7 @@ export default function NewBusinessForm({
             type="color"
             defaultValue="#f5f5f5"
             disabled={disabled}
-            className="h-10 rounded-sm border border-ink-line bg-ink-elevated disabled:opacity-50"
+            className="h-10 radius-sm border border-ink-line bg-ink-elevated disabled:opacity-50"
           />
         </div>
       </div>
@@ -233,7 +233,7 @@ export default function NewBusinessForm({
       <button
         type="submit"
         disabled={disabled || status === "submitting"}
-        className="section-eyebrow mt-2 rounded-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity disabled:opacity-50 w-fit"
+        className="section-eyebrow mt-2 radius-sm bg-brass text-ink font-semibold text-xs px-6 py-3.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:ring-brass transition-opacity disabled:opacity-50 w-fit"
       >
         {status === "submitting" ? "Creando..." : "Crear negocio"}
       </button>

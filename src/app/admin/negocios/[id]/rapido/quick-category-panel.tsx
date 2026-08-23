@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { Business, Product, ProfessionalWithServices, Service } from "@/types/business";
 import {
   EditorCategory,
@@ -52,9 +53,12 @@ export default function QuickCategoryPanel({
               className="w-full flex items-center justify-between py-4 text-left"
             >
               <span className="section-title text-sm text-bone">{label}</span>
-              <span className="text-bone-muted text-xs" aria-hidden="true">
-                {isOpen ? "▼" : "▶"}
-              </span>
+              <Icon
+                name="chevron"
+                size={16}
+                rotate={isOpen ? 0 : 270}
+                className="text-bone-muted shrink-0"
+              />
             </button>
 
             {isOpen ? (

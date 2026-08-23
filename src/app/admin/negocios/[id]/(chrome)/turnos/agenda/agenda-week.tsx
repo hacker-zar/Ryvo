@@ -80,7 +80,7 @@ export default function AgendaWeek({
                     <div className="h-10 flex items-end justify-center">
                       {count > 0 ? (
                         <div
-                          className="w-full rounded-sm bg-ink-elevated border border-ink-line flex items-start justify-center"
+                          className="w-full radius-sm bg-ink-elevated border border-ink-line flex items-start justify-center"
                           style={{ height: `${heightPct}%`, backgroundColor: "var(--brass)", opacity: 0.25 + Math.min(count / maxCount, 1) * 0.55 }}
                         >
                           <span className="ticket-number text-[10px] text-bone mt-0.5">

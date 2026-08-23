@@ -14,6 +14,15 @@ export type AnimationPreset = "ninguna" | "sutil" | "dinamica" | "revelado" | "e
 // reproducen exactamente el aspecto histórico (sin radio, sin sombra).
 export type ImageRadiusPreset = "recto" | "suave" | "redondeado" | "muy-redondeado";
 export type ImageShadowPreset = "ninguna" | "suave" | "media" | "marcada";
+/** Filtro de las fotos públicas — el eje con el que una barbería
+ *  construye su identidad visual (blanco y negro, alto contraste,
+ *  virado cálido). "natural" es la ausencia de filtro. */
+export type ImageTreatment = "natural" | "byn" | "contraste" | "calido";
+/** Ritmo vertical de secciones — ver `.section-y` en globals.css.
+ *  Se re-exporta desde blueprints.ts, donde vive la densidad por
+ *  plantilla; acá está el tipo para no crear una dependencia circular
+ *  entre types/ y lib/templates/. */
+export type Density = "compacta" | "estandar" | "amplia";
 
 // Cómo se presenta la galería pública (ver components/Gallery.tsx y sus
 // variantes en components/gallery/*) — independiente de la plantilla:
@@ -104,6 +113,21 @@ export interface Business {
   // Estilo visual de fotos públicas — ver ImageRadiusPreset/ImageShadowPreset.
   image_radius?: ImageRadiusPreset;
   image_shadow?: ImageShadowPreset;
+  // Filtro aplicado a TODAS las fotos públicas (`.image-frame img` en
+  // globals.css). "natural" = sin filtro, el aspecto de siempre.
+  image_treatment?: ImageTreatment;
+  // Ritmo vertical de las secciones. Vacío = heredar la densidad de la
+  // plantilla elegida (LAYOUT_BLUEPRINTS); con valor, lo anula. No es
+  // `ImageTreatment`-style con default en el tipo porque la diferencia
+  // entre "sin elegir" y "elegí estándar" importa: la primera sigue a la
+  // plantilla si el dueño la cambia, la segunda no.
+  density?: Density | "";
+  // Apertura del hero. Vacío = el texto de siempre (eyebrow fija
+  // "Reservá tu turno online" + nombre del negocio como H1). No se
+  // precarga con el nombre: si lo hiciéramos, renombrar el negocio
+  // dejaría el hero con el nombre viejo.
+  hero_kicker?: string;
+  hero_headline?: string;
   // Notification Engine (ver lib/notifications/*) — apagado por default,
   // cero envíos hasta que el dueño lo prenda explícitamente desde
   // Automatizaciones. notify_whatsapp_enabled es el interruptor general

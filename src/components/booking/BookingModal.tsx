@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useEffect, useMemo, useState } from "react";
 import {
   Business,
@@ -246,12 +247,12 @@ function BookingModalContent({
         type="button"
         aria-label="Cerrar"
         onClick={close}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm anim-fade"
       />
 
       {/* Modal */}
       <div
-        className="relative w-full sm:max-w-md sm:mx-4 bg-ink border border-ink-line sm:rounded-sm max-h-[92vh] sm:max-h-[85vh] flex flex-col animate-[slideUp_0.25s_ease-out] rounded-t-2xl sm:rounded-t-sm"
+        className="relative w-full sm:max-w-md sm:mx-4 bg-ink border border-ink-line sheet-radius max-h-[92vh] sm:max-h-[85vh] flex flex-col anim-slide-up"
         style={{ ["--brass" as string]: business.primary_color }}
       >
         {/* Header con progreso */}
@@ -266,9 +267,9 @@ function BookingModalContent({
               type="button"
               onClick={close}
               aria-label="Cerrar"
-              className="text-bone-muted hover:text-bone focus-visible:ring-2 focus-visible:ring-brass rounded-sm transition-colors text-lg leading-none shrink-0"
+              className="text-bone-muted hover:text-bone focus-visible:ring-2 focus-visible:ring-brass radius-sm transition-colors shrink-0"
             >
-              ✕
+              <Icon name="close" size={20} />
             </button>
           </div>
         ) : null}

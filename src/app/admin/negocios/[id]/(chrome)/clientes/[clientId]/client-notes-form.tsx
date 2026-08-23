@@ -38,7 +38,7 @@ export default function ClientNotesForm({
       <button
         type="submit"
         disabled={isPending}
-        className="section-eyebrow text-xs px-4 py-2.5 rounded-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50"
+        className="section-eyebrow text-xs px-4 py-2.5 radius-sm bg-brass text-ink font-semibold w-fit disabled:opacity-50"
       >
         {isPending ? "Guardando..." : "Guardar notas"}
       </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import Icon from "@/components/ui/Icon";
 import { useState } from "react";
 import Link from "next/link";
 import { logoutAdmin } from "@/lib/admin/auth-actions";
@@ -48,7 +49,12 @@ export default function PublicSiteAdminBar({
           className="section-eyebrow text-xs text-bone hover:text-brass transition-colors flex items-center gap-1.5"
         >
           <span className="truncate max-w-[50vw]">{businessName}</span>
-          <span aria-hidden="true">▾</span>
+          <Icon
+            name="chevron"
+            size={16}
+            rotate={open ? 180 : 0}
+            className="shrink-0"
+          />
         </button>
 
         {open ? (
@@ -59,7 +65,7 @@ export default function PublicSiteAdminBar({
               onClick={() => setOpen(false)}
               className="fixed inset-0 z-[199] cursor-default"
             />
-            <div className="absolute left-4 top-full mt-1 z-[201] w-48 rounded-sm border border-ink-line bg-ink-elevated py-1.5 shadow-lg">
+            <div className="absolute left-4 top-full mt-1 z-[201] w-48 radius-sm border border-ink-line bg-ink-elevated py-1.5 shadow-lg">
               {items.map((item) => (
                 <Link
                   key={item.href}

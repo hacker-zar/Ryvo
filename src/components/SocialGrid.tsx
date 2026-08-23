@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Reveal from "@/components/Reveal";
+import Icon from "@/components/ui/Icon";
+import { readableTextColor } from "@/lib/format";
 
 // Grid de fotos + CTA a Instagram — exclusiva de la plantilla Bold.
 // Reutiliza la galería ya cargada (hasta 6 fotos) e `instagram` (ya
@@ -23,7 +25,7 @@ export default function SocialGrid({
   const handle = instagram.replace(/^@/, "");
 
   return (
-    <section className="mx-auto max-w-5xl px-4 py-16 md:py-24">
+    <section className="mx-auto max-w-5xl px-4 section-y">
       <Reveal className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="section-eyebrow" style={{ color: accentColor }}>
@@ -38,10 +40,13 @@ export default function SocialGrid({
             href={`https://instagram.com/${handle}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="section-eyebrow text-xs px-5 py-3 rounded-full font-semibold shrink-0 w-fit hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: accentColor, color: "var(--ink)" }}
+            className="section-eyebrow text-xs px-5 py-3 rounded-full font-semibold shrink-0 w-fit inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
+            // readableTextColor y no un "var(--ink)" fijo: el fondo es el
+            // color libre que eligió el negocio, y un tono oscuro fijo
+            // encima de un acento oscuro queda ilegible.
+            style={{ backgroundColor: accentColor, color: readableTextColor(accentColor) }}
           >
-            @{handle} →
+            <Icon name="instagram" size={16} className="shrink-0" />@{handle}
           </a>
         ) : null}
       </Reveal>
