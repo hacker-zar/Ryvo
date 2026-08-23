@@ -37,7 +37,10 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
     return (
       <section id="servicios" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
         <Reveal>
-          <h2 className="section-eyebrow" style={{ color: primaryColor }}>
+          <h2
+            className="section-eyebrow text-xl sm:text-2xl md:text-3xl"
+            style={{ color: primaryColor }}
+          >
             Carta de servicios
           </h2>
         </Reveal>
@@ -144,7 +147,10 @@ export default function Services({ services, primaryColor, layout }: ServicesPro
   return (
     <section id="servicios" className="mx-auto max-w-5xl px-4 py-16 md:py-24">
       <Reveal>
-        <h2 className="section-eyebrow" style={{ color: primaryColor }}>
+        <h2
+          className="section-eyebrow text-xl sm:text-2xl md:text-3xl"
+          style={{ color: primaryColor }}
+        >
           Carta de servicios
         </h2>
       </Reveal>

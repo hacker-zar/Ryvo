@@ -124,11 +124,16 @@ export default function Hero({ business, layout }: HeroProps) {
     );
   }
 
+  // Oculto en mobile: ahí ya está MobileBookingBar (CTA fijo abajo de
+  // todo) — mostrar también el del Hero dejaba varios botones de
+  // reservar visibles a la vez apenas se entraba a la página. En
+  // desktop no existe esa barra fija, así que acá sigue siendo el CTA
+  // principal.
   const primaryCta = (
     <button
       type="button"
       onClick={open}
-      className="section-eyebrow text-xs px-7 py-3.5 btn-radius font-semibold hover:opacity-90 transition-opacity"
+      className="hidden md:inline-flex section-eyebrow text-xs px-7 py-3.5 btn-radius font-semibold hover:opacity-90 transition-opacity"
       style={{ backgroundColor: business.primary_color, color: ctaTextColor }}
     >
       Reservar turno
@@ -158,7 +163,7 @@ export default function Hero({ business, layout }: HeroProps) {
               </Reveal>
             ) : null}
             <Reveal delay={220}>
-              <div className="mt-8">{primaryCta}</div>
+              <div className="hidden md:block mt-8">{primaryCta}</div>
             </Reveal>
           </div>
           <div className="relative aspect-[4/3] md:aspect-square rounded-sm overflow-hidden bg-ink-elevated">
@@ -205,7 +210,7 @@ export default function Hero({ business, layout }: HeroProps) {
               </Reveal>
             ) : null}
             <Reveal delay={220}>
-              <div className="mt-8">
+              <div className="hidden md:block mt-8">
                 <button
                   type="button"
                   onClick={open}

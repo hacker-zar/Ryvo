@@ -74,10 +74,15 @@ export default function Header({ business, enabledSectionIds, layout }: HeaderPr
           ))}
         </nav>
 
+        {/* Oculto en mobile a propósito: ahí ya está MobileBookingBar (CTA
+            fijo abajo de todo) — mostrar también este de acá arriba
+            dejaba 3 botones de reservar visibles a la vez (este + el del
+            Hero + el fijo). En desktop no existe esa barra fija, así que
+            acá sigue siendo el único CTA persistente. */}
         <button
           type="button"
           onClick={open}
-          className="section-eyebrow text-xs font-semibold px-4 py-2 btn-radius hover:opacity-90 transition-opacity"
+          className="hidden md:inline-flex section-eyebrow text-xs font-semibold px-4 py-2 btn-radius hover:opacity-90 transition-opacity"
           style={{
             backgroundColor: business.primary_color,
             color: readableTextColor(business.primary_color),

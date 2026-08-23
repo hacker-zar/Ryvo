@@ -198,6 +198,32 @@ body {
   font-family: var(--font-sans-stack);
 }
 
+/* Navegación interna (nav del Header, "Ver servicios" del Hero, etc.):
+   los anchors ya son <a href="#seccion"> comunes, nada que reescribir en
+   JS — `scroll-behavior: smooth` nativo alcanza. Gateado por
+   `no-preference` (no al revés) para que, con reduced motion activado,
+   el navegador vuelva a su salto instantáneo por default en vez de que
+   nosotros tengamos que apagarlo a mano. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Compensa el Header sticky (ver Header.tsx) para que la sección de
+   destino no quede tapada detrás al llegar por anchor — mismos ids que
+   ya usan los links de Header/Hero, reutilizado por cualquier página
+   pública que comparta ese Header (sitio de negocio, perfil de
+   profesional, gestión de turno). */
+#inicio,
+#servicios,
+#galeria,
+#profesionales,
+#resenas,
+#contacto {
+  scroll-margin-top: 5rem;
+}
+
 /* Título de sección: mayúsculas, tracking amplio, tipo cartel de local.
    Se usa consistentemente para que la voz tipográfica del sitio no
    dependa de que cada negocio elija bien sus estilos.
