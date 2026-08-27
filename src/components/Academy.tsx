@@ -216,9 +216,6 @@ export default function Academy({
           </div>
         </Reveal>
       ) : null}
-
-      {/* CTA final */}
-      <Reveal className="mt-16 flex justify-center">{cta}</Reveal>
     </section>
   );
 }

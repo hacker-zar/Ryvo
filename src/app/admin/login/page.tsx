@@ -45,7 +45,7 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
         <h1 className="section-title mt-2 text-xl text-bone text-center">
           {business ? `Ingresar a ${business.name}` : "Ingresar"}
         </h1>
-        <LoginForm isOwnerLogin={Boolean(business)} />
+        <LoginForm isOwnerLogin={Boolean(business)} businessSlug={businessSlug} />
       </div>
     </main>
   );

@@ -403,6 +403,51 @@ export interface Account {
   created_at: string;
 }
 
+// Identidad de cliente final autenticada con Google — separada de
+// `Account` a propósito: sin business_id, sin rol RBAC, nunca pasa por
+// canManageBusiness/requireAdminFor. Ver customers-repository.ts y
+// customer-session.ts.
+export interface Customer {
+  id: string;
+  google_sub: string;
+  email: string;
+  name: string;
+  created_at: string;
+}
+
+export type PageRequestStatus = "new" | "contacted" | "converted" | "discarded";
+
+// Solicitud de página nueva desde la home pública ("Quiero mi página")
+// — un lead, no una cuenta. Ver page-request-actions.ts y
+// admin/solicitudes/page.tsx.
+export interface PageRequest {
+  id: string;
+  owner_name: string;
+  business_name: string;
+  whatsapp: string;
+  instagram: string;
+  business_type: string;
+  what_you_want: string;
+  comments: string;
+  status: PageRequestStatus;
+  created_at: string;
+  // null hasta que se convierte en negocio real (ver
+  // adminConvertPageRequestToBusiness en page-request-actions.ts).
+  business_id: string | null;
+}
+
+// Solicitud + estado real del negocio vinculado (join sobre
+// page_requests.business_id → businesses), para que /admin/solicitudes
+// pueda mostrar "Negocio creado" y decidir si el siguiente paso es
+// "Continuar con la página" (todavía en onboarding) o "Ir al negocio"
+// (ya publicado) sin inventar un estado de producción nuevo — reusa
+// businesses.published/onboarding_step tal cual. null en ambos campos =
+// sin negocio vinculado todavía.
+export interface PageRequestWithBusiness extends PageRequest {
+  business_published: boolean | null;
+  business_slug: string | null;
+}
+
 // === Academia — funcionalidad nativa reutilizable (no específica de
 // ningún negocio puntual, ver Academy.tsx). `Academy` es la config 1:1
 // del negocio (nombre/headline/descripción/imagen/CTA/contacto/tipo de

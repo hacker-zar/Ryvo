@@ -4,7 +4,9 @@ import {
   getBusinessById,
   listProfessionalsByBusiness,
 } from "@/lib/data/business-repository";
+import { getAccountGoogleLink } from "@/lib/data/accounts-repository";
 import { getMyBookings } from "@/lib/admin/actions";
+import GoogleLinkPanel from "@/components/admin/GoogleLinkPanel";
 import MyBookingsList from "./my-bookings-list";
 import QuickChangesHub from "./quick-changes-hub";
 
@@ -41,10 +43,11 @@ export default async function QuickEditorPage({ params }: PageProps) {
 
   if (!session.professionalId) redirect("/admin/login");
 
-  const [business, professionals, bookings] = await Promise.all([
+  const [business, professionals, bookings, googleLink] = await Promise.all([
     getBusinessById(id),
     listProfessionalsByBusiness(id),
     getMyBookings(id),
+    getAccountGoogleLink(session.accountId),
   ]);
   if (!business) notFound();
 
@@ -60,6 +63,14 @@ export default async function QuickEditorPage({ params }: PageProps) {
       </p>
 
       <MyBookingsList bookings={bookings} />
+
+      <div className="mt-12 border-t border-ink-line pt-6">
+        <p className="section-eyebrow text-brass mb-4">Mi cuenta</p>
+        <GoogleLinkPanel
+          linkedEmail={googleLink?.googleEmail ?? null}
+          nextPath={`/admin/negocios/${business.id}/rapido`}
+        />
+      </div>
     </div>
   );
 }

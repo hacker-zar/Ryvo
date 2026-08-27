@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getBusinessById, listProfessionalsByBusiness } from "@/lib/data/business-repository";
-import { listAccountsByBusiness } from "@/lib/data/accounts-repository";
+import { getAccountGoogleLink, listAccountsByBusiness } from "@/lib/data/accounts-repository";
 import { logoutAdmin } from "@/lib/admin/auth-actions";
+import { getAdminSession } from "@/lib/admin/session";
+import GoogleLinkPanel from "@/components/admin/GoogleLinkPanel";
 import AccountManager from "../account-manager";
 import BusinessNav from "../business-nav";
 
@@ -19,12 +21,21 @@ interface PageProps {
 export default async function AccountPage({ params }: PageProps) {
   const { id } = await params;
 
-  const [business, accounts, professionals] = await Promise.all([
+  const [business, accounts, professionals, session] = await Promise.all([
     getBusinessById(id),
     listAccountsByBusiness(id),
     listProfessionalsByBusiness(id),
+    getAdminSession(),
   ]);
   if (!business) notFound();
+
+  // Google login es autoservicio: solo se vincula la cuenta de la sesión
+  // ACTUAL (nunca otra). "owner" acá cubre tanto al dueño real como a un
+  // Barber — pero un Barber jamás llega a esta página (el layout de
+  // (chrome)/* ya lo redirige a /rapido antes), así que en la práctica
+  // esto solo se resuelve para el dueño.
+  const googleLink =
+    session?.role === "owner" ? await getAccountGoogleLink(session.accountId) : null;
 
   return (
     <>
@@ -58,6 +69,16 @@ export default async function AccountPage({ params }: PageProps) {
           professionals={professionals}
         />
       </div>
+
+      {session?.role === "owner" ? (
+        <div className="mt-12 border-t border-ink-line pt-6">
+          <p className="section-eyebrow text-brass mb-4">Mi cuenta</p>
+          <GoogleLinkPanel
+            linkedEmail={googleLink?.googleEmail ?? null}
+            nextPath={`/admin/negocios/${business.id}/cuenta`}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-12 border-t border-ink-line pt-6">
         <p className="section-eyebrow text-brass">Sesión</p>

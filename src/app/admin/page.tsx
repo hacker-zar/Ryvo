@@ -43,13 +43,22 @@ export default async function AdminHomePage() {
       ) : null}
 
       {session.role === "super" ? (
-        <Link
-          href="/admin/usuarios"
-          className="mb-6 inline-flex items-center gap-1.5 text-xs text-bone-muted hover:text-brass transition-colors"
-        >
-          Ver todos los usuarios y partners de RYVO
-          <Icon name="arrow" size={16} className="shrink-0" />
-        </Link>
+        <div className="mb-6 flex flex-wrap gap-x-6 gap-y-2">
+          <Link
+            href="/admin/usuarios"
+            className="inline-flex items-center gap-1.5 text-xs text-bone-muted hover:text-brass transition-colors"
+          >
+            Ver todos los usuarios y partners de RYVO
+            <Icon name="arrow" size={16} className="shrink-0" />
+          </Link>
+          <Link
+            href="/admin/solicitudes"
+            className="inline-flex items-center gap-1.5 text-xs text-bone-muted hover:text-brass transition-colors"
+          >
+            Ver solicitudes de página nueva
+            <Icon name="arrow" size={16} className="shrink-0" />
+          </Link>
+        </div>
       ) : null}
 
       <p className="section-eyebrow text-brass">Negocios</p>

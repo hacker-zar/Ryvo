@@ -579,3 +579,83 @@ alter table academy_interests enable row level security;
 create policy "public read academies" on academies for select using (true);
 create policy "public read academy categories" on academy_categories for select using (true);
 create policy "public insert academy interests" on academy_interests for insert with check (true);
+
+-- === Login con Google: Owner/Worker (vinculación manual, nunca
+-- autoprovisión) y Customer (autoprovisión). Partner y Superadmin quedan
+-- FUERA de esta fase, sin cambios. Aplicado directo contra Supabase vía
+-- apply_migration; documentación posterior, no fuente de verdad.
+--
+-- accounts.google_sub: NO es el claim "sub" crudo del JWT de Google — es
+-- `auth.users.id` de Supabase Auth para la identidad de Google ya
+-- verificada (estable por cuenta de Google dentro de este proyecto de
+-- Supabase, ver verifyGoogleAccessToken en src/lib/google-identity.ts).
+-- Vincular Google a una cuenta existente es autoservicio: la persona
+-- entra primero con usuario+contraseña como siempre y, ya autenticada,
+-- vincula su Google desde su propia cuenta — nunca al revés. Un Google
+-- sin vínculo previo nunca crea ni promueve una cuenta admin. ===
+alter table accounts add column if not exists google_sub text;
+alter table accounts add column if not exists google_email text;
+
+-- Ambas columnas se llenan o quedan vacías juntas — nunca una sí y la otra no.
+alter table accounts add constraint accounts_google_link_shape
+  check ((google_sub is null) = (google_email is null));
+
+-- Único: la misma cuenta de Google no puede terminar vinculada a dos filas
+-- de `accounts`. Parcial porque la mayoría de las cuentas no tiene Google
+-- vinculado.
+create unique index if not exists accounts_google_sub_idx
+  on accounts (google_sub) where google_sub is not null;
+
+-- =========================
+-- customers (identidad de cliente final autenticada con Google — separada
+-- de `accounts` a propósito: sin business_id, sin rol RBAC, nunca pasa por
+-- canManageBusiness/requireAdminFor. También separada de la tabla
+-- `clients` derivada de reservas de invitado (ver "Clientes" en el admin):
+-- esa es un contacto por negocio armado a partir de bookings; esta es una
+-- identidad real logueada, única para toda la plataforma. Esta fase
+-- entrega solo identidad + sesión propia (`customer_session`) — conectar
+-- bookings.customer_id y agregar UI pública queda para un pedido futuro.)
+-- =========================
+create table if not exists customers (
+  id uuid primary key default gen_random_uuid(),
+  google_sub text not null,
+  email text not null,
+  name text not null default '',
+  created_at timestamptz not null default now()
+);
+create unique index if not exists customers_google_sub_idx on customers (google_sub);
+
+alter table customers enable row level security;
+-- Sin políticas públicas a propósito, mismo criterio que `accounts`: solo
+-- supabaseAdmin (service role) puede leer/escribir esta tabla.
+
+-- === Solicitudes de página nueva ("Quiero mi página" en la home
+-- pública) — mismo patrón que academy_interests: RLS habilitada, SOLO
+-- política de insert público, cero política de lectura. A diferencia de
+-- /registro (alta real, crea cuenta+negocio al instante), esto es
+-- apenas un lead: no crea nada más, RYVO revisa y contacta manualmente
+-- (ver /admin/solicitudes). ===
+create table if not exists page_requests (
+  id uuid primary key default gen_random_uuid(),
+  owner_name text not null,
+  business_name text not null,
+  whatsapp text not null,
+  instagram text not null default '',
+  business_type text not null default '',
+  what_you_want text not null default '',
+  comments text not null default '',
+  status text not null default 'new' check (status in ('new','contacted','converted','discarded')),
+  created_at timestamptz not null default now()
+);
+create index if not exists page_requests_status_idx on page_requests(status);
+
+alter table page_requests enable row level security;
+create policy "public insert page requests" on page_requests for insert with check (true);
+
+-- Conversión solicitud → negocio ("Convertir en negocio" en
+-- /admin/solicitudes). Nullable: una solicitud nueva todavía no tiene
+-- negocio. `on delete set null` (no cascade) — mismo criterio que
+-- academy_interests.academy_category_id: si el negocio se borra de
+-- verdad, la solicitud (y su historial) se conserva.
+alter table page_requests add column if not exists business_id uuid references businesses(id) on delete set null;
+create index if not exists page_requests_business_id_idx on page_requests(business_id);

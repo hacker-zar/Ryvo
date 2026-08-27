@@ -36,6 +36,101 @@ export async function getAccountAuthByUsername(username: string): Promise<{
   return data ?? null;
 }
 
+/**
+ * Login con Google: busca la cuenta ya vinculada a este `google_sub`
+ * (ver setAccountGoogleIdentity). `role <> 'partner'` es defensa en
+ * profundidad — hoy ninguna UI de vinculación escribe google_sub en una
+ * fila partner, pero Partner queda fuera de esta fase por diseño y esta
+ * query lo blinda igual. Sin autoprovisión: si no hay fila, devuelve
+ * null y el caller rechaza el login (ver google-auth-actions.ts).
+ */
+export async function getAccountAuthByGoogleSub(googleSub: string): Promise<{
+  id: string;
+  business_id: string | null;
+  role: AccountRole;
+  professional_id: string | null;
+  active: boolean;
+} | null> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
+  const { data } = await supabaseAdmin
+    .from("accounts")
+    .select("id, business_id, role, professional_id, active")
+    .eq("google_sub", googleSub)
+    .neq("role", "partner")
+    .maybeSingle();
+  return data ?? null;
+}
+
+/**
+ * Solo el estado de vínculo de Google de UNA cuenta puntual — nunca se
+ * mezcla con ACCOUNT_PUBLIC_COLUMNS/listAccountsByBusiness, para que un
+ * dueño no vea de paso el email de Google de las cuentas Barber que
+ * administra (no se pidió, sería exponer más de lo necesario).
+ */
+export async function getAccountGoogleLink(
+  accountId: string
+): Promise<{ googleEmail: string | null } | null> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
+  const { data } = await supabaseAdmin
+    .from("accounts")
+    .select("google_email")
+    .eq("id", accountId)
+    .maybeSingle();
+  if (!data) return null;
+  return { googleEmail: data.google_email ?? null };
+}
+
+/**
+ * Vincula una identidad de Google a una cuenta ya autenticada —
+ * `accountId` debe salir siempre de la sesión actual (ver
+ * linkGoogleToOwnAccount en google-auth-actions.ts), nunca de un
+ * parámetro de request. El índice único accounts_google_sub_idx es la
+ * defensa final contra que el mismo Google termine en dos cuentas.
+ */
+export async function setAccountGoogleIdentity(
+  accountId: string,
+  googleSub: string,
+  googleEmail: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY.",
+    };
+  }
+  const { error } = await supabaseAdmin
+    .from("accounts")
+    .update({ google_sub: googleSub, google_email: googleEmail })
+    .eq("id", accountId);
+  if (error) {
+    if (error.code === "23505") {
+      return {
+        success: false,
+        error: "Esa cuenta de Google ya está vinculada a otra cuenta de RYVO.",
+      };
+    }
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}
+
+export async function clearAccountGoogleIdentity(
+  accountId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY.",
+    };
+  }
+  const { error } = await supabaseAdmin
+    .from("accounts")
+    .update({ google_sub: null, google_email: null })
+    .eq("id", accountId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 // ---------------------------------------------------------------------
 // Gestión de cuentas — usadas por /admin (crear negocio, sección "Cuenta").
 // ---------------------------------------------------------------------

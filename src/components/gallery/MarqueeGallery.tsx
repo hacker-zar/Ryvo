@@ -96,7 +96,14 @@ export default function MarqueeGallery({
             type="button"
             onClick={() => setOpenIndex(i)}
             aria-label={`Ver foto ${i + 1} de ${businessName} en tamaño completo`}
-            className={`image-frame relative h-64 shrink-0 snap-start overflow-hidden bg-ink-elevated ${SHAPES[i % SHAPES.length]}`}
+            // max-w-[85vw]: sin esto, la forma "aspect-[16/10]" a h-64 mide
+            // ~410px — más ancha que casi cualquier celular (375px) — y con
+            // snap-mandatory, un swipe normal (que como mucho recorre el
+            // ancho de pantalla) no llega a cruzar su punto de snap: el
+            // navegador rechaza el arrastre y la tira vuelve a donde
+            // arrancó, sintiéndose "trabada". Topeada al viewport, cualquier
+            // swipe de una pantalla completa siempre alcanza para avanzar.
+            className={`image-frame relative h-64 max-w-[85vw] shrink-0 snap-start overflow-hidden bg-ink-elevated ${SHAPES[i % SHAPES.length]}`}
           >
             <Image src={src} alt={`${businessName} - foto ${i + 1}`} fill sizes="60vw" className="object-cover" />
           </button>

@@ -4,13 +4,12 @@ import { redirect } from "next/navigation";
 import {
   checkSuperAdminPassword,
   clearAdminOrigin,
-  createOwnerSession,
-  createPartnerSession,
   createSuperAdminSession,
   destroyAdminSession,
   getAdminOrigin,
   verifyPassword,
 } from "@/lib/admin/session";
+import { completeAccountLogin } from "@/lib/admin/complete-account-login";
 import { getAccountAuthByUsername } from "@/lib/data/accounts-repository";
 
 // Mensaje único para cualquier fallo de login de cuenta (usuario
@@ -37,27 +36,7 @@ export async function loginAdmin(formData: FormData) {
       return { success: false, error: ACCOUNT_LOGIN_ERROR };
     }
 
-    // Una cuenta "partner" no tiene un único negocio (business_id null) —
-    // aterriza en /admin, que para sesión "partner" lista solo sus
-    // negocios asignados (ver admin/page.tsx). Distinto de "worker"
-    // (Barber) y "owner", que sí están atadas a un business_id.
-    if (account.role === "partner") {
-      await createPartnerSession(account.id);
-      redirect("/admin");
-    }
-
-    await createOwnerSession(
-      account.id,
-      account.business_id!,
-      account.role,
-      account.professional_id
-    );
-    // Ninguna cuenta "owner" (dueño o Barber, accountRole "owner"/"worker")
-    // aterriza en el editor completo — es exclusivo de super/partner (ver
-    // require-full-editor-access.ts). Owner y Barber van los dos a
-    // /rapido; lo que ven ahí adentro difiere por rol (Cambios rápidos vs.
-    // Mis turnos, ver rapido/page.tsx), pero la URL de entrada es la misma.
-    redirect(`/admin/negocios/${account.business_id}/rapido`);
+    return completeAccountLogin(account);
   }
 
   // Sin username: login de superadmin (RYVO), independiente del sistema de
