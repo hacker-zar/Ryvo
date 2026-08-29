@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/lib/useConfirm";
 import Icon from "@/components/ui/Icon";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -33,6 +34,7 @@ export default function ProfessionalsManager({
 }: ProfessionalsManagerProps) {
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
+  const { ask, dialog } = useConfirm();
   const [items, setItems] = useState(professionals);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
@@ -84,8 +86,19 @@ export default function ProfessionalsManager({
     }
   }
 
-  async function handleDelete(professionalId: string) {
-    if (!confirm("¿Borrar este profesional?")) return;
+  function handleDelete(professionalId: string) {
+    const professional = items.find((p) => p.id === professionalId);
+    ask({
+      title: "¿Borrar este profesional?",
+      description: `${
+        professional ? professional.name : "Este profesional"
+      } deja de aparecer en tu web. Los turnos que ya tenga asignados NO se borran: quedan sin profesional.`,
+      confirmLabel: "Borrar profesional",
+      onConfirm: () => removeProfessional(professionalId),
+    });
+  }
+
+  async function removeProfessional(professionalId: string) {
     setDeletingId(professionalId);
     const result = await adminDeleteProfessional(businessId, professionalId);
     setDeletingId(null);
@@ -388,6 +401,7 @@ export default function ProfessionalsManager({
           {createStatus.isPending ? "Agregando..." : "+ Agregar"}
         </button>
       </form>
+      {dialog}
     </div>
   );
 }

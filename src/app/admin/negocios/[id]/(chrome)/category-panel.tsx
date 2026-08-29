@@ -15,7 +15,6 @@ import ProductsManager from "./products-manager";
 import LocationsManager from "./locations-manager";
 import AppearanceForm from "./appearance-form";
 import TemplatePanel from "./template-panel";
-import NotificationSettingsPanel from "./notification-settings-panel";
 import ComingSoonRow from "@/components/ui/ComingSoonRow";
 
 interface CategoryPanelProps {
@@ -37,7 +36,12 @@ const CATEGORIES: { key: EditorCategory; label: string }[] = [
   { key: "profesionales", label: "Profesionales" },
   { key: "productos", label: "Productos" },
   { key: "reservas", label: "Reservas" },
-  { key: "automatizaciones", label: "Automatizaciones" },
+  // "automatizaciones" salió de acá: los avisos por WhatsApp son un
+  // ajuste operativo del negocio, no una decisión de diseño, y el editor
+  // completo es exclusivo de RYVO/Partner — el dueño no podía encender
+  // los avisos de su propio negocio. Ahora vive en Configuración, que él
+  // sí abre (ver cuenta/page.tsx). La categoría sigue existiendo en
+  // EditorCategory porque es la clave del puente con la preview.
   { key: "plantilla", label: "Plantilla" },
 ];
 
@@ -45,13 +49,10 @@ const CATEGORIES: { key: EditorCategory; label: string }[] = [
  *  abierta vive en EditorSelectionContext, así que un click en la preview
  *  (ver PreviewPane) abre la categoría correspondiente acá también.
  *
- *  Reorganizado en 7 categorías (antes: Información/Servicios/
- *  Profesionales/Horarios/Fotos/Apariencia, sin agrupar): Apariencia
- *  fusiona Fotos con lo que ya tenía (colores/tipografía/botones) — se
- *  muestran los dos paneles existentes bajo un mismo acordeón, sin
- *  fusionar su código; Página reemplaza a Información; Reservas
- *  reemplaza a Horarios (locales); Productos/Automatizaciones son nuevas,
- *  todavía sin funcionalidad real (ver ComingSoonRow). */
+ *  Apariencia fusiona Fotos con lo que ya tenía (colores/tipografía/
+ *  botones) — se muestran los dos paneles existentes bajo un mismo
+ *  acordeón, sin fusionar su código; Página reemplaza a Información;
+ *  Reservas reemplaza a Horarios (locales). */
 export default function CategoryPanel({
   business,
   services,
@@ -149,25 +150,6 @@ export default function CategoryPanel({
                       </p>
                       <ComingSoonRow label="Anticipación mínima" />
                       <ComingSoonRow label="Política de cancelación" />
-                    </div>
-                  </div>
-                ) : null}
-                {key === "automatizaciones" ? (
-                  <div className="mt-2 grid gap-6">
-                    <NotificationSettingsPanel
-                      businessId={business.id}
-                      whatsappEnabled={business.notify_whatsapp_enabled ?? false}
-                      reminder24hEnabled={business.notify_reminder_24h_enabled ?? false}
-                    />
-                    <div>
-                      <p className="text-xs text-bone-muted mb-4 max-w-sm">
-                        RYVO ya detecta oportunidades de recontacto (ver
-                        Oportunidades) — enviarlas automáticamente todavía no
-                        está disponible.
-                      </p>
-                      <ComingSoonRow label="Rebooking automático" />
-                      <ComingSoonRow label="Solicitud de reseñas" />
-                      <ComingSoonRow label="Recuperación de clientes" />
                     </div>
                   </div>
                 ) : null}

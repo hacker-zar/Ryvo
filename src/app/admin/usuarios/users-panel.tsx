@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/lib/useConfirm";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Account, AccountRole, Business } from "@/types/business";
@@ -195,25 +196,28 @@ export default function UsersPanel({ accounts, businesses }: UsersPanelProps) {
  * de superadmin (adminSetAccountActive/adminDeleteAccount ya lo exigen en
  * el server, esto es solo la UI). Pausar es reversible (vuelve a activarse
  * con el mismo botón); eliminar no, por eso pide confirmación explícita
- * con el nombre de la cuenta, mismo patrón `confirm()` nativo que ya usa
- * el resto del admin (ver ServicesManager/ProfessionalsManager).
+ * nombrando la cuenta, con el mismo ConfirmDialog que usa el resto del
+ * admin (ver useConfirm).
  */
 function AccountRowActions({ account }: { account: Account }) {
   const { run, isPending } = useAsyncStatus();
+  const { ask, dialog } = useConfirm();
 
   async function handleToggleActive() {
     await run(() => adminSetAccountActive(account.id, !account.active));
     window.location.reload();
   }
 
-  async function handleDelete() {
-    if (
-      !confirm(
-        `¿Eliminar la cuenta "${account.name}" (${account.username})?\n\nEsta acción no se puede deshacer.`
-      )
-    ) {
-      return;
-    }
+  function handleDelete() {
+    ask({
+      title: `¿Eliminar la cuenta de ${account.name}?`,
+      description: `${account.username} pierde el acceso al panel de inmediato. Esta acción no se puede deshacer.`,
+      confirmLabel: "Eliminar cuenta",
+      onConfirm: removeAccount,
+    });
+  }
+
+  async function removeAccount() {
     await run(() => adminDeleteAccount(account.id));
     window.location.reload();
   }
@@ -236,6 +240,7 @@ function AccountRowActions({ account }: { account: Account }) {
       >
         Eliminar
       </button>
+      {dialog}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/lib/useConfirm";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Service } from "@/types/business";
@@ -14,6 +15,7 @@ import { useAsyncStatus } from "@/lib/useAsyncStatus";
 import { adminInputClassesCompact } from "@/lib/ui-classes";
 import SaveStatus from "@/components/ui/SaveStatus";
 import EmptyState from "@/components/ui/EmptyState";
+import Icon from "@/components/ui/Icon";
 
 interface ServicesManagerProps {
   businessId: string;
@@ -26,8 +28,14 @@ export default function ServicesManager({
 }: ServicesManagerProps) {
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
+  const { ask, dialog } = useConfirm();
   const [items, setItems] = useState(services);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<{
+    serviceId: string;
+    message: string;
+    canDeactivate: boolean;
+  } | null>(null);
   const editingId =
     target?.category === "servicios" ? target.itemId ?? null : null;
 
@@ -55,15 +63,61 @@ export default function ServicesManager({
     }
   }
 
-  async function handleDelete(serviceId: string) {
-    if (!confirm("¿Borrar este servicio?")) return;
+  /**
+   * El servidor es quien decide si este borrado se puede hacer (ver
+   * deleteService): un servicio con turnos NO se borra, porque la FK
+   * `bookings.service_id` es ON DELETE CASCADE y se llevaría puesto todo
+   * el historial y las reservas futuras. Acá no se duplica esa regla —
+   * solo se muestra el motivo que devuelve, con la salida real al lado
+   * ("Desactivar"), en vez de un error que deja al dueño sin saber qué
+   * hacer.
+   */
+  function handleDelete(serviceId: string) {
+    const service = items.find((s) => s.id === serviceId);
+    ask({
+      title: "¿Borrar este servicio?",
+      description: `${
+        service ? service.name : "Este servicio"
+      } solo se puede borrar si no tiene ningún turno asociado. Si tiene, te vamos a ofrecer desactivarlo. No se puede deshacer.`,
+      confirmLabel: "Borrar servicio",
+      onConfirm: () => removeService(serviceId),
+    });
+  }
+
+  async function removeService(serviceId: string) {
+    setDeleteError(null);
     setDeletingId(serviceId);
     const result = await adminDeleteService(businessId, serviceId);
     setDeletingId(null);
     if (result.success) {
       setItems((prev) => prev.filter((s) => s.id !== serviceId));
       refreshPreview();
+      return;
     }
+    setDeleteError({
+      serviceId,
+      message: result.error ?? "No se pudo borrar el servicio.",
+      canDeactivate: Boolean(result.bookingCount),
+    });
+  }
+
+  /** Alternativa segura al borrado bloqueado: lo saca de la web pública y
+   *  del wizard de reserva sin tocar un solo turno. Reusa la misma acción
+   *  de edición de siempre, mandando solo `active`. */
+  async function handleDeactivate(service: Service) {
+    const formData = new FormData();
+    formData.set("name", service.name);
+    formData.set("description", service.description ?? "");
+    formData.set("price", String(service.price ?? ""));
+    formData.set("duration", String(service.duration ?? ""));
+    // `active` ausente = checkbox destildado, que es como lo lee la acción.
+    const result = await adminUpdateService(businessId, service.id, formData);
+    if (!result.success) return;
+    setItems((prev) =>
+      prev.map((s) => (s.id === service.id ? { ...s, active: false } : s))
+    );
+    setDeleteError(null);
+    refreshPreview();
   }
 
   return (
@@ -165,6 +219,33 @@ export default function ServicesManager({
                     {formatPrice(service.price)}
                     {service.duration != null ? ` · ${service.duration} min` : ""}
                   </p>
+
+                  {deleteError?.serviceId === service.id ? (
+                    <div className="mt-3 radius-sm border border-warn/40 bg-warn/10 px-3 py-2.5 max-w-sm">
+                      <p className="text-xs text-warn flex items-start gap-1.5">
+                        <Icon name="alert" size={16} className="shrink-0 mt-px" />
+                        <span>{deleteError.message}</span>
+                      </p>
+                      {deleteError.canDeactivate ? (
+                        <div className="mt-2.5 flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleDeactivate(service)}
+                            className="section-eyebrow text-xs text-bone hover:text-brass transition-colors"
+                          >
+                            Desactivar servicio
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteError(null)}
+                            className="section-eyebrow text-xs text-bone-muted hover:text-bone transition-colors"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex gap-3 shrink-0">
                   <button
@@ -178,7 +259,7 @@ export default function ServicesManager({
                   <button
                     disabled={deletingId === service.id}
                     onClick={() => handleDelete(service.id)}
-                    className="text-xs text-bone-muted hover:text-red-400 transition-colors disabled:opacity-50"
+                    className="text-xs text-bone-muted hover:text-danger transition-colors disabled:opacity-50"
                   >
                     {deletingId === service.id ? "Borrando..." : "Borrar"}
                   </button>
@@ -234,6 +315,7 @@ export default function ServicesManager({
           {createStatus.isPending ? "Agregando..." : "+ Agregar"}
         </button>
       </form>
+      {dialog}
     </div>
   );
 }

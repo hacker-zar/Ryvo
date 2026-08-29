@@ -51,6 +51,34 @@ interface RegisteredForm {
   save: (() => Promise<boolean>) | null;
 }
 
+/**
+ * Nombre visible de cada formulario registrado, para poder decir QUÉ
+ * sección tiene cambios pendientes o cuál falló al guardar, en vez de un
+ * mensaje genérico.
+ *
+ * Vive acá y no en cada panel para que el contexto pueda armar los
+ * mensajes sin que los paneles tengan que pasar su etiqueta en cada
+ * `setFormDirty` — las claves son estables y son pocas. Una clave sin
+ * entrada acá cae en la clave misma, que es peor mensaje pero nunca un
+ * crash.
+ */
+const FORM_LABELS: Record<string, string> = {
+  pagina: "Página",
+  fotos: "Fotos",
+  apariencia: "Apariencia",
+  notificaciones: "Avisos automáticos",
+};
+
+function labelFor(key: string): string {
+  return FORM_LABELS[key] ?? key;
+}
+
+/** "Apariencia" · "Apariencia y Fotos" · "Página, Apariencia y Fotos" */
+function joinLabels(labels: string[]): string {
+  if (labels.length <= 1) return labels[0] ?? "";
+  return `${labels.slice(0, -1).join(", ")} y ${labels[labels.length - 1]}`;
+}
+
 interface EditorSelectionContextValue {
   target: EditorTarget | null;
   select: (target: EditorTarget) => void;
@@ -60,6 +88,12 @@ interface EditorSelectionContextValue {
    *  cada panel necesite saber que la preview existe. */
   previewVersion: number;
   refreshPreview: () => void;
+  /** Nombres de las secciones con cambios pendientes, ya unidos en texto
+   *  legible ("Apariencia y Fotos"). Cadena vacia si no hay ninguna. Lo
+   *  consume GlobalSaveBar para decir QUE falta guardar, en vez de un
+   *  aviso generico que no distingue de las listas CRUD (que guardan
+   *  solas, por item). */
+  dirtySections: string;
   /** true si CUALQUIER formulario registrado (Página/Fotos/Apariencia)
    *  tiene cambios sin guardar — es la unión de todos, no de uno solo:
    *  varias secciones pueden estar sucias al mismo tiempo (ver
@@ -132,6 +166,7 @@ export function EditorSelectionProvider({
   // ofrece "Guardar y continuar" — leer el ref durante el render no es
   // seguro (ver regla react-hooks/refs).
   const [hasSaveHandler, setHasSaveHandler] = useState(false);
+  const [dirtySections, setDirtySections] = useState("");
   const [saveStatus, setSaveStatus] = useState<GlobalSaveStatus>("idle");
   const [saveError, setSaveError] = useState("");
   const [pendingApply, setPendingApply] = useState<(() => void) | null>(null);
@@ -143,17 +178,24 @@ export function EditorSelectionProvider({
   // registro completo — se llama después de cualquier cambio a
   // formsRef, sea por dirty o por save handler.
   const recomputeAggregates = useCallback(() => {
-    let anyDirty = false;
     let anySaveable = false;
-    for (const entry of formsRef.current.values()) {
+    const dirtyLabels: string[] = [];
+    for (const [key, entry] of formsRef.current) {
       if (entry.dirty) {
-        anyDirty = true;
+        dirtyLabels.push(labelFor(key));
         if (entry.save) anySaveable = true;
       }
     }
+    const anyDirty = dirtyLabels.length > 0;
     isDirtyRef.current = anyDirty;
     setIsDirty(anyDirty);
     setHasSaveHandler(anySaveable);
+    // Se compara el texto ya unido en vez de los arrays: `dirtyLabels` es
+    // un array nuevo en cada llamada, y setState con un array distinto
+    // pero equivalente re-renderizaría a todos los consumidores en cada
+    // tecla tipeada.
+    const joined = joinLabels(dirtyLabels);
+    setDirtySections((prev) => (prev === joined ? prev : joined));
   }, []);
 
   const setFormDirty = useCallback(
@@ -175,26 +217,40 @@ export function EditorSelectionProvider({
   );
 
   const saveChanges = useCallback(async (): Promise<boolean> => {
-    const dirtyEntries = Array.from(formsRef.current.values()).filter(
-      (f) => f.dirty && f.save
+    const dirtyEntries = Array.from(formsRef.current.entries()).filter(
+      ([, f]) => f.dirty && f.save
     );
     if (dirtyEntries.length === 0) return true;
 
     setSaveStatus("saving");
     setSaveError("");
     try {
-      const results = await Promise.all(dirtyEntries.map((f) => f.save!()));
-      const allOk = results.every(Boolean);
-      if (allOk) {
+      const results = await Promise.all(
+        dirtyEntries.map(([, f]) => f.save!())
+      );
+      // Se guardan en paralelo, así que unos pueden salir bien y otros
+      // mal. Antes el mensaje era "No se pudieron guardar algunos
+      // cambios" para cualquier combinación: el usuario no sabía cuál
+      // quedó guardado y cuál no, y reintentar solo reintentaba los que
+      // habían fallado (los que salieron bien ya limpiaron su `dirty`).
+      const failed = dirtyEntries
+        .filter((_, i) => !results[i])
+        .map(([key]) => labelFor(key));
+
+      if (failed.length === 0) {
         setSaveStatus("success");
-      } else {
-        setSaveStatus("error");
-        setSaveError("No se pudieron guardar algunos cambios. Reintentá.");
+        return true;
       }
-      return allOk;
+      setSaveStatus("error");
+      setSaveError(
+        failed.length === dirtyEntries.length
+          ? `No se pudo guardar ${joinLabels(failed)}. Reintentá.`
+          : `Se guardó todo menos ${joinLabels(failed)}. Reintentá esa parte.`
+      );
+      return false;
     } catch {
       setSaveStatus("error");
-      setSaveError("No se pudieron guardar algunos cambios. Reintentá.");
+      setSaveError("No se pudieron guardar los cambios. Reintentá.");
       return false;
     }
   }, []);
@@ -301,6 +357,7 @@ export function EditorSelectionProvider({
       previewVersion,
       refreshPreview,
       isDirty,
+      dirtySections,
       setFormDirty,
       setFormSaveHandler,
       saveStatus,
@@ -315,6 +372,7 @@ export function EditorSelectionProvider({
       previewVersion,
       refreshPreview,
       isDirty,
+      dirtySections,
       setFormDirty,
       setFormSaveHandler,
       saveStatus,

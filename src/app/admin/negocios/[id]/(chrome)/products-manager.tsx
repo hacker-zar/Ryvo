@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/lib/useConfirm";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
@@ -31,7 +32,7 @@ const buttonSecondary =
  * Catálogo — grilla visual de productos (foto/nombre/precio), NO una
  * tabla administrativa (pedido explícito). Reutiliza exactamente el
  * mismo patrón que ServicesManager/ProfessionalsManager (edición in-line
- * por card, useAsyncStatus, confirm() nativo para borrar) — solo cambia
+ * por card, useAsyncStatus, ConfirmDialog para borrar) — solo cambia
  * la presentación de lista a grilla. El interruptor "mostrar catálogo"
  * no vive acá: es el mismo toggle ON/OFF que ya tiene cualquier sección
  * en "Página → Orden de secciones" (ver SectionsManager).
@@ -42,6 +43,7 @@ export default function ProductsManager({
 }: ProductsManagerProps) {
   const router = useRouter();
   const { target, select, refreshPreview } = useEditorSelection();
+  const { ask, dialog } = useConfirm();
   const [items, setItems] = useState(products);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -73,9 +75,19 @@ export default function ProductsManager({
     }
   }
 
-  async function handleDelete(productId: string) {
-    if (!confirm("¿Eliminar este producto?\n\nEsta acción no se puede deshacer."))
-      return;
+  function handleDelete(productId: string) {
+    const product = items.find((p) => p.id === productId);
+    ask({
+      title: "¿Eliminar este producto?",
+      description: `${
+        product ? product.name : "Este producto"
+      } deja de aparecer en tu catálogo. No se puede deshacer.`,
+      confirmLabel: "Eliminar producto",
+      onConfirm: () => removeProduct(productId),
+    });
+  }
+
+  async function removeProduct(productId: string) {
     setDeletingId(productId);
     const result = await adminDeleteProduct(businessId, productId);
     setDeletingId(null);
@@ -266,6 +278,7 @@ export default function ProductsManager({
           </div>
         )}
       </div>
+      {dialog}
     </div>
   );
 }

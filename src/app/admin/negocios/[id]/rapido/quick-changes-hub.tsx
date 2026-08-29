@@ -40,9 +40,9 @@ function cardsFor(businessId: string): QuickChangeCard[] {
 export default function QuickChangesHub({ businessId, slug }: QuickChangesHubProps) {
   return (
     <div>
-      <p className="section-eyebrow text-brass">Cambios rápidos</p>
+      <p className="section-eyebrow text-brass">Mi web</p>
       <h1 className="section-title mt-2 text-2xl text-bone">
-        Modificá lo que necesités sin entrar al editor completo
+        Actualizá el contenido de tu web
       </h1>
       <a
         href={`/${slug}`}

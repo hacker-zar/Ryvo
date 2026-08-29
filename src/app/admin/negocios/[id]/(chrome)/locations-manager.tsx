@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/lib/useConfirm";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Location, OpeningHours } from "@/types/business";
@@ -49,6 +50,7 @@ export default function LocationsManager({
 }: LocationsManagerProps) {
   const router = useRouter();
   const { refreshPreview } = useEditorSelection();
+  const { ask, dialog } = useConfirm();
   const [items, setItems] = useState(locations);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<LocationFormState>(EMPTY_FORM);
@@ -101,8 +103,19 @@ export default function LocationsManager({
     }
   }
 
-  async function handleDelete(locationId: string) {
-    if (!confirm("¿Borrar este local?")) return;
+  function handleDelete(locationId: string) {
+    const location = items.find((l) => l.id === locationId);
+    ask({
+      title: "¿Borrar este local?",
+      description: `${
+        location ? `${location.name}: se` : "Se"
+      } borran también sus horarios de atención. Los turnos ya reservados ahí NO se borran: quedan sin local asignado.`,
+      confirmLabel: "Borrar local",
+      onConfirm: () => removeLocation(locationId),
+    });
+  }
+
+  async function removeLocation(locationId: string) {
     const result = await adminDeleteLocation(businessId, locationId);
     if (result.success) {
       setItems((prev) => prev.filter((l) => l.id !== locationId));
@@ -272,6 +285,7 @@ export default function LocationsManager({
           {createStatus.isPending ? "Agregando..." : "+ Agregar local"}
         </button>
       </div>
+      {dialog}
     </div>
   );
 }

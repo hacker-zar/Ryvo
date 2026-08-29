@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/lib/useConfirm";
 import { useState } from "react";
 import { BookableService, isBookableService, Location, Service } from "@/types/business";
 import { PublicBooking } from "@/lib/data/business-repository";
@@ -57,9 +58,22 @@ export default function ManageBookingView({
 
   const isUpcoming = booking.status === "pending" || booking.status === "confirmed";
   const ctaTextColor = readableTextColor(primaryColor);
+  const { ask, dialog } = useConfirm();
 
-  async function handleCancel() {
-    if (!confirm("¿Seguro que querés cancelar este turno?")) return;
+  function handleCancel() {
+    // Es el cliente cancelando su propio turno desde el link que recibió:
+    // la acción más destructiva que puede hacer alguien fuera del panel, y
+    // era la única que seguía con el cuadro gris del navegador.
+    ask({
+      title: "¿Cancelar tu turno?",
+      description:
+        "El horario queda libre para otra persona y no se puede recuperar. Vas a tener que reservar de nuevo.",
+      confirmLabel: "Sí, cancelar turno",
+      onConfirm: runCancel,
+    });
+  }
+
+  async function runCancel() {
     const result = await cancelStatus.run(() => cancelBooking(booking.id));
     if (result.success) {
       setBooking((b) => ({ ...b, status: "cancelled" }));
@@ -166,6 +180,7 @@ export default function ManageBookingView({
           </button>
         </div>
       )}
+      {dialog}
     </section>
   );
 }

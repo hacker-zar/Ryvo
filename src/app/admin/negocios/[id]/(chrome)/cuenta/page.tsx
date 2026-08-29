@@ -7,6 +7,10 @@ import { getAdminSession } from "@/lib/admin/session";
 import GoogleLinkPanel from "@/components/admin/GoogleLinkPanel";
 import AccountManager from "../account-manager";
 import BusinessNav from "../business-nav";
+import PublishToggle from "../publish-toggle";
+import NotificationSettingsPanel from "../notification-settings-panel";
+import GlobalSaveBar from "../global-save-bar";
+import { EditorSelectionProvider } from "@/lib/admin/editor-selection-context";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -53,6 +57,36 @@ export default async function AccountPage({ params }: PageProps) {
 
       <div className="mt-8">
         <BusinessNav businessId={business.id} active="cuenta" />
+      </div>
+
+      <p className="section-eyebrow text-bone-muted">Estado de la web</p>
+      <div className="mt-3 mb-10">
+        <PublishToggle
+          businessId={business.id}
+          slug={business.slug}
+          published={business.published !== false}
+        />
+      </div>
+
+      {/* Los avisos automáticos son un ajuste operativo del negocio, no
+          una decisión de diseño — vivían en el editor completo, que es
+          exclusivo de RYVO/Partner, así que el dueño no podía encender
+          los avisos de su propio negocio. */}
+      <p className="section-eyebrow text-bone-muted">Avisos automáticos</p>
+      {/* NotificationSettingsPanel se registra en el guardado global (usa
+          useEditorSelection), así que necesita su propio Provider acá —
+          mismo patrón que las sub-páginas de /rapido. Sin esto la página
+          entera crashea, y es un error de runtime que ni el build ni el
+          typecheck detectan. */}
+      <div className="mt-3 mb-10">
+        <EditorSelectionProvider>
+          <GlobalSaveBar />
+          <NotificationSettingsPanel
+            businessId={business.id}
+            whatsappEnabled={business.notify_whatsapp_enabled ?? false}
+            reminder24hEnabled={business.notify_reminder_24h_enabled ?? false}
+          />
+        </EditorSelectionProvider>
       </div>
 
       <p className="section-eyebrow text-bone-muted">Acceso</p>

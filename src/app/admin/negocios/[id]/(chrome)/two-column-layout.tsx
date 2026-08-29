@@ -46,7 +46,19 @@ export default function TwoColumnLayout({ left, right }: TwoColumnLayoutProps) {
         ))}
       </div>
 
-      <div className="md:grid md:grid-cols-[400px_1fr] md:gap-10 md:items-start">
+      {/* Ensanche progresivo del editor.
+          AdminChrome centra todo en max-w-5xl (1024px), que es un ancho
+          de LECTURA — correcto para listas y formularios, pero acá deja
+          la preview en 552px reales (1024 − padding − 400 del panel − 40
+          de gap). El editor es la única pantalla del admin que necesita
+          más.
+
+          Se resuelve rompiendo el contenedor solo desde 1700px de
+          viewport, en vez de ensanchar AdminChrome: así ninguna de las
+          otras pantallas del admin cambia, y por debajo de ese ancho el
+          comportamiento es exactamente el de hoy. Margen negativo fijo
+          (no 100vw) para no pelear con la barra de scroll. */}
+      <div className="min-[1700px]:-mx-[288px] md:grid md:grid-cols-[400px_1fr] md:gap-10 md:items-start">
         <div className={mobileTab === "config" ? "block" : "hidden md:block"}>
           {left}
         </div>

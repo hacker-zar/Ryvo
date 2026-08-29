@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/lib/useConfirm";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Template, TemplateLayoutId } from "@/types/business";
@@ -46,6 +47,7 @@ export default function TemplatePanel({
   businessTemplates,
 }: TemplatePanelProps) {
   const router = useRouter();
+  const { ask, dialog } = useConfirm();
   const { refreshPreview } = useEditorSelection();
   const [mode, setMode] = useState<Mode>("closed");
   const [busy, setBusy] = useState(false);
@@ -104,11 +106,15 @@ export default function TemplatePanel({
       count > 0
         ? `${count} página${count === 1 ? "" : "s"} usa${count === 1 ? "" : "n"} esta plantilla ahora mismo — van a seguir funcionando con su diseño actual, solo se borra la plantilla en sí. `
         : "";
-    const confirmed = window.confirm(
-      `${warning}¿Eliminar "${template.name}"? Esta acción no se puede deshacer.`
-    );
-    if (!confirmed) return;
+    ask({
+      title: `¿Eliminar "${template.name}"?`,
+      description: `${warning}Esta acción no se puede deshacer.`,
+      confirmLabel: "Eliminar plantilla",
+      onConfirm: () => removeTemplate(template),
+    });
+  }
 
+  async function removeTemplate(template: Template) {
     setDeletingId(template.id);
     const result = await adminDeleteTemplate(businessId, template.id);
     setDeletingId(null);
@@ -241,6 +247,7 @@ export default function TemplatePanel({
           </div>
         </div>
       ) : null}
+      {dialog}
     </div>
   );
 }

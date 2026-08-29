@@ -1077,9 +1077,38 @@ export async function updateService(
   return { success: true };
 }
 
+/** Cuántos turnos referencian este servicio — TODOS, incluidos los
+ *  cancelados y el historial completado: son igual de irrecuperables si
+ *  el servicio se borra. Ver deleteService. */
+export async function countBookingsForService(
+  serviceId: string
+): Promise<number> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) return 0;
+  const { count } = await supabaseAdmin
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("service_id", serviceId);
+  return count ?? 0;
+}
+
+/**
+ * ⚠️ `bookings.service_id` tiene ON DELETE CASCADE en la base: borrar un
+ * servicio arrastra en silencio TODOS sus turnos — historial completado
+ * y reservas futuras confirmadas por igual. Es irrecuperable y no hay
+ * ninguna pantalla que lo muestre después.
+ *
+ * (Las otras tres FK de `bookings` — professional_id, location_id,
+ * client_id — son `set null` justamente para no perder el turno cuando
+ * desaparece lo que referencian. service_id quedó fuera de ese criterio.)
+ *
+ * Por eso este borrado se niega cuando hay turnos, en vez de confirmar
+ * dos veces: existe una alternativa que hace lo que el dueño realmente
+ * quiere (sacar el servicio de la web y del wizard) sin perder nada, que
+ * es `active: false`. Un servicio sin ningún turno sí se borra de verdad.
+ */
 export async function deleteService(
   id: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; bookingCount?: number }> {
   if (!isSupabaseAdminConfigured || !supabaseAdmin) {
     return {
       success: false,
@@ -1087,6 +1116,19 @@ export async function deleteService(
         "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder borrar servicios.",
     };
   }
+
+  const bookingCount = await countBookingsForService(id);
+  if (bookingCount > 0) {
+    return {
+      success: false,
+      bookingCount,
+      error:
+        bookingCount === 1
+          ? "Este servicio tiene 1 turno asociado. Desactivalo en vez de borrarlo: deja de aparecer en tu web y en las reservas, y no perdés el turno."
+          : `Este servicio tiene ${bookingCount} turnos asociados. Desactivalo en vez de borrarlo: deja de aparecer en tu web y en las reservas, y no perdés ningún turno.`,
+    };
+  }
+
   const { error } = await supabaseAdmin.from("services").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   return { success: true };
@@ -2122,15 +2164,21 @@ export async function countBusinessesUsingTemplate(
  *  getBusinessProfile, se trae exista o no `enabled`, porque el dueño
  *  tiene que poder verla/editarla incluso apagada. null = todavía nunca
  *  se activó Academia para este negocio (caso normal, no un error). */
-export async function getAcademyForAdmin(businessId: string): Promise<Academy | null> {
-  if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
-  const { data } = await supabaseAdmin
-    .from("academies")
-    .select("*")
-    .eq("business_id", businessId)
-    .maybeSingle();
-  return data ?? null;
-}
+// cache() por request, mismo criterio que getBusinessById: ahora
+// BusinessNav también la consulta (para decidir si mostrar la pestaña
+// "Academia"), y sin esto la pantalla de Academia pagaría la misma
+// consulta dos veces por navegación.
+export const getAcademyForAdmin = cache(
+  async (businessId: string): Promise<Academy | null> => {
+    if (!isSupabaseAdminConfigured || !supabaseAdmin) return null;
+    const { data } = await supabaseAdmin
+      .from("academies")
+      .select("*")
+      .eq("business_id", businessId)
+      .maybeSingle();
+    return data ?? null;
+  }
+);
 
 export type AcademyInput = Omit<Academy, "id" | "business_id" | "created_at" | "updated_at">;
 

@@ -1098,6 +1098,32 @@ export async function adminPublishBusiness(businessId: string) {
   return result;
 }
 
+/**
+ * Ocultar una web ya publicada. Hasta acá publicar era de ida: no había
+ * ninguna acción que devolviera `published` a false, así que sacar de
+ * línea la web de un cliente que dejó de pagar, o que quedó con datos
+ * mal, obligaba a entrar a SQL contra producción.
+ *
+ * NO toca `onboarding_step`, a diferencia de adminPublishBusiness: el
+ * negocio ya completó su onboarding y ocultarlo no lo devuelve a ese
+ * estado. Si volviera a 0, la próxima visita al editor mostraría el
+ * wizard paso a paso en vez del editor normal (ver (chrome)/page.tsx),
+ * que no es lo que "ocultar temporalmente" significa.
+ *
+ * La ruta pública ya sabe manejarlo: con `published === false`,
+ * /[slug] renderiza ComingSoon con la identidad del negocio en vez de
+ * un 404 — el sitio no desaparece, queda en "próximamente".
+ */
+export async function adminUnpublishBusiness(businessId: string) {
+  await requireAdminFor(businessId);
+  const result = await updateBusiness(businessId, { published: false });
+  if (result.success) {
+    revalidatePath("/admin");
+    revalidatePath(`/admin/negocios/${businessId}`);
+  }
+  return result;
+}
+
 // ---------------------------------------------------------------------
 // Sistema de plantillas — gestión desde el editor ("Plantilla" al final
 // de CATEGORIES) y desde el picker de creación de página. Ver Template en

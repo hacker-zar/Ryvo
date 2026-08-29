@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getAcademyForAdmin } from "@/lib/data/business-repository";
+import { getAdminSession } from "@/lib/admin/session";
 
 type NavKey =
   | "editor"
@@ -31,10 +33,40 @@ const TABS: { key: NavKey; label: string; suffix: string }[] = [
  * editor. Mismos destinos que el menú desplegable del sitio público (ver
  * PublicSiteAdminBar).
  */
-export default function BusinessNav({ businessId, active }: BusinessNavProps) {
+export default async function BusinessNav({ businessId, active }: BusinessNavProps) {
+  // Academia es una vertical que no todos los negocios tienen. Como
+  // pestaña fija, para la mayoría llevaba a una pantalla de "activá
+  // Academia" — y un menú con entradas que no aplican entrena a
+  // ignorarlo. Mismo criterio que ya se usa para ocultar secciones sin
+  // contenido en el sitio público.
+  //
+  // Se sigue mostrando si YA estás parado en Academia, para no hacer
+  // desaparecer la pestaña de la pantalla que estás mirando mientras la
+  // configurás.
+  const [academy, session] = await Promise.all([
+    getAcademyForAdmin(businessId),
+    getAdminSession(),
+  ]);
+
+  // El editor completo es exclusivo de RYVO y Partner (ver
+  // require-full-editor-access.ts). Para un dueño, la pestaña "Editor"
+  // era un link muerto: lo redirigía a /rapido sin explicación, y la
+  // sensación no es "tengo un plan más acotado" sino "algo se rompió".
+  // Acá pasa a llamarse "Mi web" y a apuntar directo a donde él sí
+  // trabaja, en vez de mandarlo a rebotar.
+  const isOwner = session?.role === "owner";
+
+  const visibleTabs = TABS.filter(
+    (tab) => tab.key !== "academia" || academy !== null || active === "academia"
+  ).map((tab) =>
+    tab.key === "editor" && isOwner
+      ? { ...tab, label: "Mi web", suffix: "/rapido" }
+      : tab
+  );
+
   return (
     <div className="flex items-center gap-4 flex-wrap border-b border-ink-line pb-4 mb-8">
-      {TABS.map((tab) => (
+      {visibleTabs.map((tab) => (
         <Link
           key={tab.key}
           href={`/admin/negocios/${businessId}${tab.suffix}`}

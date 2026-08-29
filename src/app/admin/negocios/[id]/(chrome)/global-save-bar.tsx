@@ -16,7 +16,8 @@ import Icon, { IconName } from "@/components/ui/Icon";
  * global (ver plan — decisión explícita, no un olvido).
  */
 export default function GlobalSaveBar() {
-  const { isDirty, saveStatus, saveError, saveChanges } = useEditorSelection();
+  const { isDirty, dirtySections, saveStatus, saveError, saveChanges } =
+    useEditorSelection();
 
   const saving = saveStatus === "saving";
   const showError = saveStatus === "error";
@@ -30,7 +31,15 @@ export default function GlobalSaveBar() {
     label = "Error al guardar";
     icon = "alert";
   } else if (isDirty) {
-    label = "Cambios sin guardar";
+    // Nombra la sección. En el editor conviven dos modelos de guardado:
+    // Página/Fotos/Apariencia van en lote por esta barra, mientras que
+    // las listas CRUD (Servicios/Profesionales/Productos/Locales)
+    // guardan solas por ítem. Con un "Cambios sin guardar" genérico, el
+    // dueño agregaba un servicio —ya guardado— y esta barra le avisaba
+    // igual, por otro panel, sin forma de saber cuál.
+    label = dirtySections
+      ? `Cambios sin guardar en ${dirtySections}`
+      : "Cambios sin guardar";
     icon = "alert";
   } else {
     label = "Todos los cambios guardados";

@@ -13,9 +13,30 @@ const VIEWPORTS = [
 
 type Viewport = (typeof VIEWPORTS)[number]["key"];
 
-// Categorías con contenido real en la preview (las de solo estructura —
-// productos/automatizaciones — no tienen ningún elemento clickeable en el
-// sitio público todavía, así que no forman parte de este puente).
+// Margen para una preview lenta (consulta fría + render del sitio
+// completo) sin dejar al usuario esperando indefinidamente si falló.
+const PREVIEW_TIMEOUT_MS = 10000;
+
+/**
+ * Ancho REAL del iframe en modo Desktop.
+ *
+ * Antes el iframe medía lo que sobraba en el panel (~552px con el
+ * contenedor de 1024px), y como un iframe tiene su propio viewport, a
+ * ese ancho se disparaban los breakpoints de mobile/tablet: la pestaña
+ * decía "Desktop" y mostraba otra cosa. Era la única pantalla del editor
+ * que desinformaba activamente — y con la revisión previa a publicar
+ * hecha acá, se aprobaban layouts que ningún visitante de escritorio
+ * iba a ver.
+ *
+ * Ahora el iframe SIEMPRE mide 1280px de verdad y se reduce con
+ * transform: scale() hasta entrar en el hueco disponible. El navegador
+ * de adentro cree que está en un monitor y resuelve los breakpoints
+ * correctos; lo único que cambia es el tamaño con que lo vemos.
+ */
+const DESKTOP_PREVIEW_WIDTH = 1280;
+const MOBILE_PREVIEW_WIDTH = 390;
+const MOBILE_PREVIEW_HEIGHT = 760;
+
 const VALID_CATEGORIES: EditorCategory[] = [
   "pagina",
   "servicios",
@@ -55,6 +76,38 @@ export default function PreviewPane({ businessId }: PreviewPaneProps) {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const currentKeyRef = useRef(currentKey);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const frameBoxRef = useRef<HTMLDivElement>(null);
+  // Ancho disponible para la preview. Empieza en null (todavía no medido)
+  // y no en un número inventado: con un valor supuesto, el primer render
+  // mostraría la preview a una escala incorrecta y saltaría al medirse.
+  const [availableWidth, setAvailableWidth] = useState<number | null>(null);
+
+  // ResizeObserver y no un listener de `resize` de window: el hueco de la
+  // preview cambia por cosas que no son un resize de ventana — abrir una
+  // categoría del acordeón, o el propio ensanche del editor a partir de
+  // 1700px (ver TwoColumnLayout).
+  useEffect(() => {
+    const node = frameBoxRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setAvailableWidth(entry.contentRect.width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const frameWidth =
+    viewport === "mobile" ? MOBILE_PREVIEW_WIDTH : DESKTOP_PREVIEW_WIDTH;
+
+  // Nunca se agranda (tope en 1), solo se reduce: mostrar el sitio más
+  // grande que su tamaño real sería otra forma de mentir.
+  const scale =
+    availableWidth === null ? 1 : Math.min(1, availableWidth / frameWidth);
+
+  // El alto visible es el del contenedor; el iframe necesita ser más alto
+  // en proporción inversa a la escala para llenarlo después de reducirse.
+  const visibleHeight =
+    viewport === "mobile" ? MOBILE_PREVIEW_HEIGHT * scale : 640;
 
   const loaded = readyKey === currentKey;
   const loadError = errorKey === currentKey;
@@ -62,6 +115,23 @@ export default function PreviewPane({ businessId }: PreviewPaneProps) {
   useEffect(() => {
     currentKeyRef.current = currentKey;
   }, [currentKey]);
+
+  /**
+   * "Listo" depende de que el iframe mande `ryvo-editor-ready`. Si la
+   * página de preview falla en el server, ese mensaje no llega nunca — y
+   * `onError` de un <iframe> no dispara para respuestas HTTP de error,
+   * así que el panel se quedaba en "Cargando vista previa..." para
+   * siempre, sin salida. Este timeout hace alcanzable el estado de error
+   * que el componente ya tenía construido (con su botón "Reintentar"),
+   * en vez de agregar uno nuevo.
+   */
+  useEffect(() => {
+    if (loaded || loadError) return;
+    const timer = window.setTimeout(() => {
+      setErrorKey(currentKeyRef.current);
+    }, PREVIEW_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [currentKey, loaded, loadError]);
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
@@ -118,12 +188,21 @@ export default function PreviewPane({ businessId }: PreviewPaneProps) {
         ))}
       </div>
 
+      {/* Caja medida por el ResizeObserver — siempre al 100% del hueco,
+          para que `availableWidth` sea el ancho real disponible y no el
+          del marco ya escalado. */}
+      <div ref={frameBoxRef} className="w-full">
       <div
         className={
           viewport === "mobile"
-            ? "relative mx-auto w-[390px] rounded-2xl border border-ink-line overflow-hidden bg-ink"
+            ? "relative mx-auto rounded-2xl border border-ink-line overflow-hidden bg-ink"
             : "relative w-full radius-sm border border-ink-line overflow-hidden bg-ink"
         }
+        style={{
+          height: visibleHeight,
+          width:
+            viewport === "mobile" ? MOBILE_PREVIEW_WIDTH * scale : undefined,
+        }}
       >
         {!loaded && !loadError ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-ink">
@@ -154,13 +233,25 @@ export default function PreviewPane({ businessId }: PreviewPaneProps) {
           src={`/admin/negocios/${businessId}/preview`}
           title="Vista previa del sitio"
           onError={() => setErrorKey(currentKey)}
-          className={
-            viewport === "mobile"
-              ? "w-[390px] h-[760px]"
-              : "w-full h-[80vh] min-h-[600px]"
-          }
+          className="border-0"
+          style={{
+            width: frameWidth,
+            // Alto compensado: al reducirse por `scale`, termina ocupando
+            // exactamente `visibleHeight`.
+            height: visibleHeight / scale,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+          }}
         />
       </div>
+      </div>
+
+      {viewport === "desktop" && scale < 1 ? (
+        <p className="mt-2 text-[11px] text-bone-muted/70">
+          Escritorio real de {DESKTOP_PREVIEW_WIDTH}px, mostrado al{" "}
+          {Math.round(scale * 100)}%.
+        </p>
+      ) : null}
     </div>
   );
 }

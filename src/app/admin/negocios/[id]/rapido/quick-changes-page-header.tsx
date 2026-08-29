@@ -17,10 +17,10 @@ export default function QuickChangesPageHeader({
         href={`/admin/negocios/${businessId}/rapido`}
         className="section-eyebrow text-xs text-bone-muted hover:text-brass transition-colors"
       >
-        ← Volver a Cambios rápidos
+        ← Volver a Mi web
       </Link>
 
-      <p className="section-eyebrow text-brass mt-6">Cambios rápidos</p>
+      <p className="section-eyebrow text-brass mt-6">Mi web</p>
       <h1 className="section-title mt-2 text-2xl text-bone">{title}</h1>
     </>
   );

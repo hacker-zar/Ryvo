@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/lib/useConfirm";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -93,6 +94,7 @@ export default function AcademyCategoriesManager({
   locations,
 }: AcademyCategoriesManagerProps) {
   const router = useRouter();
+  const { ask, dialog } = useConfirm();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -110,8 +112,17 @@ export default function AcademyCategoriesManager({
     }
   }
 
-  async function handleDelete(categoryId: string) {
-    if (!confirm("¿Eliminar esta categoría?\n\nEsta acción no se puede deshacer.")) return;
+  function handleDelete(categoryId: string) {
+    ask({
+      title: "¿Eliminar esta categoría?",
+      description:
+        "Deja de estar disponible para nuevos interesados. Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar categoría",
+      onConfirm: () => removeCategory(categoryId),
+    });
+  }
+
+  async function removeCategory(categoryId: string) {
     setDeletingId(categoryId);
     const result = await adminDeleteAcademyCategory(businessId, categoryId);
     setDeletingId(null);
@@ -226,6 +237,7 @@ export default function AcademyCategoriesManager({
           + Nueva categoría
         </button>
       )}
+      {dialog}
     </div>
   );
 }
