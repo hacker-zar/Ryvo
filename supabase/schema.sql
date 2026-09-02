@@ -659,3 +659,29 @@ create policy "public insert page requests" on page_requests for insert with che
 -- verdad, la solicitud (y su historial) se conserva.
 alter table page_requests add column if not exists business_id uuid references businesses(id) on delete set null;
 create index if not exists page_requests_business_id_idx on page_requests(business_id);
+
+-- === Catálogo — precio opcional (ver
+-- migrations/0003_products_price_nullable.sql). `null` = "Consultar
+-- precio" (formatPrice, lib/format.ts, ya contemplaba null desde antes).
+-- No se toca ningún otro campo ni fila existente. ===
+alter table products alter column price drop not null;
+alter table products alter column price drop default;
+
+-- === Catálogo — layout configurable (ver
+-- migrations/0004_catalog_layout.sql). Mismo mecanismo que
+-- gallery_layout, pero el catálogo pasa a depender SOLO de esta columna
+-- para su composición — template_layout ya no decide qué se renderiza
+-- ahí, solo aporta apariencia. Default 'lista': los 4 negocios
+-- existentes al aplicar esta migración quedaron todos en 'lista'. ===
+alter table businesses add column if not exists catalog_layout text not null default 'lista';
+alter table businesses add constraint businesses_catalog_layout_check
+  check (catalog_layout in ('lista', 'grilla', 'destacados'));
+
+-- === Catálogo — orden manual (ver
+-- migrations/0005_products_display_order.sql). Mismo mecanismo que
+-- professionals.display_order/reorderProfessional. El backfill numeró
+-- los productos existentes 0,1,2... por business_id en su orden real
+-- de created_at — nunca quedaron todos empatados en 0. ===
+alter table products add column if not exists display_order integer not null default 0;
+create index if not exists products_business_id_display_order_idx
+  on products(business_id, display_order);

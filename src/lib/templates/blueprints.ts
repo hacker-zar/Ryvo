@@ -84,7 +84,6 @@ export const LAYOUT_BLUEPRINTS: Record<TemplateLayoutId, LayoutBlueprint> = {
       { type: "core", ids: ["services", "products"] },
       { type: "marquee" },
       { type: "core", ids: ["professionals", "academy", "gallery", "reviews"] },
-      { type: "social" },
       { type: "core", ids: ["contact"] },
     ],
     headingFont: { name: "Space Grotesk", cssVar: "--font-space-grotesk" },

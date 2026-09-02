@@ -78,7 +78,11 @@ export default async function BusinessSite({ profile, slug }: BusinessSiteProps)
       />
     ),
     products: () => (
-      <Products products={products} primaryColor={business.primary_color} layout={layout} />
+      <Products
+        products={products}
+        primaryColor={business.primary_color}
+        catalogLayout={business.catalog_layout}
+      />
     ),
     academy: () => (
       <Academy

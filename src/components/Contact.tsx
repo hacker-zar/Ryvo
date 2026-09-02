@@ -1,5 +1,5 @@
 import { Business } from "@/types/business";
-import { dayLabel, whatsappLink } from "@/lib/format";
+import { dayLabel, readableTextColor, whatsappLink } from "@/lib/format";
 import Reveal from "@/components/Reveal";
 import SectionHeader from "@/components/SectionHeader";
 import SiteQrBlock from "@/components/SiteQrBlock";
@@ -25,6 +25,16 @@ interface ContactProps {
 
 export default function Contact({ business, publicSiteUrl }: ContactProps) {
   const mapsQuery = encodeURIComponent(business.address);
+  // Mismo formato de botón que usaba el CTA de Instagram de SocialGrid
+  // (píldora, fondo primary_color, texto legible calculado) — unificado
+  // acá para los 3 links de contacto en vez del botón cuadrado de solo
+  // ícono que tenían antes.
+  const contactButtonClasses =
+    "section-eyebrow text-xs px-5 py-3 rounded-full font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-opacity";
+  const contactButtonStyle = {
+    backgroundColor: business.primary_color,
+    color: readableTextColor(business.primary_color),
+  };
 
   return (
     <section id="contacto" className="bg-ink-elevated">
@@ -50,7 +60,7 @@ export default function Contact({ business, publicSiteUrl }: ContactProps) {
               </a>
             ) : null}
 
-            <div className="flex flex-wrap gap-3 text-xs">
+            <div className="flex flex-wrap gap-3">
               {business.whatsapp ? (
                 <a
                   href={whatsappLink(
@@ -59,13 +69,13 @@ export default function Contact({ business, publicSiteUrl }: ContactProps) {
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="WhatsApp"
-                  title="WhatsApp"
                   data-editable-category="pagina"
                   data-editable-field="whatsapp"
-                  className="h-11 w-11 flex items-center justify-center radius-sm border border-ink-line text-bone hover:border-brass hover:text-brass transition-colors"
+                  className={contactButtonClasses}
+                  style={contactButtonStyle}
                 >
-                  <Icon name="whatsapp" size={20} />
+                  <Icon name="whatsapp" size={16} className="shrink-0" />
+                  WhatsApp
                 </a>
               ) : null}
 
@@ -74,26 +84,26 @@ export default function Contact({ business, publicSiteUrl }: ContactProps) {
                   href={`https://instagram.com/${business.instagram}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Instagram"
-                  title="Instagram"
                   data-editable-category="pagina"
                   data-editable-field="instagram"
-                  className="h-11 w-11 flex items-center justify-center radius-sm border border-ink-line text-bone hover:border-brass hover:text-brass transition-colors"
+                  className={contactButtonClasses}
+                  style={contactButtonStyle}
                 >
-                  <Icon name="instagram" size={20} />
+                  <Icon name="instagram" size={16} className="shrink-0" />@
+                  {business.instagram.replace(/^@/, "")}
                 </a>
               ) : null}
 
               {business.phone ? (
                 <a
                   href={`tel:${business.phone}`}
-                  aria-label="Llamar"
-                  title="Llamar"
                   data-editable-category="pagina"
                   data-editable-field="telefono"
-                  className="h-11 w-11 flex items-center justify-center radius-sm border border-ink-line text-bone hover:border-brass hover:text-brass transition-colors"
+                  className={contactButtonClasses}
+                  style={contactButtonStyle}
                 >
-                  <Icon name="phone" size={20} />
+                  <Icon name="phone" size={16} className="shrink-0" />
+                  Llamar
                 </a>
               ) : null}
             </div>

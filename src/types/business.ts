@@ -36,6 +36,13 @@ export type GalleryLayoutId =
   | "masonry"
   | "showcase";
 
+// Cómo se presenta el catálogo público (ver components/Products.tsx y
+// components/catalog/*) — igual que GalleryLayoutId, independiente de
+// `template_layout`: ningún renderer de catálogo debe consultar la
+// plantilla, solo el estilo elegido acá. "lista" es el default (y el
+// fallback para cualquier valor no reconocido, ver Products.tsx).
+export type CatalogLayoutId = "lista" | "grilla" | "destacados";
+
 // Secciones reordenables/activables del sitio público. "hero" queda
 // deliberadamente fuera de este union — es estructural (siempre primera,
 // siempre visible), igual que Header/Footer, no forma parte del orden
@@ -98,6 +105,11 @@ export interface Business {
   // Estilo de presentación de la galería pública — ver GalleryLayoutId.
   // Vacío/no seteado = "editorial" (ver Gallery.tsx).
   gallery_layout?: GalleryLayoutId | null;
+  // Estilo de presentación del catálogo público — ver CatalogLayoutId.
+  // Nunca null/undefined en la base (default 'lista'), pero opcional acá
+  // igual que el resto de los campos de personalización, para que
+  // BusinessInput no lo exija en cada insert.
+  catalog_layout?: CatalogLayoutId;
   // Imagen de la sección "Quiénes somos", elegida explícitamente por el
   // negocio — independiente del orden de `gallery`. Vacío/no seteado =
   // usa `gallery[0]` como fallback (comportamiento histórico, ver
@@ -241,8 +253,17 @@ export interface Product {
   business_id: string;
   name: string;
   description: string;
-  price: number;
+  // null = sin precio cargado todavía → formatPrice (lib/format.ts) lo
+  // muestra como "Consultar precio". `0` es un precio real (el negocio
+  // lo escribió a propósito), no se confunde con "sin precio".
+  price: number | null;
   image: string;
+  // Orden manual dentro del catálogo del negocio — mismo mecanismo que
+  // professionals.display_order (ver reorderProduct en
+  // business-repository.ts). Nunca lo asigna el negocio directamente:
+  // createProduct calcula max+1, reorderProduct intercambia con el
+  // vecino.
+  display_order: number;
   // Mismo patrón que services.active/professionals.active — Products.tsx
   // (público) solo muestra los activos, igual que Services ya hace.
   active: boolean;

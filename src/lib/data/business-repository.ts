@@ -55,7 +55,7 @@ import { detectOpportunities } from "@/lib/opportunities";
 // funciones de autenticación de más abajo, porque el hash terminaría
 // serializado en el HTML/RSC payload aunque ningún componente lo muestre.
 const BUSINESS_PUBLIC_COLUMNS =
-  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, gallery_layout, about_image, opening_hours, background_color, text_color, typography_preset, button_style, image_radius, image_shadow, image_treatment, density, hero_kicker, hero_headline, notify_whatsapp_enabled, notify_reminder_24h_enabled, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, template_id, template_layout, palette_id, partner_id, created_at";
+  "id, name, slug, description, logo, primary_color, secondary_color, whatsapp, instagram, address, phone, email, city, hero_image, gallery, gallery_layout, catalog_layout, about_image, opening_hours, background_color, text_color, typography_preset, button_style, image_radius, image_shadow, image_treatment, density, hero_kicker, hero_headline, notify_whatsapp_enabled, notify_reminder_24h_enabled, business_type, onboarding_step, published, favicon, hero_video, hero_video_enabled, hero_video_position, single_specialist_mode, section_order, animation_preset, template_id, template_layout, palette_id, partner_id, created_at";
 
 /**
  * Punto único de acceso a datos de negocio.
@@ -115,12 +115,17 @@ export async function getBusinessProfile(
       // Mismo criterio que servicios/profesionales: la web pública solo
       // muestra productos activos (ver Product.active, sumado junto con
       // el Editor rápido) — listProductsByBusiness (admin) trae todos,
-      // activos e inactivos, para poder reactivarlos.
+      // activos e inactivos, para poder reactivarlos. Mismo orden que
+      // listProductsByBusiness (display_order, created_at como
+      // desempate) — el sitio público y el editor deben coincidir
+      // siempre, nunca dos criterios de orden distintos para el mismo
+      // dato.
       supabase
         .from("products")
         .select("*")
         .eq("business_id", business.id)
         .eq("active", true)
+        .order("display_order", { ascending: true })
         .order("created_at", { ascending: true }),
       // maybeSingle: la mayoría de los negocios todavía no activó
       // Academia — 0 filas es un caso normal, no un error.
@@ -1151,13 +1156,17 @@ export async function listProductsByBusiness(
       .from("products")
       .select("*")
       .eq("business_id", businessId)
+      .order("display_order", { ascending: true })
       .order("created_at", { ascending: true });
     return data ?? [];
   }
   return businessId === demoBusiness.id ? demoProducts : [];
 }
 
-export type ProductInput = Omit<Product, "id" | "created_at" | "updated_at">;
+export type ProductInput = Omit<
+  Product,
+  "id" | "created_at" | "updated_at" | "display_order"
+>;
 
 export async function createProduct(
   input: ProductInput
@@ -1169,8 +1178,64 @@ export async function createProduct(
         "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder crear productos.",
     };
   }
-  const { error } = await supabaseAdmin.from("products").insert(input);
+  // Mismo patrón que createProfessional: el producto nuevo entra
+  // siempre al final del catálogo del negocio, nunca al principio ni
+  // en un lugar arbitrario.
+  const { data: maxOrderRow } = await supabaseAdmin
+    .from("products")
+    .select("display_order")
+    .eq("business_id", input.business_id)
+    .order("display_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const displayOrder = (maxOrderRow?.display_order ?? -1) + 1;
+
+  const { error } = await supabaseAdmin
+    .from("products")
+    .insert({ ...input, display_order: displayOrder });
   if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+/** Sube o baja un producto en el orden del catálogo, intercambiando
+ *  display_order con el vecino inmediato — mismo patrón exacto que
+ *  reorderProfessional, sin drag-and-drop. */
+export async function reorderProduct(
+  businessId: string,
+  productId: string,
+  direction: "up" | "down"
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseAdminConfigured || !supabaseAdmin) {
+    return {
+      success: false,
+      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY para poder reordenar productos.",
+    };
+  }
+  const { data: products } = await supabaseAdmin
+    .from("products")
+    .select("id, display_order")
+    .eq("business_id", businessId)
+    .order("display_order", { ascending: true });
+  if (!products) return { success: false, error: "No se encontraron productos." };
+
+  const index = products.findIndex((p) => p.id === productId);
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (index === -1 || swapIndex < 0 || swapIndex >= products.length) {
+    return { success: true }; // ya está en el extremo, no hay nada que hacer
+  }
+
+  const current = products[index];
+  const neighbor = products[swapIndex];
+  await Promise.all([
+    supabaseAdmin
+      .from("products")
+      .update({ display_order: neighbor.display_order })
+      .eq("id", current.id),
+    supabaseAdmin
+      .from("products")
+      .update({ display_order: current.display_order })
+      .eq("id", neighbor.id),
+  ]);
   return { success: true };
 }
 

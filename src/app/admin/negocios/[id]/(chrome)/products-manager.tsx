@@ -6,9 +6,11 @@ import { useState } from "react";
 import Image from "next/image";
 import { Product } from "@/types/business";
 import { formatPrice } from "@/lib/format";
+import Icon from "@/components/ui/Icon";
 import {
   adminCreateProduct,
   adminDeleteProduct,
+  adminReorderProduct,
   adminUpdateProduct,
 } from "@/lib/admin/actions";
 import { useEditorSelection } from "@/lib/admin/editor-selection-context";
@@ -46,6 +48,7 @@ export default function ProductsManager({
   const { ask, dialog } = useConfirm();
   const [items, setItems] = useState(products);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const editingId =
     target?.category === "productos" ? target.itemId ?? null : null;
@@ -97,6 +100,16 @@ export default function ProductsManager({
     }
   }
 
+  async function handleReorder(productId: string, direction: "up" | "down") {
+    setReorderingId(productId);
+    const result = await adminReorderProduct(businessId, productId, direction);
+    setReorderingId(null);
+    if (result.success) {
+      router.refresh();
+      refreshPreview();
+    }
+  }
+
   return (
     <div className="mt-2">
       <div className="flex items-start justify-between gap-4">
@@ -131,9 +144,8 @@ export default function ProductsManager({
             type="number"
             step="1"
             min="0"
-            required
             className={adminInputClassesCompact}
-            placeholder="Precio"
+            placeholder="Precio (opcional)"
           />
           <textarea
             name="description"
@@ -160,7 +172,7 @@ export default function ProductsManager({
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((product) =>
+            {items.map((product, index) =>
               editingId === product.id ? (
                 <form
                   key={product.id}
@@ -185,10 +197,9 @@ export default function ProductsManager({
                     type="number"
                     step="1"
                     min="0"
-                    defaultValue={product.price}
-                    required
+                    defaultValue={product.price ?? ""}
                     className={adminInputClassesCompact}
-                    placeholder="Precio"
+                    placeholder="Precio (opcional)"
                   />
                   <textarea
                     name="description"
@@ -254,7 +265,25 @@ export default function ProductsManager({
                         {product.description}
                       </p>
                     ) : null}
-                    <div className="mt-3 flex gap-3">
+                    <div className="mt-3 flex items-center gap-3">
+                      <button
+                        type="button"
+                        disabled={index === 0 || reorderingId === product.id}
+                        onClick={() => handleReorder(product.id, "up")}
+                        aria-label="Subir"
+                        className="text-bone-muted hover:text-brass disabled:opacity-30 transition-colors"
+                      >
+                        <Icon name="chevron" size={16} rotate={180} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === items.length - 1 || reorderingId === product.id}
+                        onClick={() => handleReorder(product.id, "down")}
+                        aria-label="Bajar"
+                        className="text-bone-muted hover:text-brass disabled:opacity-30 transition-colors"
+                      >
+                        <Icon name="chevron" size={16} />
+                      </button>
                       <button
                         onClick={() =>
                           select({ category: "productos", itemId: product.id })

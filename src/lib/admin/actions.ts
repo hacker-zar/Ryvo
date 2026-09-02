@@ -41,6 +41,7 @@ import {
   getTemplateById,
   listBookingsByBusiness,
   listProfessionalsByBusiness,
+  reorderProduct,
   reorderProfessional,
   rescheduleBookingById,
   unassignBusinessFromPartner,
@@ -62,7 +63,13 @@ import {
   updateAccount,
   updateAccountPassword,
 } from "@/lib/data/accounts-repository";
-import { AcademyInterestStatus, AccountRole, OpeningHours, SectionConfig } from "@/types/business";
+import {
+  AcademyInterestStatus,
+  AccountRole,
+  CatalogLayoutId,
+  OpeningHours,
+  SectionConfig,
+} from "@/types/business";
 import { slugify } from "@/lib/slug";
 import { sanitizeSectionOrder } from "@/lib/section-order";
 import { dispatchDueNotificationsForBooking } from "@/lib/notifications/dispatch";
@@ -326,22 +333,49 @@ export async function adminDeleteService(
   return result;
 }
 
+// Precio de un producto — a diferencia de parseOptionalNumber (que
+// colapsa "vacío" e "inválido" en el mismo null), acá hace falta
+// distinguirlos: vacío es una elección legítima ("Consultar precio"),
+// un texto no numérico es un error del usuario que merece un mensaje
+// legible en vez de convertirse en null en silencio o llegar crudo a
+// Postgres. parseOptionalNumber sigue siendo quien hace la conversión
+// real — esto solo decide qué significa que devuelva null.
+function parseProductPrice(
+  formData: FormData
+): { success: true; price: number | null } | { success: false; error: string } {
+  const raw = String(formData.get("price") ?? "").trim();
+  if (!raw) return { success: true, price: null };
+
+  const parsed = parseOptionalNumber(formData.get("price"));
+  if (parsed === null) {
+    return { success: false, error: "El precio ingresado no es válido." };
+  }
+  if (parsed < 0) {
+    return { success: false, error: "El precio no puede ser negativo." };
+  }
+  return { success: true, price: parsed };
+}
+
 export async function adminCreateProduct(
   businessId: string,
   formData: FormData
 ) {
   await requireAdminFor(businessId);
 
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return { success: false, error: "El nombre es obligatorio." };
+
+  const priceResult = parseProductPrice(formData);
+  if (!priceResult.success) return priceResult;
+
   const input: ProductInput = {
     business_id: businessId,
-    name: String(formData.get("name") || "").trim(),
+    name,
     description: String(formData.get("description") || ""),
-    price: Number(formData.get("price") || 0),
+    price: priceResult.price,
     image: String(formData.get("image") || ""),
     active: formData.get("active") === "on",
   };
-
-  if (!input.name) return { success: false, error: "El nombre es obligatorio." };
 
   const result = await createProduct(input);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
@@ -355,10 +389,13 @@ export async function adminUpdateProduct(
 ) {
   await requireAdminFor(businessId);
 
+  const priceResult = parseProductPrice(formData);
+  if (!priceResult.success) return priceResult;
+
   const input: Partial<ProductInput> = {
     name: String(formData.get("name") || "").trim(),
     description: String(formData.get("description") || ""),
-    price: Number(formData.get("price") || 0),
+    price: priceResult.price,
     image: String(formData.get("image") || ""),
     active: formData.get("active") === "on",
   };
@@ -374,6 +411,17 @@ export async function adminDeleteProduct(
 ) {
   await requireAdminFor(businessId);
   const result = await deleteProduct(productId);
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+export async function adminReorderProduct(
+  businessId: string,
+  productId: string,
+  direction: "up" | "down"
+) {
+  await requireAdminFor(businessId);
+  const result = await reorderProduct(businessId, productId, direction);
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
 }
@@ -483,6 +531,22 @@ export async function adminSetSingleSpecialistMode(
   const result = await updateBusiness(businessId, {
     single_specialist_mode: enabled,
   });
+  if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
+  return result;
+}
+
+// Sin validar `layout` contra CATALOG_LAYOUT_OPTIONS acá: el picker (un
+// set de tarjetas, no un <select> con cualquier string libre) ya solo
+// puede mandar uno de los 3 valores reales — y aunque mandara otra
+// cosa, el constraint check de la columna (ver
+// migrations/0004_catalog_layout.sql) es la defensa real, no esta
+// acción.
+export async function adminSetCatalogLayout(
+  businessId: string,
+  layout: CatalogLayoutId
+) {
+  await requireAdminFor(businessId);
+  const result = await updateBusiness(businessId, { catalog_layout: layout });
   if (result.success) revalidatePath(`/admin/negocios/${businessId}`);
   return result;
 }

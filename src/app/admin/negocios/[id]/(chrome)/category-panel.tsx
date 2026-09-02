@@ -12,6 +12,7 @@ import FotosPanel from "./fotos-panel";
 import ServicesManager from "./services-manager";
 import ProfessionalsManager from "./professionals-manager";
 import ProductsManager from "./products-manager";
+import CatalogLayoutPicker from "./catalog-layout-picker";
 import LocationsManager from "./locations-manager";
 import AppearanceForm from "./appearance-form";
 import TemplatePanel from "./template-panel";
@@ -62,7 +63,7 @@ export default function CategoryPanel({
   officialTemplates,
   businessTemplates,
 }: CategoryPanelProps) {
-  const { target, select, clear } = useEditorSelection();
+  const { target, select, clear, refreshPreview } = useEditorSelection();
   const openCategory = target?.category ?? null;
 
   return (
@@ -135,7 +136,16 @@ export default function CategoryPanel({
                   />
                 ) : null}
                 {key === "productos" ? (
-                  <ProductsManager businessId={business.id} products={products} />
+                  <div className="grid gap-8">
+                    <CatalogLayoutPicker
+                      businessId={business.id}
+                      initialValue={business.catalog_layout ?? "lista"}
+                      productsWithImageCount={products.filter((p) => p.image).length}
+                      totalProducts={products.length}
+                      onSaved={refreshPreview}
+                    />
+                    <ProductsManager businessId={business.id} products={products} />
+                  </div>
                 ) : null}
                 {key === "reservas" ? (
                   <div className="grid gap-6">
