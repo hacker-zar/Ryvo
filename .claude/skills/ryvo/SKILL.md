@@ -80,17 +80,34 @@ no excluye horarios ya pasados cuando la fecha elegida es hoy.
 
 ## Admin — aislamiento multi-tenant real
 
-Dos roles de sesión, codificados y firmados (HMAC) en la cookie
-`admin_session` (`src/lib/admin/session.ts`, tipo `AdminSession`):
+Cuatro roles, codificados y firmados (HMAC) en la cookie `admin_session`
+(`src/lib/admin/session.ts`, tipo `AdminSession`). Tres niveles de
+autenticación (`role`: `super` / `partner` / `owner`) y, dentro de
+`owner`, un `accountRole` que separa al dueño del Barber
+(`worker` — solo lectura de sus propios turnos, ninguna acción de
+escritura; ver `requireBusinessMember` en `authorize.ts`):
 
 - **`super`** — RYVO, autentica contra `ADMIN_PASSWORD` (env var, sin
   negocio asociado). Puede gestionar cualquier negocio y es el único rol
-  que puede crear negocios nuevos (`adminCreateBusiness`).
-- **`owner`** — el dueño de UN negocio puntual, autentica contra la
-  contraseña propia de ESE negocio (`businesses.admin_password_hash`, hash
-  scrypt). Solo puede gestionar ese negocio — intentar entrar a
+  que puede crear negocios nuevos sin quedar asignado a ninguno.
+- **`partner`** — una cuenta de `accounts` (`role: "partner"`,
+  `business_id: null`) que administra el CONJUNTO de negocios que tenga
+  asignados (`businesses.partner_id`). A diferencia de `owner`, la
+  asignación se consulta en la base en cada autorización
+  (`isBusinessAssignedToPartner`), nunca se cachea en la cookie: puede
+  cambiar en cualquier momento. También puede crear negocios, quedando
+  auto-asignado (`requireSuperAdminOrPartner`).
+- **`owner`** — una cuenta de `accounts` (usuario + contraseña, hash
+  scrypt en `accounts.password_hash`) vinculada a UN negocio puntual.
+  Solo puede gestionar ese negocio — intentar entrar a
   `/admin/negocios/<otro-id>` lo rebota a su propio negocio, nunca muestra
-  ni filtra datos ajenos.
+  ni filtra datos ajenos. Su `accountRole` puede ser `owner` (editor
+  completo) o `worker` (Barber: Editor rápido, solo lectura de sus turnos).
+
+⚠️ `businesses.admin_password_hash` es un vestigio: el login por negocio
+migró a `accounts` y la columna está en NULL en los 4 negocios reales. No
+la uses para autenticar. Sigue siendo la razón por la que existe
+`BUSINESS_PUBLIC_COLUMNS` (ver "Supabase y seguridad").
 
 **Regla de oro**: toda server action de `src/lib/admin/actions.ts` y
 `gallery-actions.ts` que reciba un `businessId` DEBE arrancar con
@@ -161,29 +178,54 @@ serializa en el HTML/RSC payload aunque nada lo muestre.
 ## Ya implementado (no reconstruir)
 
 Sitio público completo, booking wizard con disponibilidad real, apariencia
-personalizable, admin completo (negocio/apariencia/locales/galería/
-servicios/profesionales/turnos), multi-local, modo demo automático, y
-aislamiento multi-tenant real entre negocios (sesión con rol +
-`requireAdminFor` en cada acción — ver "Admin" arriba). El esquema real de
-Supabase (`businesses/services/locations/bookings/reviews/professionals`)
-está aplicado y verificado contra `supabase/schema.sql`.
+personalizable, plantillas (`templates`), catálogo de productos, Academia,
+clientes, estadísticas y oportunidades, motor de notificaciones, agenda
+día/semana, Editor rápido, registro y login con Google, admin completo,
+multi-local, modo demo automático, y aislamiento multi-tenant real entre
+negocios (sesión con rol + `requireAdminFor` en cada acción — ver "Admin"
+arriba).
 
-**Profesionales** (`professionals` table, `Professional` type,
-`src/components/Professionals.tsx`): señal de confianza en la web pública
-(nombre, rol, bio, foto opcional con fallback de iniciales) — deliberada y
-explícitamente **no** ligado al flujo de reservas, no hay "elegir
-profesional" en el wizard. Se renderiza entre Servicios y Galería. Si se
-llega a pedir en el futuro conectar profesionales con servicios/booking,
-es un cambio de alcance nuevo, no una extensión trivial de esto.
+La base real tiene **18 tablas**, no 6: a las de siempre
+(`businesses/services/locations/bookings/reviews/professionals`) se suman
+`accounts`, `professional_services`, `clients`, `customers`, `products`,
+`templates`, `notification_events`, `partner_businesses`, `academies`,
+`academy_categories`, `academy_interests` y `page_requests`.
+
+⚠️ `supabase/schema.sql` quedó atrás de la base real: le faltan 6 columnas
+de `businesses` (`favicon`, `about_image`, `hero_kicker`, `hero_headline`,
+`density`, `image_treatment`). Hasta que se corrija, verificá contra la
+base, no contra el archivo.
+
+**Profesionales**: SÍ están ligados al flujo de reservas — esto cambió, y
+la versión anterior de este skill decía lo contrario.
+`professional_services` define qué profesional puede dar qué servicio, y el
+wizard inserta un paso "elegir profesional" **solo** cuando el servicio
+elegido tiene 2+ profesionales calificados (ver `BookingModal` +
+`StepProfessional`); con uno solo se resuelve automático y el paso no
+aparece. Siguen siendo además señal de confianza en la web pública
+(`Professionals.tsx`).
 
 ## Roadmap — NO implementar sin pedido explícito
 
-WhatsApp Booking, recordatorios automáticos, rebooking, waitlist, gestión de
-reseñas más allá de mostrarlas, analytics, marketing, gift cards,
-membresías, IA, optimización de agenda, gestión de empleados, pagos online,
-inventario, fidelización, chat. Todo esto está fuera de alcance a propósito
-(ver "Fuera de alcance" en `README.md`) — no prepares abstracciones "por si
-después se necesita".
+Rebooking, waitlist, gestión de reseñas más allá de mostrarlas, marketing,
+gift cards, membresías, IA, pagos online, inventario, fidelización, chat,
+gestión de empleados (horarios propios, liquidaciones). Todo esto está
+fuera de alcance a propósito (ver "Fuera de alcance" en `README.md`) — no
+prepares abstracciones "por si después se necesita".
+
+Estos, en cambio, YA existen y salieron del roadmap — no los reconstruyas
+ni los trates como fuera de alcance:
+
+- **Recordatorios automáticos / WhatsApp**: motor completo
+  (`notification_events`, `lib/notifications/dispatch.ts`, adapter de
+  WhatsApp Cloud API, cron en `vercel.json` → `/api/cron/notifications`).
+  Los eventos reactivos (reserva creada/confirmada/cancelada/reprogramada)
+  salen desde la propia Server Action; solo el `reminder_24h` depende del
+  cron. ⚠️ Está inerte en producción porque falta la env var
+  `CRON_SECRET` — es configuración faltante, no código faltante.
+- **Analytics**: `estadisticas/` + `BusinessStats` + `lib/opportunities.ts`.
+- **Cuentas por profesional**: `accounts.role = "worker"` + Editor rápido
+  (`/admin/negocios/[id]/rapido`).
 
 ## Antes de tocar código
 
