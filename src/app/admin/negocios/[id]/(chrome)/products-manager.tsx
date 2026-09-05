@@ -164,14 +164,25 @@ export default function ProductsManager({
         </form>
       ) : null}
 
-      <div className="mt-6">
+      {/* `@container` + breakpoints `@…` (del contenedor, no del viewport):
+          este mismo componente se monta en dos anchos muy distintos — la
+          columna de configuración del editor, que mide 400px fijos (ver
+          TwoColumnLayout), y la página del Editor rápido, que ocupa el
+          max-w-5xl entero de AdminChrome. Con `sm:`/`lg:` (viewport) el
+          panel de 400px terminaba pintando TRES columnas de ~122px en
+          cualquier pantalla de escritorio, y el formulario de edición
+          (miniatura de 56px shrink-0 + botón "Cambiar" ≈ 150px) no entra:
+          se derramaba encima de la tarjeta vecina. Midiendo el contenedor
+          real, el panel angosto queda en una sola columna y la página
+          ancha conserva sus tres. */}
+      <div className="mt-6 @container">
         {items.length === 0 ? (
           <EmptyState
             title="Tu catálogo está vacío."
             hint="Agregá tu primer producto para comenzar."
           />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 @2xl:grid-cols-2 @4xl:grid-cols-3">
             {items.map((product, index) =>
               editingId === product.id ? (
                 <form
