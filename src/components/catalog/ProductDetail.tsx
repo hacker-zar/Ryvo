@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Icon from "@/components/ui/Icon";
 import { Business, Product } from "@/types/business";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, initials } from "@/lib/format";
 
 interface ProductDetailProps {
   product: Product;
@@ -141,54 +141,90 @@ export default function ProductDetail({
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 py-6 flex-1">
-          {product.image ? (
-            <div className="image-frame relative aspect-[4/3] overflow-hidden bg-ink-elevated mb-5">
+        <div className="overflow-y-auto flex-1">
+          {/* La foto manda: cuadrada y a sangre (antes 4:3 con padding
+              lateral y media pantalla de alto). En el detalle la imagen ES
+              el contenido, no una ilustración del texto. Se dibuja siempre
+              — con monograma si falta — para que el diálogo no cambie de
+              forma según cada producto y para que las flechas tengan
+              dónde vivir. Sin foto va más bajo (2:1 en vez de cuadrado):
+              un cuadrado entero de monograma se come media pantalla de
+              mobile para no decir nada, y hoy hay negocios sin una sola
+              foto cargada. */}
+          <div
+            className={`image-frame relative w-full overflow-hidden bg-ink-elevated ${
+              product.image ? "aspect-square" : "aspect-[2/1]"
+            }`}
+          >
+            {product.image ? (
               <Image
                 src={product.image}
                 alt={product.name}
                 fill
-                sizes="(min-width: 640px) 500px, 100vw"
+                sizes="(min-width: 640px) 512px, 100vw"
                 className="object-cover"
               />
-            </div>
-          ) : null}
+            ) : (
+              <span
+                aria-hidden
+                className="ticket-number absolute inset-0 flex items-center justify-center text-5xl text-bone-muted/40"
+              >
+                {initials(product.name)}
+              </span>
+            )}
 
-          <h2 id={titleId} className="display-title text-2xl text-bone">
-            {product.name}
-          </h2>
-          <p className="ticket-number text-lg mt-2" style={{ color: primaryColor }}>
-            {formatPrice(product.price)}
-          </p>
-          {product.description ? (
-            <p className="mt-4 text-sm text-bone-muted leading-relaxed whitespace-pre-line">
-              {product.description}
-            </p>
-          ) : null}
-        </div>
-
-        {onPrev || onNext ? (
-          <div className="shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-t border-ink-line">
-            <button
-              type="button"
-              disabled={!onPrev}
-              onClick={onPrev ?? undefined}
-              aria-label="Producto anterior"
-              className="h-10 w-10 flex items-center justify-center radius-sm border border-ink-line text-bone-muted hover:text-bone hover:border-brass disabled:opacity-30 transition-colors"
-            >
-              <Icon name="chevron" size={16} rotate={90} />
-            </button>
-            <button
-              type="button"
-              disabled={!onNext}
-              onClick={onNext ?? undefined}
-              aria-label="Producto siguiente"
-              className="h-10 w-10 flex items-center justify-center radius-sm border border-ink-line text-bone-muted hover:text-bone hover:border-brass disabled:opacity-30 transition-colors"
-            >
-              <Icon name="chevron" size={16} rotate={270} />
-            </button>
+            {/* Anterior/siguiente pasaron del pie a los costados de la
+                foto: es donde se las busca, y libera el pie del diálogo.
+                Fondo propio semiopaco porque acá se apoyan sobre la foto
+                del negocio, de la que no se puede asumir ningún color. */}
+            {onPrev || onNext ? (
+              <>
+                <button
+                  type="button"
+                  disabled={!onPrev}
+                  onClick={onPrev ?? undefined}
+                  aria-label="Producto anterior"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 flex items-center justify-center radius-sm border border-ink-line bg-ink/80 backdrop-blur-sm text-bone hover:border-brass disabled:opacity-0 transition-colors"
+                >
+                  <Icon name="chevron" size={16} rotate={90} />
+                </button>
+                <button
+                  type="button"
+                  disabled={!onNext}
+                  onClick={onNext ?? undefined}
+                  aria-label="Producto siguiente"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 flex items-center justify-center radius-sm border border-ink-line bg-ink/80 backdrop-blur-sm text-bone hover:border-brass disabled:opacity-0 transition-colors"
+                >
+                  <Icon name="chevron" size={16} rotate={270} />
+                </button>
+              </>
+            ) : null}
           </div>
-        ) : null}
+
+          <div className="px-5 py-6">
+            <h2 id={titleId} className="display-title text-2xl text-bone">
+              {product.name}
+            </h2>
+            {/* El precio sube de text-lg a text-2xl y a renglón propio: en
+                la referencia es el segundo dato que se lee, no una nota al
+                pie del título. */}
+            <p className="ticket-number text-2xl mt-3" style={{ color: primaryColor }}>
+              {formatPrice(product.price)}
+            </p>
+
+            {/* La descripción deja de ser un párrafo suelto y pasa a ser
+                una sección rotulada bajo un filete, como los bloques
+                desplegables de una ficha de producto real. */}
+            {product.description ? (
+              <div className="mt-6 border-t border-ink-line pt-5">
+                <h3 className="section-eyebrow text-[11px] text-bone-muted">Descripción</h3>
+                <p className="mt-3 text-sm text-bone-muted leading-relaxed whitespace-pre-line">
+                  {product.description}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -209,3 +209,19 @@ export function contrastRatio(hexA: string, hexB: string): number | null {
   const darker = Math.min(lumA, lumB);
   return (lighter + 0.05) / (darker + 0.05);
 }
+
+/**
+ * Iniciales de un nombre (máximo dos), para los monogramas que ocupan el
+ * lugar de una foto que falta — hoy, las tarjetas y el detalle del
+ * catálogo. Vive acá y no en un componente porque ya lo necesitan dos
+ * archivos distintos de `components/catalog`; Professionals.tsx tiene su
+ * propia copia local de antes, que puede migrar a esta cuando se toque.
+ */
+export function initials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}

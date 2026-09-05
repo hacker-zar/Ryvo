@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Business, Product } from "@/types/business";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, initials } from "@/lib/format";
 
 export type ProductCardVariant = "list" | "grid";
 
@@ -11,18 +11,6 @@ interface ProductCardProps {
   primaryColor: Business["primary_color"];
   variant: ProductCardVariant;
   onOpen: (id: string) => void;
-}
-
-/** Monograma para los productos sin foto de la grilla — mismo criterio
- *  que el fallback de iniciales de Professionals.tsx, para no inventar
- *  un segundo estilo de "acá falta una imagen" en el mismo sitio. */
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
 }
 
 /**
