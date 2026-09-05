@@ -12,17 +12,22 @@ interface CatalogGridProps {
   primaryColor: Business["primary_color"];
 }
 
-/** "Grilla" — 1 columna en mobile, 2 en tablet, 3 en desktop. Sección
- *  completa y autocontenida, mismo criterio que CatalogList. */
+/** "Grilla" — 2 columnas ya en mobile, 4 en desktop. Sección completa y
+ *  autocontenida, mismo criterio que CatalogList.
+ *
+ *  Dos columnas en mobile (y no una) es deliberado: el catálogo se mira
+ *  para comparar productos entre sí, y a una por pantalla hay que
+ *  scrollear para saber qué más hay. El tile cuadrado sostiene el ancho
+ *  chico sin recortar la foto. */
 export default function CatalogGrid({ products, primaryColor }: CatalogGridProps) {
   const { openProduct, open, close, goPrev, goNext } = useProductDetail(products);
 
   return (
     <section id="catalogo" className="mx-auto max-w-5xl px-4 section-y">
       <SectionHeader eyebrow="Catálogo" title="Productos" primaryColor={primaryColor} />
-      <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 lg:grid-cols-4">
         {products.map((product, i) => (
-          <Reveal key={product.id} delay={100 + Math.min(i, 5) * 60}>
+          <Reveal key={product.id} delay={100 + Math.min(i, 5) * 60} className="h-full">
             <ProductCard product={product} primaryColor={primaryColor} variant="grid" onOpen={open} />
           </Reveal>
         ))}
